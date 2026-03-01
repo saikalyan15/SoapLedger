@@ -1,306 +1,760 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { 
-  User, Phone, ChevronDown, Plus, X, 
-  ShoppingBag, Loader2, CheckCircle2 
-} from 'lucide-react';
-import { submitOrderAction } from '@/lib/actions/orders';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  DEFAULT_PACKAGING_COST, 
-  FREE_SHIPPING_THRESHOLD, 
-  SHIPPING_CHARGE_BELOW,
-  ORDER_STATUSES 
-} from '@/lib/constants';
+  ShoppingBag, Check, Plus, Trash2, ChevronDown, 
+  Search, UserPlus, UserCheck, AlertCircle, Loader2
+} from 'lucide-react';
+import { createOrderAction, updateOrderAction } from '@/lib/actions/orders';
 
-export default function OrderForm({ products, settings }) {
+const OrderForm = ({ products, settings, initialData }) => {
   const router = useRouter();
+  const isEdit = !!initialData;
   
-  // Using centralized constants
-  const FREE_SHIPPING = FREE_SHIPPING_THRESHOLD;
-  const SHIPPING_FEE = SHIPPING_CHARGE_BELOW;
-  const DEFAULT_PACKAGING = settings.default_packaging_cost !== undefined ? parseFloat(settings.default_packaging_cost) : DEFAULT_PACKAGING_COST;
+  // --- Form State ---
+  const [customer, setCustomer] = useState(initialData?.order ? {
+    id: initialData.order.customer_id,
+    name: initialData.order.customer_name,
+    phone: initialData.order.customer_phone,
+    address: initialData.order.customer_address,
+    isExisting: true
+  } : {
+    id: null,
+    name: '',
+    phone: '',
+    address: '',
+    isExisting: false,
+    isNew: false
+  });
 
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
-  const [status, setStatus] = useState(ORDER_STATUSES[0]);
-  const [items, setItems] = useState([{ product_id: '', quantity: 1, unit_price: 0 }]);
-  const [packagingCost, setPackagingCost] = useState(DEFAULT_PACKAGING);
-  const [materialCost, setMaterialCost] = useState(0);
-  const [notes, setNotes] = useState('');
+  const [orderDate, setOrderDate] = useState(
+    initialData?.order?.order_date 
+    ? new Date(initialData.order.order_date).toISOString().split('T')[0]
+    : new Date().toISOString().split('T')[0]
+  );
   
+  const [status, setStatus] = useState(initialData?.order?.status || 'Received');
+  
+  const [items, setItems] = useState(initialData?.items?.map(item => ({
+    product_id: item.product_id,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    line_total: item.quantity * item.unit_price
+  })) || [{ product_id: '', quantity: 1, unit_price: 0, line_total: 0 }]);
+
+  const [shippingCharge, setShippingCharge] = useState(
+    initialData?.order?.shipping_charge || 0
+  );
+  
+  const [packagingCost, setPackagingCost] = useState(
+    initialData?.order?.packaging_cost || settings.default_packaging_cost || 30
+  );
+  
+  const [materialCost, setMaterialCost] = useState(
+    initialData?.order?.material_cost || 0
+  );
+  
+  const [notes, setNotes] = useState(initialData?.order?.notes || '');
+
+  // --- UI State ---
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [showResults, setShowResults] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState(null); // 'loading', 'success', 'error'
+  const [errorMsg, setErrorMsg] = useState('');
+
   const searchRef = useRef(null);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [manualShipping, setManualShipping] = useState(null);
-
-  const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-  const autoShipping = (subtotal >= FREE_SHIPPING || subtotal === 0) ? 0 : SHIPPING_FEE;
-  const shippingCharge = manualShipping !== null ? manualShipping : autoShipping;
-  const orderValue = subtotal;
-  const estProfit = orderValue - packagingCost - materialCost;
-
-  const groupedProducts = products.reduce((acc, p) => {
-    const base = p.base_type || 'Other';
-    if (!acc[base]) acc[base] = [];
-    acc[base].push(p);
-    return acc;
-  }, {});
-
+  // --- Calculations ---
+  const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.line_total) || 0), 0);
+  
+  // Auto-calculate shipping if not manually changed (in new mode)
   useEffect(() => {
-    const delayDebounce = setTimeout(async () => {
-      if (name.length >= 2 && !isSearching) {
-        setIsSearching(true);
-        try {
-          const res = await fetch(`/api/customers/search?name=${encodeURIComponent(name)}`);
-          const data = await res.json();
-          setSearchResults(data);
-          setShowResults(true);
-        } catch (e) { console.error(e); } finally { setIsSearching(false); }
-      } else { setSearchResults([]); }
-    }, 300);
-    return () => clearTimeout(delayDebounce);
-  }, [name]);
+    if (!isEdit && subtotal > 0) {
+      const threshold = parseFloat(settings.free_shipping_threshold) || 1000;
+      const charge = parseFloat(settings.shipping_charge_below) || 100;
+      if (subtotal >= threshold) {
+        setShippingCharge(0);
+      } else {
+        setShippingCharge(charge);
+      }
+    }
+  }, [subtotal, settings, isEdit]);
 
-  useEffect(() => {
-    const handleClick = (e) => {
-      if (searchRef.current && !searchRef.current.contains(e.target)) setShowResults(false);
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  const orderValue = subtotal; // Revenue from soaps
+  const profit = orderValue - packagingCost - materialCost;
 
-  const selectCustomer = (c) => {
-    setName(c.name);
-    setPhone(c.phone);
-    setAddress(c.address || '');
-    setShowResults(false);
+  // --- Handlers ---
+  const handleCustomerSearch = async (query) => {
+    setCustomer(prev => ({ ...prev, name: query, id: null, isExisting: false }));
+    if (query.length >= 2) {
+      setIsSearching(true);
+      try {
+        const res = await fetch(`/api/customers/search?name=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        setSearchResults(data.customers || []);
+        setShowDropdown(true);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsSearching(false);
+      }
+    } else {
+      setSearchResults([]);
+      setShowDropdown(false);
+    }
   };
 
-  const addItem = () => setItems([...items, { product_id: '', quantity: 1, unit_price: 0 }]);
-  const removeItem = (i) => items.length > 1 && setItems(items.filter((_, idx) => idx !== i));
+  const selectCustomer = (c) => {
+    setCustomer({
+      id: c.id,
+      name: c.name,
+      phone: c.phone,
+      address: c.address || '',
+      isExisting: true,
+      isNew: false
+    });
+    setShowDropdown(false);
+  };
+
+  const startNewCustomer = () => {
+    setCustomer(prev => ({
+      ...prev,
+      isExisting: false,
+      isNew: true
+    }));
+    setShowDropdown(false);
+  };
+
+  const addItem = () => {
+    setItems([...items, { product_id: '', quantity: 1, unit_price: 0, line_total: 0 }]);
+  };
+
+  const removeItem = (index) => {
+    if (items.length > 1) {
+      setItems(items.filter((_, i) => i !== index));
+    }
+  };
+
   const updateItem = (index, field, value) => {
     const newItems = [...items];
+    const item = { ...newItems[index] };
+    
+    item[field] = value;
+    
     if (field === 'product_id') {
-      const p = products.find(prod => prod.id === value);
-      newItems[index] = { ...newItems[index], product_id: value, unit_price: p ? parseFloat(p.unit_price) : 0 };
-    } else { newItems[index][field] = value; }
+      const product = products.find(p => p.id === value);
+      if (product) {
+        item.unit_price = parseFloat(product.unit_price);
+      }
+    }
+    
+    item.line_total = (parseInt(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+    newItems[index] = item;
     setItems(newItems);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!customer.phone) {
+      setErrorMsg('Phone number is required');
+      return;
+    }
+    if (items.some(item => !item.product_id)) {
+      setErrorMsg('Please select a product for all line items');
+      return;
+    }
+
     setIsSubmitting(true);
+    setSubmitStatus('loading');
+    setErrorMsg('');
+
+    const customerData = {
+      name: customer.name,
+      phone: customer.phone,
+      address: customer.address,
+      notes: '' // Not used in customer upsert here
+    };
+
+    const orderData = {
+      order_date: orderDate,
+      order_value: orderValue,
+      shipping_charge: parseFloat(shippingCharge),
+      packaging_cost: parseFloat(packagingCost),
+      material_cost: parseFloat(materialCost),
+      status: status,
+      notes: notes
+    };
+
+    const formattedItems = items.map(item => ({
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price
+    }));
+
     try {
-      const res = await submitOrderAction({
-        customerName: name, phone, address, orderDate, status,
-        items: items.filter(i => i.product_id),
-        orderValue, shippingCharge, packagingCost, materialCost, notes
-      });
-      if (res.success) {
-        setIsSuccess(true);
-        setTimeout(() => router.push('/orders'), 1500);
+      let result;
+      if (isEdit) {
+        result = await updateOrderAction(initialData.order.id, orderData, formattedItems);
+      } else {
+        result = await createOrderAction(customerData, orderData, formattedItems);
       }
-    } catch (err) { alert("Submission failed"); } finally { setIsSubmitting(false); }
+
+      if (result.success) {
+        setSubmitStatus('success');
+        setTimeout(() => {
+          router.push('/orders');
+        }, 1500);
+      } else {
+        setSubmitStatus('error');
+        setErrorMsg(result.error || 'Something went wrong');
+      }
+    } catch (err) {
+      setSubmitStatus('error');
+      setErrorMsg('Failed to save order');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- Styles ---
+  const sectionLabelStyle = {
+    fontSize: '11px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: '#6B7280',
+    marginBottom: '16px',
+    fontWeight: '600',
+    fontFamily: '"Plus Jakarta Sans", sans-serif',
+  };
+
+  const inputBaseStyle = {
+    width: '100%',
+    padding: '10px 14px',
+    borderRadius: '8px',
+    border: '1px solid #E5E7EB',
+    fontSize: '14px',
+    fontFamily: '"Plus Jakarta Sans", sans-serif',
+    outline: 'none',
+    transition: 'all 0.2s',
   };
 
   return (
-    <div className="pb-32 max-w-[680px] mx-auto">
+    <div style={{ maxWidth: '680px', margin: '0 auto', paddingBottom: '100px' }}>
       {/* Header */}
-      <div className="pt-2">
-        <h1 className="text-[36px] text-primary font-normal leading-none m-0 font-serif">New Order</h1>
-        <p className="text-sm text-muted mt-1.5 m-0 font-sans">Log an order from WhatsApp history</p>
+      <div style={{ marginBottom: '32px' }}>
+        <h1 style={{ 
+          fontFamily: '"DM Serif Display", serif', 
+          fontSize: '36px', 
+          color: '#1B4332',
+          margin: '0 0 8px 0'
+        }}>
+          {isEdit ? 'Edit Order' : 'New Order'}
+        </h1>
+        <p style={{ 
+          fontFamily: '"Plus Jakarta Sans", sans-serif', 
+          fontSize: '14px', 
+          color: '#6B7280',
+          margin: 0
+        }}>
+          {isEdit ? `Order #${initialData.order.id.slice(0, 8)}` : 'Log an order from WhatsApp'}
+        </p>
+        <div style={{ height: '2px', background: '#E5E7EB', marginTop: '16px' }} />
       </div>
 
-      <div className="mt-8 border-b-2 border-border mb-8"></div>
-
-      <form onSubmit={handleSubmit} className="animate-in fade-in duration-500">
-        {/* SECTION 1: CUSTOMER */}
-        <div className="mb-7">
-          <label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted mb-4 block font-sans">Customer</label>
-          <div className="space-y-5">
-            <div className="relative" ref={searchRef}>
-              <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1.5 block font-sans">Customer Name</label>
-              <div className="relative">
-                <User size={16} className="absolute left-3.5 top-[50%] -translate-y-[50%] text-muted opacity-50" />
-                <input 
-                  autoFocus required value={name} 
-                  onChange={(e) => {
-                    const newVal = e.target.value;
-                    setName(newVal);
-                    if (newVal.length === 0) {
-                      setPhone('');
-                      setAddress('');
-                    }
-                  }}
-                  onFocus={() => name.length >= 2 && setShowResults(true)}
-                  className="w-full pl-10 pr-3.5 py-[11px] border border-border rounded-lg text-sm text-[#1A1A1A] outline-none transition-all duration-150 focus:border-primary focus:ring-[3px] focus:ring-primary/10 bg-white font-sans"
-                  placeholder="Type to search existing or enter new..."
+      <form onSubmit={handleSubmit}>
+        {/* Section 1: Customer */}
+        <section style={{ marginBottom: '40px' }}>
+          <div style={sectionLabelStyle}>Customer</div>
+          
+          <div style={{ position: 'relative' }} ref={searchRef}>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                placeholder="Type customer name..."
+                value={customer.name}
+                onChange={(e) => handleCustomerSearch(e.target.value)}
+                autoFocus={!isEdit}
+                required
+                style={{
+                  ...inputBaseStyle,
+                  paddingLeft: '36px',
+                }}
+              />
+              <Search 
+                size={16} 
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} 
+              />
+              {isSearching && (
+                <Loader2 
+                  size={16} 
+                  className="animate-spin" 
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} 
                 />
-                {isSearching && <Loader2 size={16} className="absolute right-3.5 top-[50%] -translate-y-[50%] animate-spin text-primary" />}
-              </div>
-              {showResults && searchResults.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-border rounded-lg shadow-xl overflow-hidden font-sans">
-                  {searchResults.map(c => (
-                    <div key={c.id} onClick={() => selectCustomer(c)} className="px-4 py-3 hover:bg-[#FAFDF9] cursor-pointer border-b border-[#F3F4F6] last:border-0 group">
-                      <div className="text-sm font-semibold text-primary">{c.name}</div>
-                      <div className="text-[12px] text-muted mt-0.5">{c.phone}</div>
-                    </div>
-                  ))}
-                </div>
               )}
             </div>
 
-            <div>
-              <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1.5 block font-sans">WhatsApp Number</label>
-              <div className="relative">
-                <Phone size={16} className="absolute left-3.5 top-[50%] -translate-y-[50%] text-muted opacity-50" />
-                <input 
-                  required value={phone} onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-[11px] border border-border rounded-lg text-sm text-[#1A1A1A] outline-none transition-all focus:border-primary focus:ring-[3px] focus:ring-primary/10 bg-white font-sans"
-                  placeholder="e.g. 9876543210"
-                />
+            {/* Customer Dropdown */}
+            {showDropdown && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                background: '#FFFFFF',
+                border: '1px solid #E5E7EB',
+                borderRadius: '8px',
+                marginTop: '4px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                zIndex: 50,
+                overflow: 'hidden'
+              }}>
+                {searchResults.map(c => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => selectCustomer(c)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-start',
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #F3F4F6',
+                      textAlign: 'left'
+                    }}
+                  >
+                    <span style={{ fontWeight: '600', fontSize: '14px', color: '#111827' }}>{c.name}</span>
+                    <span style={{ fontSize: '12px', color: '#6B7280' }}>{c.phone}</span>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={startNewCustomer}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    border: 'none',
+                    background: '#F9FAFB',
+                    cursor: 'pointer',
+                    color: '#1B4332',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    textAlign: 'left'
+                  }}
+                >
+                  <UserPlus size={16} />
+                  Add "{customer.name}" as new customer
+                </button>
               </div>
-            </div>
+            )}
+          </div>
 
+          {/* Customer Feedback Pills */}
+          <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+            {customer.isExisting && (
+              <div style={{
+                background: '#D8F3DC',
+                color: '#1B4332',
+                padding: '4px 12px',
+                borderRadius: '20px',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                <UserCheck size={14} />
+                Returning customer
+              </div>
+            )}
+            {customer.isNew && (
+              <div style={{
+                background: '#FEF3C7',
+                color: '#92400E',
+                padding: '4px 12px',
+                borderRadius: '20px',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}>
+                <AlertCircle size={14} />
+                New customer — please add phone number
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginTop: '16px' }}>
             <div>
-              <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1.5 block font-sans">Delivery Address (optional)</label>
-              <textarea 
-                rows={3} value={address} onChange={(e) => setAddress(e.target.value)}
-                className="w-full px-3.5 py-[11px] border border-border rounded-lg text-sm text-[#1A1A1A] outline-none transition-all focus:border-primary focus:ring-[3px] focus:ring-primary/10 placeholder:text-muted/50 bg-white font-sans"
+              <label style={{ ...sectionLabelStyle, marginBottom: '8px', display: 'block' }}>Phone Number</label>
+              <input
+                type="text"
+                value={customer.phone}
+                onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                required
+                placeholder="WhatsApp Number"
+                style={{
+                  ...inputBaseStyle,
+                  borderColor: !customer.phone && submitStatus === 'error' ? '#EF4444' : '#E5E7EB'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ ...sectionLabelStyle, marginBottom: '8px', display: 'block' }}>Delivery Address</label>
+              <textarea
+                value={customer.address}
+                onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                rows={3}
                 placeholder="Add later when ready to dispatch"
+                style={{
+                  ...inputBaseStyle,
+                  fontSize: '13px',
+                  borderColor: '#E5E7EB',
+                }}
               />
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="my-7 border-b border-border"></div>
+        <div style={{ height: '1px', background: '#E5E7EB', margin: '28px 0' }} />
 
-        {/* SECTION 2: ORDER DETAILS */}
-        <div className="mb-7">
-          <label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted mb-4 block font-sans">Order Details</label>
-          <div className="grid grid-cols-2 gap-5">
+        {/* Section 2: Order Details */}
+        <section style={{ marginBottom: '40px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div>
-              <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1.5 block font-sans">Order Date</label>
-              <input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="w-full px-3.5 py-[11px] border border-border rounded-lg text-sm outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 bg-white font-sans" />
+              <div style={sectionLabelStyle}>Order Date</div>
+              <input
+                type="date"
+                value={orderDate}
+                onChange={(e) => setOrderDate(e.target.value)}
+                style={inputBaseStyle}
+              />
             </div>
             <div>
-              <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1.5 block font-sans">Status</label>
-              <div className="relative">
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-3.5 py-[11px] border border-border rounded-lg text-sm outline-none appearance-none bg-white focus:border-primary focus:ring-[3px] focus:ring-primary/10 font-sans">
-                  {ORDER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+              <div style={sectionLabelStyle}>Status</div>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  style={{
+                    ...inputBaseStyle,
+                    appearance: 'none',
+                    paddingRight: '40px',
+                  }}
+                >
+                  <option value="Received">Received</option>
+                  <option value="Payment Confirmed">Payment Confirmed</option>
+                  <option value="In Production">In Production</option>
+                  <option value="Dispatched">Dispatched</option>
+                  <option value="Delivered">Delivered</option>
+                  <option value="Cancelled">Cancelled</option>
                 </select>
-                <ChevronDown size={16} className="absolute right-3.5 top-[50%] -translate-y-[50%] text-muted pointer-events-none" />
+                <ChevronDown 
+                  size={18} 
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#6B7280' }} 
+                />
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="my-7 border-b border-border"></div>
+        <div style={{ height: '1px', background: '#E5E7EB', margin: '28px 0' }} />
 
-        {/* SECTION 3: LINE ITEMS */}
-        <div className="mb-7">
-          <label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted mb-4 block font-sans">Soaps Ordered</label>
-          <div className="bg-[#FAFDF9] border border-primary-light rounded-xl p-6 space-y-5 shadow-[0_2px_12px_rgba(27,67,50,0.08)] font-sans">
-            {items.map((item, idx) => (
-              <div key={idx} className="flex gap-4 items-end animate-in slide-in-from-bottom-2 duration-200">
-                <div className="flex-1">
-                  <label className="text-[10px] font-bold text-muted opacity-50 uppercase mb-1 block">Product</label>
-                  <div className="relative">
-                    <select required value={item.product_id} onChange={(e) => updateItem(idx, 'product_id', e.target.value)} className="w-full px-3 py-2.5 border border-border rounded-lg text-[13px] outline-none appearance-none bg-white focus:border-primary">
-                      <option value="">Select soap...</option>
-                      {Object.entries(groupedProducts).map(([base, products]) => (
-                        <optgroup key={base} label={base.toUpperCase()}>
-                          {products.map(p => (
-                            <option key={p.id} value={p.id}>{p.name} — ₹{parseFloat(p.unit_price).toFixed(2)}</option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-2.5 top-[50%] -translate-y-[50%] text-muted pointer-events-none" />
+        {/* Section 3: Soaps Ordered */}
+        <section style={{ marginBottom: '40px' }}>
+          <div style={sectionLabelStyle}>Soaps Ordered</div>
+          <div style={{
+            background: '#FAFDF9',
+            border: '1px solid #D8F3DC',
+            borderRadius: '12px',
+            padding: '20px',
+          }}>
+            {items.map((item, index) => (
+              <div key={index} style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 70px 90px 80px 40px', 
+                gap: '12px', 
+                alignItems: 'end',
+                marginBottom: index === items.length - 1 ? 0 : '16px'
+              }}>
+                <div>
+                  {index === 0 && <label style={{ ...sectionLabelStyle, fontSize: '10px' }}>Product</label>}
+                  <select
+                    value={item.product_id}
+                    onChange={(e) => updateItem(index, 'product_id', e.target.value)}
+                    style={inputBaseStyle}
+                  >
+                    <option value="">Select Soap...</option>
+                    {/* Group by base_type if possible, but keep it simple for now */}
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} — ₹{p.unit_price}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  {index === 0 && <label style={{ ...sectionLabelStyle, fontSize: '10px' }}>Qty</label>}
+                  <input
+                    type="number"
+                    min="1"
+                    value={item.quantity}
+                    onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                    style={inputBaseStyle}
+                  />
+                </div>
+                <div>
+                  {index === 0 && <label style={{ ...sectionLabelStyle, fontSize: '10px' }}>Price ₹</label>}
+                  <input
+                    type="number"
+                    value={item.unit_price}
+                    onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
+                    style={inputBaseStyle}
+                  />
+                </div>
+                <div style={{ textAlign: 'right', paddingBottom: '10px' }}>
+                  {index === 0 && <label style={{ ...sectionLabelStyle, fontSize: '10px', display: 'block', textAlign: 'right' }}>Total</label>}
+                  <div style={{ 
+                    fontFamily: '"DM Serif Display", serif', 
+                    fontSize: '15px', 
+                    color: '#1B4332' 
+                  }}>
+                    ₹{item.line_total}
                   </div>
                 </div>
-                <div className="w-20">
-                  <label className="text-[10px] font-bold text-muted opacity-50 uppercase mb-1 block">Qty</label>
-                  <input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', parseInt(e.target.value)||0)} className="w-full px-2.5 py-2.5 border border-border rounded-lg text-[13px] text-center outline-none focus:border-primary" />
-                </div>
-                <div className="w-[100px]">
-                  <label className="text-[10px] font-bold text-muted opacity-50 uppercase mb-1 block">Price</label>
-                  <div className="relative">
-                    <span className="absolute left-2.5 top-[50%] -translate-y-[50%] text-[13px] text-muted opacity-50">₹</span>
-                    <input type="number" value={item.unit_price} onChange={(e) => updateItem(idx, 'unit_price', parseFloat(e.target.value)||0)} className="w-full pl-6 pr-2.5 py-2.5 border border-border rounded-lg text-[13px] outline-none focus:border-primary" />
-                  </div>
-                </div>
-                <div className="w-[100px] text-right mb-2.5">
-                  <div className="text-[10px] font-bold text-muted opacity-50 uppercase mb-1">Total</div>
-                  <div className="font-bold text-primary text-sm">₹{(item.quantity*item.unit_price).toFixed(2)}</div>
-                </div>
-                <div className="mb-1.5">
+                <div>
                   {items.length > 1 && (
-                    <button type="button" onClick={() => removeItem(idx)} className="p-2 text-muted opacity-50 hover:text-danger hover:opacity-100 transition-colors cursor-pointer border-none bg-transparent">
-                      <X size={18} />
+                    <button
+                      type="button"
+                      onClick={() => removeItem(index)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#9CA3AF',
+                        cursor: 'pointer',
+                        padding: '10px',
+                        marginBottom: '2px'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.color = '#EF4444'}
+                      onMouseOut={(e) => e.currentTarget.style.color = '#9CA3AF'}
+                    >
+                      <Trash2 size={18} />
                     </button>
                   )}
                 </div>
               </div>
             ))}
-            
-            <button type="button" onClick={addItem} className="mt-2 flex items-center gap-2 text-primary text-sm font-semibold hover:opacity-70 transition-all border-none bg-transparent cursor-pointer p-0 font-sans">
-              <Plus size={16} /> Add Another Soap
+
+            <button
+              type="button"
+              onClick={addItem}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#1B4332',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                marginTop: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: 0
+              }}
+            >
+              <Plus size={16} />
+              Add Another Soap
             </button>
-            
-            <div className="mt-8 bg-bg border border-border rounded-lg p-5 space-y-3 shadow-inner">
-              <div className="flex justify-between items-center text-sm"><span className="text-muted">Subtotal</span><span className="font-semibold text-[#1A1A1A]">₹{subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between items-center text-sm">
-                <div className="flex flex-col"><span className="text-muted">Shipping Charge</span>{manualShipping===null && <span className="text-[10px] text-primary/60">(auto-applied)</span>}</div>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted opacity-50">₹</span>
-                  <input type="number" value={shippingCharge} onChange={(e)=>setManualShipping(parseFloat(e.target.value)||0)} className="w-20 bg-transparent border-b border-border text-right text-[14px] font-semibold outline-none focus:border-primary transition-all" />
-                </div>
+          </div>
+
+          {/* Order Summary Box */}
+          <div style={{
+            background: '#F9F6F0',
+            border: '1px solid #E5E7EB',
+            borderRadius: '10px',
+            padding: '16px 20px',
+            marginTop: '20px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div style={{ display: 'flex', gap: '32px' }}>
+              <div>
+                <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase' }}>Subtotal</div>
+                <div style={{ fontWeight: '600', fontSize: '16px' }}>₹{subtotal}</div>
               </div>
-              <div className="pt-4 border-t border-border flex justify-between items-center font-bold text-primary"><span>Order Value</span><span className="text-xl">₹{orderValue.toFixed(2)}</span></div>
+              <div>
+                <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase' }}>Shipping</div>
+                <input
+                  type="number"
+                  value={shippingCharge}
+                  onChange={(e) => setShippingCharge(e.target.value)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: '1px dashed #9CA3AF',
+                    width: '60px',
+                    fontWeight: '600',
+                    fontSize: '16px',
+                    padding: 0,
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase' }}>Order Value</div>
+              <div style={{ 
+                fontFamily: '"DM Serif Display", serif', 
+                fontSize: '24px', 
+                color: '#1B4332' 
+              }}>
+                ₹{subtotal}
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="my-7 border-b border-border"></div>
+        <div style={{ height: '1px', background: '#E5E7EB', margin: '28px 0' }} />
 
-        {/* SECTION 4: COST TRACKING */}
-        <div className="mb-7 font-sans">
-          <label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted mb-4 block">Cost Tracking</label>
-          <div className="grid grid-cols-2 gap-5">
-            <div>
-              <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1.5 block">Packaging Cost ₹</label>
-              <input type="number" value={packagingCost} onChange={(e)=>setPackagingCost(parseFloat(e.target.value)||0)} className="w-full px-3.5 py-[11px] border border-border rounded-lg text-sm outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 bg-white" />
-            </div>
-            <div>
-              <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1.5 block">Material Cost ₹</label>
-              <input type="number" value={materialCost} onChange={(e)=>setMaterialCost(parseFloat(e.target.value)||0)} className="w-full px-3.5 py-[11px] border border-border rounded-lg text-sm outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 bg-white" />
+        {/* Section 4: Cost Tracking */}
+        <section style={{ marginBottom: '40px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div style={{ ...sectionLabelStyle, marginBottom: 0 }}>Cost Tracking</div>
+            <div style={{
+              fontSize: '12px',
+              color: '#6B7280',
+              fontStyle: 'italic'
+            }}>
+              Used to calculate profit. An estimate is fine.
             </div>
           </div>
-        </div>
 
-        {/* SECTION 5: NOTES */}
-        <div className="mb-10 font-sans">
-          <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted mb-1.5 block">Notes (optional)</label>
-          <textarea rows={3} value={notes} onChange={(e)=>setNotes(e.target.value)} className="w-full px-3.5 py-[11px] border border-border rounded-lg text-sm outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 bg-white" placeholder="Special instructions, Instagram handle..." />
-        </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+            <div>
+              <label style={{ ...sectionLabelStyle, fontSize: '10px' }}>Packaging Cost ₹</label>
+              <input
+                type="number"
+                value={packagingCost}
+                onChange={(e) => setPackagingCost(e.target.value)}
+                style={inputBaseStyle}
+              />
+            </div>
+            <div>
+              <label style={{ ...sectionLabelStyle, fontSize: '10px' }}>Material Cost ₹</label>
+              <input
+                type="number"
+                value={materialCost}
+                onChange={(e) => setMaterialCost(e.target.value)}
+                style={inputBaseStyle}
+              />
+            </div>
+          </div>
 
-        {/* SUBMIT */}
-        <button 
-          disabled={isSubmitting||isSuccess} 
-          className={`w-full h-[52px] rounded-[10px] text-base font-semibold text-white flex items-center justify-center gap-3 shadow-[0_2px_8px_rgba(27,67,50,0.25)] transition-all border-none cursor-pointer font-sans ${isSuccess ? 'bg-[#10B981]' : 'bg-primary hover:bg-[#2D6A4F] active:scale-[0.99] disabled:opacity-50'}`}
-        >
-          {isSubmitting ? <><Loader2 size={20} className="animate-spin" /> Saving...</> : isSuccess ? <><CheckCircle2 size={20} /> Order Saved!</> : <><ShoppingBag size={18} /> Save Order</>}
-        </button>
+          {/* Profit Pill */}
+          {subtotal > 0 && (
+            <div style={{
+              display: 'inline-flex',
+              padding: '8px 16px',
+              borderRadius: '24px',
+              fontSize: '14px',
+              fontWeight: '600',
+              fontFamily: '"Plus Jakarta Sans", sans-serif',
+              background: profit > 0 ? '#D8F3DC' : profit < 0 ? '#FEE2E2' : '#F3F4F6',
+              color: profit > 0 ? '#1B4332' : profit < 0 ? '#DC2626' : '#6B7280',
+            }}>
+              {profit > 0 ? `Est. Profit ₹${profit}` : profit < 0 ? `Est. Loss ₹${Math.abs(profit)}` : 'Break even'}
+            </div>
+          )}
+        </section>
+
+        <div style={{ height: '1px', background: '#E5E7EB', margin: '28px 0' }} />
+
+        {/* Section 5: Notes */}
+        <section style={{ marginBottom: '48px' }}>
+          <div style={sectionLabelStyle}>Notes</div>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            placeholder="Special instructions, gift message, how they found us..."
+            style={inputBaseStyle}
+          />
+        </section>
+
+        {/* Submit Button */}
+        <div style={{ position: 'sticky', bottom: '24px', zIndex: 10 }}>
+          {errorMsg && (
+            <div style={{ 
+              background: '#FEE2E2', 
+              color: '#DC2626', 
+              padding: '12px', 
+              borderRadius: '8px', 
+              marginBottom: '16px',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              border: '1px solid #FECACA'
+            }}>
+              <AlertCircle size={16} />
+              {errorMsg}
+            </div>
+          )}
+          
+          <button
+            type="submit"
+            disabled={isSubmitting || submitStatus === 'success'}
+            style={{
+              width: '100%',
+              height: '52px',
+              background: submitStatus === 'success' ? '#1B4332' : '#1B4332',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '16px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              boxShadow: '0 4px 12px rgba(27,67,50,0.2)',
+              transition: 'all 0.2s'
+            }}
+          >
+            {submitStatus === 'loading' ? (
+              <>
+                <Loader2 size={20} className="animate-spin" />
+                Saving...
+              </>
+            ) : submitStatus === 'success' ? (
+              <>
+                <Check size={20} />
+                Order Saved!
+              </>
+            ) : isEdit ? (
+              <>
+                <Check size={20} />
+                Update Order
+              </>
+            ) : (
+              <>
+                <ShoppingBag size={20} />
+                Save Order
+              </>
+            )}
+          </button>
+        </div>
       </form>
     </div>
   );
-}
+};
+
+export default OrderForm;

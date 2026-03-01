@@ -1,7 +1,5 @@
-import OrderForm from './OrderForm';
 import { getActiveProducts, getSettings } from '@/lib/queries/orders';
-
-export const dynamic = 'force-dynamic';
+import OrderForm from './OrderForm';
 
 export default async function NewOrderPage() {
   const [products, settings] = await Promise.all([
@@ -10,10 +8,8 @@ export default async function NewOrderPage() {
   ]);
 
   return (
-    <div className="flex justify-center">
-      <div className="w-full max-w-[680px]">
-        <OrderForm products={products} settings={settings} />
-      </div>
+    <div style={{ padding: '40px' }}>
+      <OrderForm products={products} settings={settings} />
     </div>
   );
 }

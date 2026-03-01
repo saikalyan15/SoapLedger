@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, PlusCircle, ShoppingBag,
+  LayoutDashboard, PlusCircle, ShoppingBag, Users,
   Package, FlaskConical, Receipt, Settings
 } from 'lucide-react'
 
@@ -10,6 +10,7 @@ const navItems = [
   { label: 'Dashboard',     href: '/dashboard',    icon: LayoutDashboard },
   { label: 'New Order',     href: '/orders/new',   icon: PlusCircle },
   { label: 'Orders',        href: '/orders',       icon: ShoppingBag },
+  { label: 'Customers',     href: '/customers',    icon: Users },
   { label: 'Products',      href: '/products',     icon: Package },
   { label: 'Raw Materials', href: '/raw-materials',icon: FlaskConical },
   { label: 'Expenses',      href: '/expenses',     icon: Receipt },

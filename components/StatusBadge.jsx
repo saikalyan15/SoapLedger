@@ -1,30 +1,35 @@
-export default function StatusBadge({ status, type = 'status' }) {
-  const getColors = () => {
-    if (type === 'status') {
-      switch (status) {
-        case 'Received': return 'bg-[#FEF3C7] text-[#92400E]';
-        case 'In Progress': return 'bg-[#DBEAFE] text-[#1E40AF]';
-        case 'Dispatched': return 'bg-[#CCFBF1] text-[#0F766E]';
-        case 'Delivered': return 'bg-[#D8F3DC] text-[#1B4332]';
-        default: return 'bg-gray-100 text-gray-800';
-      }
-    }
-    
-    if (type === 'product') {
-      switch (status) {
-        case 'Active': return 'bg-[var(--color-primary-light)] text-[var(--color-primary)]';
-        case 'Seasonal': return 'bg-[var(--color-accent-light)] text-[var(--color-accent)]';
-        case 'Archived': return 'bg-gray-200 text-gray-500';
-        default: return 'bg-gray-100 text-gray-800';
-      }
-    }
-    
-    return 'bg-gray-100 text-gray-800';
-  };
+import React from 'react';
+
+const statusStyles = {
+  'Received': { bg: '#FEF3C7', text: '#92400E' },
+  'Payment Confirmed': { bg: '#DBEAFE', text: '#1E40AF' },
+  'In Production': { bg: '#F3E8FF', text: '#6B21A8' },
+  'Dispatched': { bg: '#CCFBF1', text: '#0F766E' },
+  'Delivered': { bg: '#D8F3DC', text: '#1B4332' },
+  'Cancelled': { bg: '#FEE2E2', text: '#DC2626' },
+};
+
+const StatusBadge = ({ status }) => {
+  const style = statusStyles[status] || { bg: '#F3F4F6', text: '#374151' };
 
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getColors()}`}>
+    <span
+      style={{
+        backgroundColor: style.bg,
+        color: style.text,
+        fontSize: '11px',
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+        padding: '4px 12px',
+        borderRadius: '20px',
+        display: 'inline-block',
+        fontFamily: '"Plus Jakarta Sans", sans-serif',
+      }}
+    >
       {status}
     </span>
   );
-}
+};
+
+export default StatusBadge;
