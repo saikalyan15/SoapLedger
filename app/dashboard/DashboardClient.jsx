@@ -8,17 +8,17 @@ import {
 } from 'recharts';
 import { 
   TrendingUp, TrendingDown, Clock, Package, 
-  Users, ShoppingBag, DollarSign, ChevronRight, AlertTriangle, Loader2
+  Users, ShoppingBag, DollarSign, ChevronRight, AlertTriangle, Loader2, Calendar
 } from 'lucide-react';
 import Link from 'next/link';
 import { 
   getRevenueKPIs, 
-  getMonthlyRevenue, 
   getRepeatCustomerRate, 
   getProductPerformance, 
   getOperationsMetrics, 
   getAvgOrderValueTrend,
-  getCostPriceTrend
+  getCostPriceTrend,
+  getCashFlowTrend
 } from '@/lib/queries/dashboard';
 import StatusBadge from '@/components/StatusBadge';
 
@@ -43,6 +43,15 @@ const BASE_COLOURS = {
   'Loofah':      '#92400E',
   'Other':       '#9CA3AF',
 };
+
+const PRODUCT_BAR_COLORS = [
+  '#1B4332', // Dark Green
+  '#92400E', // Deep Soil
+  '#2D6A4F', // Forest Green
+  '#BC8A5F', // Clay / Sand
+  '#40916C', // Sage Green
+  '#D4A017', // Ochre / Amber
+];
 
 const CustomTooltip = ({ active, payload, label, isCurrency, decimals = 0 }) => {
   if (!active || !payload?.length) return null;
@@ -137,44 +146,35 @@ const ChartCard = ({ title, subtitle, children, loading, empty, icon: Icon, heig
   </div>
 );
 
-const PRODUCT_BAR_COLORS = [
-  '#1B4332', // Dark Green
-  '#92400E', // Deep Soil
-  '#2D6A4F', // Forest Green
-  '#BC8A5F', // Clay / Sand
-  '#40916C', // Sage Green
-  '#D4A017', // Ochre / Amber
-];
-
-const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, initialProducts, initialOperations, initialAvgTrend, initialCostTrend }) => {
+const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, initialOperations, initialAvgTrend, initialCostTrend, initialCashFlow }) => {
   const [filter, setFilter] = useState('All Time');
   const [isPending, startTransition] = useTransition();
   
   const [revenue, setRevenue] = useState(initialRevenue);
-  const [monthly, setMonthly] = useState(initialMonthly);
   const [customers, setCustomers] = useState(initialCustomers);
   const [products, setProducts] = useState(initialProducts);
   const [operations, setOperations] = useState(initialOperations);
   const [avgTrend, setAvgTrend] = useState(initialAvgTrend);
   const [costTrend, setCostTrend] = useState(initialCostTrend);
+  const [cashFlow, setCashFlow] = useState(initialCashFlow);
 
   const fetchFilteredData = async (range) => {
-    const [rev, mon, cust, prod, oper, trend, cTrend] = await Promise.all([
+    const [rev, cust, prod, oper, trend, cTrend, cFlow] = await Promise.all([
       getRevenueKPIs(range),
-      getMonthlyRevenue(range),
       getRepeatCustomerRate(range),
       getProductPerformance(range),
       getOperationsMetrics(range),
       getAvgOrderValueTrend(range),
       getCostPriceTrend(range),
+      getCashFlowTrend(range),
     ]);
     setRevenue(rev);
-    setMonthly(mon);
     setCustomers(cust);
     setProducts(prod);
     setOperations(oper);
     setAvgTrend(trend);
     setCostTrend(cTrend);
+    setCashFlow(cFlow);
   };
 
   const handleFilterChange = (newFilter) => {
@@ -250,29 +250,41 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
         <KPICard 
           label="Total Revenue" 
           value={`₹${fmt(revenue.total_revenue)}`} 
-          trend={revenue.revenue_trend} 
-          sub="Dispatched + Delivered" 
+          sub="Money in (Delivered)" 
           color="#1B4332"
           loading={isPending}
         />
         <KPICard 
           label="Total Orders" 
           value={fmt(revenue.orders_count)} 
-          sub={`${fmt(revenue.this_month_count)} this period`} 
-          color="#D4A017"
+          sub="Count (Delivered)" 
+          color="#1B4332"
           loading={isPending}
         />
         <KPICard 
           label="Soaps Sold" 
           value={fmt(revenue.total_soaps_sold)} 
-          sub="Dispatched + Delivered" 
+          sub="Units delivered" 
           color="#1B4332"
+          loading={isPending}
+        />
+        <KPICard 
+          label="Repeat Rate" 
+          value={`${fmt(customers.repeat_rate, 1)}%`} 
+          sub={`${fmt(customers.repeat_customers)} repeat buyers`} 
+          color="#0F766E"
+          loading={isPending}
+        />
+        <KPICard 
+          label="Re-order Window" 
+          value={`${fmt(customers.avg_reorder_days)} days`} 
+          sub="Avg. time between orders" 
+          color="#0F766E"
           loading={isPending}
         />
         <KPICard 
           label="Avg Order Value" 
           value={`₹${fmt(revenue.avg_order_value)}`} 
-          trend={revenue.aov_trend} 
           sub="Revenue per order" 
           color="#6B21A8"
           loading={isPending}
@@ -280,45 +292,50 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
         <KPICard 
           label="Cost Price Per Soap" 
           value={revenue.cost_price_per_soap > 0 ? `₹${fmt(revenue.cost_price_per_soap)}` : "—"} 
-          sub="Recurring spend ÷ soaps sold" 
+          sub="Cumulative average" 
           color="#6B21A8"
-          loading={isPending}
-        />
-        <KPICard 
-          label="Repeat Rate" 
-          value={`${fmt(customers.repeat_rate, 1)}%`} 
-          sub={`${fmt(customers.repeat_customers)} of ${fmt(customers.total_customers)} customers`} 
-          color="#0F766E"
           loading={isPending}
         />
         <KPICard 
           label="Pending Revenue" 
           value={`₹${fmt(revenue.pending_revenue || 0)}`} 
-          sub={revenue.pending_revenue > 0 ? "Awaiting dispatch" : "All clear"} 
-          subColor={revenue.pending_revenue > 0 ? null : "#1B4332"}
+          sub="Orders being processed" 
           color="#D4A017"
           loading={isPending}
         />
         <KPICard 
           label="Pending Soaps" 
           value={fmt(revenue.pending_soaps)} 
-          sub={revenue.pending_soaps > 0 ? "To be produced" : "Queue empty"} 
-          color="#92400E"
+          sub="Units to be produced" 
+          color="#D4A017"
           loading={isPending}
         />
       </div>
 
       {/* Row 2: Charts Side by Side */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
-        <ChartCard title="Revenue by Month" loading={isPending} empty={monthly.length === 0} icon={DollarSign}>
+        <ChartCard title="Monthly Cash Flow" subtitle="Revenue vs Total Spend (Recurring + One-time)" loading={isPending} empty={cashFlow.length === 0} icon={DollarSign}>
           <div style={{ height: '280px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-              <BarChart data={monthly} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <BarChart data={cashFlow} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmt(v)}`} />
                 <Tooltip content={<CustomTooltip isCurrency={true} />} />
+                <Legend verticalAlign="bottom" height={36} content={({ payload }) => (
+                  <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '12px', color: '#6B7280' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#1B4332' }}></div>
+                      <span>Revenue</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#DC2626' }}></div>
+                      <span>Total Spend</span>
+                    </div>
+                  </div>
+                )} />
                 <Bar dataKey="revenue" name="Revenue" fill="#1B4332" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="total_spend" name="Total Spend" fill="#DC2626" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
