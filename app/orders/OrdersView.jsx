@@ -156,7 +156,12 @@ const OrdersView = ({ orders: initialOrders }) => {
               <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
                 <th style={thStyle}>Date</th>
                 <th style={thStyle}>Customer</th>
-                <th style={thStyle}>Order Value</th>
+                <th style={thStyle}>
+                  Order Value
+                  <div style={{ fontSize: '9px', textTransform: 'none', fontWeight: '400', color: '#9CA3AF', marginTop: '2px' }}>
+                    (incl. shipping)
+                  </div>
+                </th>
                 <th style={thStyle}>Shipping</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Actions</th>

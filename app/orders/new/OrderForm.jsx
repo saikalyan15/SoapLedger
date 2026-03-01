@@ -60,14 +60,6 @@ const OrderForm = ({ products, settings, initialData }) => {
     initialData?.order?.shipping_charge || 0
   );
   
-  const [packagingCost, setPackagingCost] = useState(
-    initialData?.order?.packaging_cost || settings.default_packaging_cost || 30
-  );
-  
-  const [materialCost, setMaterialCost] = useState(
-    initialData?.order?.material_cost || 0
-  );
-  
   const [notes, setNotes] = useState(initialData?.order?.notes || '');
 
   // --- UI State ---
@@ -116,7 +108,6 @@ const OrderForm = ({ products, settings, initialData }) => {
   }, [subtotal, settings, isEdit]);
 
   const orderValue = subtotal; // Revenue from soaps
-  const profit = orderValue - packagingCost - materialCost;
 
   // --- Handlers ---
   const handleCustomerSearch = async (query) => {
@@ -228,8 +219,8 @@ const OrderForm = ({ products, settings, initialData }) => {
       delivered_at: deliveredAt || null,
       order_value: orderValue,
       shipping_charge: parseFloat(shippingCharge),
-      packaging_cost: parseFloat(packagingCost),
-      material_cost: parseFloat(materialCost),
+      packaging_cost: 0, // Removed from form
+      material_cost: 0, // Removed from form
       status: status,
       notes: notes
     };
@@ -772,43 +763,6 @@ const OrderForm = ({ products, settings, initialData }) => {
               }}>
                 ₹{(parseFloat(subtotal) + (parseFloat(shippingCharge) || 0)).toLocaleString('en-IN')}
               </div>
-            </div>
-          </div>
-        </section>
-
-        <div style={{ height: '1px', background: '#E5E7EB', margin: '28px 0' }} />
-
-        {/* Section 4: Cost Tracking */}
-        <section style={{ marginBottom: '40px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div style={{ ...sectionLabelStyle, marginBottom: 0 }}>Cost Tracking</div>
-            <div style={{
-              fontSize: '12px',
-              color: '#6B7280',
-              fontStyle: 'italic'
-            }}>
-              Used to calculate profit. An estimate is fine.
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-            <div>
-              <label style={{ ...sectionLabelStyle, fontSize: '10px' }}>Packaging Cost ₹</label>
-              <input
-                type="number"
-                value={packagingCost}
-                onChange={(e) => setPackagingCost(e.target.value)}
-                style={inputBaseStyle}
-              />
-            </div>
-            <div>
-              <label style={{ ...sectionLabelStyle, fontSize: '10px' }}>Material Cost ₹</label>
-              <input
-                type="number"
-                value={materialCost}
-                onChange={(e) => setMaterialCost(e.target.value)}
-                style={inputBaseStyle}
-              />
             </div>
           </div>
         </section>
