@@ -136,7 +136,14 @@ const ChartCard = ({ title, subtitle, children, loading, empty, icon: Icon, heig
   </div>
 );
 
-const PRODUCT_BAR_COLORS = ['#1B4332', '#2D6A4F', '#40916C', '#52796F', '#92400E', '#D4A017'];
+const PRODUCT_BAR_COLORS = [
+  '#1B4332', // Dark Green
+  '#92400E', // Deep Soil
+  '#2D6A4F', // Forest Green
+  '#BC8A5F', // Clay / Sand
+  '#40916C', // Sage Green
+  '#D4A017', // Ochre / Amber
+];
 
 const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, initialProducts, initialOperations, initialAvgTrend, initialCostTrend }) => {
   const [filter, setFilter] = useState('All Time');
