@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
-  LineChart, Line, CartesianGrid, Legend, Cell, PieChart, Pie, Area, AreaChart
+  LineChart, Line, CartesianGrid, Legend, Cell, PieChart, Pie, Area, AreaChart,
+  ComposedChart
 } from 'recharts';
 import { 
   TrendingUp, TrendingDown, Clock, Package, 
@@ -323,59 +324,58 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
           </div>
         </ChartCard>
 
-        <ChartCard title="Cost vs Selling Price per Soap" subtitle="Monthly trend" loading={isPending} empty={costTrend.length === 0} icon={TrendingUp}>
+        <ChartCard title="Unit Cost vs Sales Volume" subtitle="Economy of scale (Cumulative)" loading={isPending} empty={costTrend.length === 0} icon={TrendingUp}>
           <div style={{ height: '280px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-              <AreaChart data={costTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ComposedChart data={costTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmt(v)}`} />
+                <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmt(v)}`} />
+                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
                 <Tooltip content={<CustomTooltip isCurrency={true} />} />
                 <Legend verticalAlign="bottom" height={36} content={({ payload }) => (
                   <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '12px', color: '#6B7280' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
+                      <div style={{ width: '8px', height: '8px', background: '#F3F4F6', border: '1px solid #E5E7EB' }}></div>
+                      <span>Soaps Sold (Volume)</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '8px', height: '2px', background: '#1B4332' }}></div>
                       <span>Avg Selling Price</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#DC2626' }}></div>
-                      <span>Cost Price</span>
+                      <div style={{ width: '8px', height: '2px', background: '#DC2626' }}></div>
+                      <span>Running Avg Cost</span>
                     </div>
                   </div>
                 )} />
                 
-                {/* Shaded Area between lines */}
-                <defs>
-                  <linearGradient id="colorMargin" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1B4332" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#1B4332" stopOpacity={0.05}/>
-                  </linearGradient>
-                </defs>
+                <Bar yAxisId="right" dataKey="soaps_sold" name="Soaps Sold" fill="#F3F4F6" radius={[4, 4, 0, 0]} barSize={40} />
                 
-                <Area 
+                <Line 
+                  yAxisId="left"
                   type="monotone" 
                   dataKey="avg_selling_price" 
                   stroke="#1B4332" 
                   strokeWidth={2} 
-                  fill="rgba(27,67,50,0.08)" 
                   name="Avg Selling Price"
                   dot={{ r: 4, fill: '#1B4332', stroke: 'none' }}
                 />
-                <Area 
+                <Line 
+                  yAxisId="left"
                   type="monotone" 
                   dataKey="cost_price_per_soap" 
                   stroke="#DC2626" 
                   strokeWidth={2} 
-                  fill="none" 
                   name="Cost Price"
                   dot={{ r: 4, fill: '#DC2626', stroke: 'none' }}
                 />
-              </AreaChart>
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
           <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '12px', fontStyle: 'italic', lineHeight: '1.4', borderTop: '1px solid #F3F4F6', paddingTop: '8px' }}>
-            * Monthly Cost = (Recurring Expenses in Month) ÷ (Soaps Sold in Month)<br/>
-            * Avg Selling Price = (Revenue in Month) ÷ (Soaps Sold in Month)
+            * Running Avg Cost = (Total Recurring Expenses to date) ÷ (Total Soaps Sold to date)<br/>
+            * Bars represent monthly sales volume. As volume grows, the red line should ideally trend downward.
           </div>
           {costTrend.length === 1 && (
             <div style={{ textAlign: 'center', fontSize: '11px', color: '#9CA3AF', marginTop: '8px' }}>
