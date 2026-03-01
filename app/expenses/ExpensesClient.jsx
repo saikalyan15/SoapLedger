@@ -22,6 +22,15 @@ export default function ExpensesClient({ initialExpenses, initialCategories, sum
   const [categories, setCategories] = useState(initialCategories);
   const [isPending, startTransition] = useTransition();
 
+  // Sync state with props when they change (e.g. after revalidatePath)
+  useEffect(() => {
+    setExpenses(initialExpenses);
+  }, [initialExpenses]);
+
+  useEffect(() => {
+    setCategories(initialCategories);
+  }, [initialCategories]);
+
   // UI States
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
