@@ -88,6 +88,42 @@ const OrderDetailsView = ({ order, items }) => {
         </div>
       </div>
 
+      {/* Timeline Row */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '12px', 
+        marginBottom: '40px',
+        fontFamily: '"Plus Jakarta Sans", sans-serif',
+        fontSize: '12px',
+        color: '#6B7280'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
+          <span>Ordered {new Date(order.order_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+        </div>
+        
+        {order.dispatched_at && (
+          <>
+            <div style={{ width: '40px', height: '1px', background: '#E5E7EB' }}></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: order.status === 'Dispatched' || order.status === 'Delivered' ? '#1B4332' : '#E5E7EB' }}></div>
+              <span>Dispatched {new Date(order.dispatched_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+            </div>
+          </>
+        )}
+
+        {order.delivered_at && (
+          <>
+            <div style={{ width: '40px', height: '1px', background: '#E5E7EB' }}></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: order.status === 'Delivered' ? '#1B4332' : '#E5E7EB' }}></div>
+              <span>Delivered {new Date(order.delivered_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+            </div>
+          </>
+        )}
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '40px' }}>
         {/* Left Column */}
         <div>

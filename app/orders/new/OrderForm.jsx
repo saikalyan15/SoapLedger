@@ -34,6 +34,18 @@ const OrderForm = ({ products, settings, initialData }) => {
     ? new Date(initialData.order.order_date).toISOString().split('T')[0]
     : new Date().toISOString().split('T')[0]
   );
+
+  const [dispatchedAt, setDispatchedAt] = useState(
+    initialData?.order?.dispatched_at 
+    ? new Date(initialData.order.dispatched_at).toISOString().split('T')[0]
+    : ''
+  );
+
+  const [deliveredAt, setDeliveredAt] = useState(
+    initialData?.order?.delivered_at 
+    ? new Date(initialData.order.delivered_at).toISOString().split('T')[0]
+    : ''
+  );
   
   const [status, setStatus] = useState(initialData?.order?.status || 'Received');
   
@@ -212,6 +224,8 @@ const OrderForm = ({ products, settings, initialData }) => {
 
     const orderData = {
       order_date: orderDate,
+      dispatched_at: dispatchedAt || null,
+      delivered_at: deliveredAt || null,
       order_value: orderValue,
       shipping_charge: parseFloat(shippingCharge),
       packaging_cost: parseFloat(packagingCost),
@@ -543,13 +557,34 @@ const OrderForm = ({ products, settings, initialData }) => {
 
         {/* Section 2: Order Details */}
         <section style={{ marginBottom: '40px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '20px' }}>
             <div>
               <div style={sectionLabelStyle}>Order Date</div>
               <input
                 type="date"
                 value={orderDate}
                 onChange={(e) => setOrderDate(e.target.value)}
+                style={inputBaseStyle}
+              />
+            </div>
+            <div>
+              <div style={sectionLabelStyle}>Dispatch Date</div>
+              <input
+                type="date"
+                value={dispatchedAt}
+                onChange={(e) => setDispatchedAt(e.target.value)}
+                style={{
+                  ...inputBaseStyle,
+                  borderColor: (status === 'Dispatched' || status === 'Delivered') && !dispatchedAt ? '#F59E0B' : '#E5E7EB'
+                }}
+              />
+            </div>
+            <div>
+              <div style={sectionLabelStyle}>Delivery Date</div>
+              <input
+                type="date"
+                value={deliveredAt}
+                onChange={(e) => setDeliveredAt(e.target.value)}
                 style={inputBaseStyle}
               />
             </div>
@@ -579,6 +614,11 @@ const OrderForm = ({ products, settings, initialData }) => {
               </div>
             </div>
           </div>
+          {(status === 'Dispatched' || status === 'Delivered') && !dispatchedAt && (
+            <div style={{ fontSize: '11px', color: '#B45309', marginTop: '8px' }}>
+              Please add dispatch date when marking as dispatched
+            </div>
+          )}
         </section>
 
         <div style={{ height: '1px', background: '#E5E7EB', margin: '28px 0' }} />

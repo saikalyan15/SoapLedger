@@ -12,7 +12,6 @@ const navItems = [
   { label: 'Orders',        href: '/orders',       icon: ShoppingBag },
   { label: 'Customers',     href: '/customers',    icon: Users },
   { label: 'Products',      href: '/products',     icon: Package },
-  { label: 'Raw Materials', href: '/raw-materials',icon: FlaskConical },
   { label: 'Expenses',      href: '/expenses',     icon: Receipt },
   { label: 'Settings',      href: '/settings',     icon: Settings },
 ]
