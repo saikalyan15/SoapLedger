@@ -189,6 +189,8 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
       threeMonthsAgo.setDate(now.getDate() - 90);
       range.from = threeMonthsAgo.toISOString();
       range.to = now.toISOString();
+    } else if (newFilter === 'All Time') {
+      range = { from: null, to: null };
     }
 
     startTransition(() => {
