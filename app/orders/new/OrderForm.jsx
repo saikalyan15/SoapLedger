@@ -7,6 +7,7 @@ import {
   Search, UserPlus, UserCheck, AlertCircle, Loader2
 } from 'lucide-react';
 import { createOrderAction, updateOrderAction } from '@/lib/actions/orders';
+import StatusBadge from '@/components/StatusBadge';
 
 const OrderForm = ({ products, settings, initialData }) => {
   const router = useRouter();
@@ -65,11 +66,30 @@ const OrderForm = ({ products, settings, initialData }) => {
   const [submitStatus, setSubmitStatus] = useState(null); // 'loading', 'success', 'error'
   const [errorMsg, setErrorMsg] = useState('');
 
+  const [customerOrders, setCustomerOrders] = useState([]);
+  const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
+
   const searchRef = useRef(null);
 
   // --- Calculations ---
   const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.line_total) || 0), 0);
   
+  const fetchCustomerHistory = async (customerId) => {
+    try {
+      const res = await fetch(`/api/customers/${customerId}/orders`);
+      const data = await res.json();
+      setCustomerOrders(data.orders || []);
+    } catch (err) {
+      console.error('Error fetching customer history:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (isEdit && initialData?.order?.customer_id) {
+      fetchCustomerHistory(initialData.order.customer_id);
+    }
+  }, [isEdit, initialData]);
+
   // Auto-calculate shipping if not manually changed (in new mode)
   useEffect(() => {
     if (!isEdit && subtotal > 0) {
@@ -88,7 +108,18 @@ const OrderForm = ({ products, settings, initialData }) => {
 
   // --- Handlers ---
   const handleCustomerSearch = async (query) => {
-    setCustomer(prev => ({ ...prev, name: query, id: null, isExisting: false }));
+    // If name is edited or cleared, reset everything customer-related
+    setCustomer({
+      id: null,
+      name: query,
+      phone: '',
+      address: '',
+      isExisting: false,
+      isNew: false
+    });
+    setCustomerOrders([]);
+    setIsHistoryExpanded(false);
+
     if (query.length >= 2) {
       setIsSearching(true);
       try {
@@ -117,6 +148,7 @@ const OrderForm = ({ products, settings, initialData }) => {
       isNew: false
     });
     setShowDropdown(false);
+    fetchCustomerHistory(c.id);
   };
 
   const startNewCustomer = () => {
@@ -359,21 +391,104 @@ const OrderForm = ({ products, settings, initialData }) => {
           </div>
 
           {/* Customer Feedback Pills */}
-          <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+          <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {customer.isExisting && (
-              <div style={{
-                background: '#D8F3DC',
-                color: '#1B4332',
-                padding: '4px 12px',
-                borderRadius: '20px',
-                fontSize: '13px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <UserCheck size={14} />
-                Returning customer
-              </div>
+              <>
+                <div style={{
+                  background: '#D8F3DC',
+                  color: '#1B4332',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  width: 'fit-content'
+                }}>
+                  <UserCheck size={14} />
+                  Returning customer
+                </div>
+                
+                {customerOrders.length > 0 && (
+                  <div style={{ marginTop: '4px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        fontFamily: '"Plus Jakarta Sans", sans-serif',
+                        fontSize: '12px',
+                        color: '#6B7280'
+                      }}
+                    >
+                      <span>
+                        {customerOrders.length} previous order{customerOrders.length > 1 ? 's' : ''} · ₹{customerOrders.reduce((sum, o) => sum + parseFloat(o.order_value), 0)} total
+                      </span>
+                      <ChevronDown 
+                        size={14} 
+                        style={{ 
+                          transition: 'transform 0.2s', 
+                          transform: isHistoryExpanded ? 'rotate(180deg)' : 'rotate(0)' 
+                        }} 
+                      />
+                    </button>
+                    
+                    {isHistoryExpanded && (
+                      <div style={{
+                        marginTop: '8px',
+                        background: '#FAFAFA',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px',
+                        padding: '12px 16px',
+                      }}>
+                        {customerOrders.map((order, idx) => (
+                          <div key={order.id}>
+                            <div style={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'center',
+                              padding: '8px 0'
+                            }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+                                <div style={{ fontSize: '13px', color: '#6B7280' }}>
+                                  {new Date(order.order_date).toLocaleDateString('en-GB', { 
+                                    day: 'numeric', month: 'short', year: 'numeric' 
+                                  })}
+                                </div>
+                                <div style={{ 
+                                  fontSize: '13px', 
+                                  color: '#1A1A1A',
+                                  maxWidth: '280px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  {order.products}
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>
+                                  ₹{order.order_value}
+                                </div>
+                                <StatusBadge status={order.status} />
+                              </div>
+                            </div>
+                            {idx < customerOrders.length - 1 && (
+                              <div style={{ height: '1px', background: '#F3F4F6' }} />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
             {customer.isNew && (
               <div style={{
@@ -656,22 +771,6 @@ const OrderForm = ({ products, settings, initialData }) => {
               />
             </div>
           </div>
-
-          {/* Profit Pill */}
-          {subtotal > 0 && (
-            <div style={{
-              display: 'inline-flex',
-              padding: '8px 16px',
-              borderRadius: '24px',
-              fontSize: '14px',
-              fontWeight: '600',
-              fontFamily: '"Plus Jakarta Sans", sans-serif',
-              background: profit > 0 ? '#D8F3DC' : profit < 0 ? '#FEE2E2' : '#F3F4F6',
-              color: profit > 0 ? '#1B4332' : profit < 0 ? '#DC2626' : '#6B7280',
-            }}>
-              {profit > 0 ? `Est. Profit ₹${profit}` : profit < 0 ? `Est. Loss ₹${Math.abs(profit)}` : 'Break even'}
-            </div>
-          )}
         </section>
 
         <div style={{ height: '1px', background: '#E5E7EB', margin: '28px 0' }} />

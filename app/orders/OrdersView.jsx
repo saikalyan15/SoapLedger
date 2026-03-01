@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Eye, Pencil, Trash2, Check, X } from 'lucide-react';
+import { Eye, Pencil, Trash2, Check, X, Search } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import StatusBadge from '@/components/StatusBadge';
 import EmptyState from '@/components/EmptyState';
@@ -12,12 +12,17 @@ const statuses = ['All', 'Received', 'Payment Confirmed', 'In Production', 'Disp
 
 const OrdersView = ({ orders }) => {
   const [activeFilter, setActiveFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const filteredOrders = activeFilter === 'All' 
-    ? orders 
-    : orders.filter(o => o.status === activeFilter);
+  const filteredOrders = orders.filter(order => {
+    const matchesStatus = activeFilter === 'All' || order.status === activeFilter;
+    const matchesSearch = 
+      order.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.customer_phone.includes(searchQuery);
+    return matchesStatus && matchesSearch;
+  });
 
   const handleDeleteClick = (id) => {
     setDeletingId(id);
@@ -61,6 +66,47 @@ const OrdersView = ({ orders }) => {
         }
       />
 
+      {/* Search Bar */}
+      <div style={{ position: 'relative', marginBottom: '20px' }}>
+        <input
+          type="text"
+          placeholder="Search by customer name or phone..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '12px 16px 12px 40px',
+            borderRadius: '8px',
+            border: '1px solid #E5E7EB',
+            fontSize: '14px',
+            fontFamily: 'Plus Jakarta Sans, sans-serif',
+            outline: 'none',
+          }}
+        />
+        <Search 
+          size={18} 
+          style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} 
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#9CA3AF',
+              padding: '4px'
+            }}
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+
       {/* Filter Bar */}
       <div style={{ 
         display: 'flex', 
@@ -94,8 +140,8 @@ const OrdersView = ({ orders }) => {
 
       {filteredOrders.length === 0 ? (
         <EmptyState 
-          title="No orders yet"
-          message={activeFilter === 'All' ? "Log your first order from WhatsApp" : `No orders with status ${activeFilter}`} 
+          title="No orders found"
+          message={searchQuery || activeFilter !== 'All' ? "Try adjusting your filters or search terms" : "Log your first order from WhatsApp"} 
         />
       ) : (
         <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '12px', overflow: 'hidden' }}>
