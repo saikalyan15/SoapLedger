@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
-  LineChart, Line, CartesianGrid, Legend, Cell, PieChart, Pie
+  LineChart, Line, CartesianGrid, Legend, Cell, PieChart, Pie, Area, AreaChart
 } from 'recharts';
 import { 
   TrendingUp, TrendingDown, Clock, Package, 
@@ -16,7 +16,8 @@ import {
   getRepeatCustomerRate, 
   getProductPerformance, 
   getOperationsMetrics, 
-  getAvgOrderValueTrend 
+  getAvgOrderValueTrend,
+  getCostPriceTrend
 } from '@/lib/queries/dashboard';
 import StatusBadge from '@/components/StatusBadge';
 
@@ -25,6 +26,12 @@ const fmt = (n, decimals = 0) =>
     minimumFractionDigits: decimals, 
     maximumFractionDigits: decimals 
   });
+
+const fmtDays = (n) => {
+  if (n == null) return '—'
+  const rounded = Math.round(n * 10) / 10
+  return Number.isInteger(rounded) ? `${rounded}` : `${rounded}`
+}
 
 const BASE_COLOURS = {
   'Goat Milk':   '#1B4332',
@@ -54,6 +61,11 @@ const CustomTooltip = ({ active, payload, label, isCurrency, decimals = 0 }) => 
           {p.name}: {isCurrency ? `₹${fmt(p.value, decimals)}` : fmt(p.value, decimals)}
         </p>
       ))}
+      {payload.length === 2 && payload[0].name === 'Avg Selling Price' && payload[1].name === 'Cost Price' && (
+        <p style={{ fontWeight: 600, marginTop: 4, borderTop: '1px solid #EEE', paddingTop: 4 }}>
+          Margin: ₹{fmt(payload[0].value - payload[1].value, 0)}
+        </p>
+      )}
     </div>
   );
 };
@@ -92,7 +104,7 @@ const KPICard = ({ label, value, trend, sub, color, loading, subColor }) => (
   </div>
 );
 
-const ChartCard = ({ title, children, loading, empty, icon: Icon, height = 'auto' }) => (
+const ChartCard = ({ title, subtitle, children, loading, empty, icon: Icon, height = 'auto' }) => (
   <div style={{
     background: '#FFFFFF',
     border: '1px solid #E5E7EB',
@@ -101,9 +113,15 @@ const ChartCard = ({ title, children, loading, empty, icon: Icon, height = 'auto
     position: 'relative',
     height: height
   }}>
-    <h3 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '18px', color: '#1B4332', margin: '0 0 20px 0' }}>
+    <h3 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '18px', color: '#1B4332', margin: '0' }}>
       {title}
     </h3>
+    {subtitle && (
+      <p style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '12px', color: '#9CA3AF', margin: '4px 0 20px 0' }}>
+        {subtitle}
+      </p>
+    )}
+    {!subtitle && <div style={{ height: '20px' }} />}
     {loading && (
       <div style={{ position: 'absolute', inset: '60px 0 0 0', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
         <Loader2 size={32} className="animate-spin" color="#1B4332" />
@@ -118,7 +136,9 @@ const ChartCard = ({ title, children, loading, empty, icon: Icon, height = 'auto
   </div>
 );
 
-const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, initialProducts, initialOperations, initialAvgTrend }) => {
+const PRODUCT_BAR_COLORS = ['#1B4332', '#2D6A4F', '#40916C', '#52796F', '#92400E', '#D4A017'];
+
+const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, initialProducts, initialOperations, initialAvgTrend, initialCostTrend }) => {
   const [filter, setFilter] = useState('All Time');
   const [isPending, startTransition] = useTransition();
   
@@ -128,15 +148,17 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
   const [products, setProducts] = useState(initialProducts);
   const [operations, setOperations] = useState(initialOperations);
   const [avgTrend, setAvgTrend] = useState(initialAvgTrend);
+  const [costTrend, setCostTrend] = useState(initialCostTrend);
 
   const fetchFilteredData = async (range) => {
-    const [rev, mon, cust, prod, oper, trend] = await Promise.all([
+    const [rev, mon, cust, prod, oper, trend, cTrend] = await Promise.all([
       getRevenueKPIs(range),
       getMonthlyRevenue(range),
       getRepeatCustomerRate(range),
       getProductPerformance(range),
       getOperationsMetrics(range),
       getAvgOrderValueTrend(range),
+      getCostPriceTrend(range),
     ]);
     setRevenue(rev);
     setMonthly(mon);
@@ -144,6 +166,7 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
     setProducts(prod);
     setOperations(oper);
     setAvgTrend(trend);
+    setCostTrend(cTrend);
   };
 
   const handleFilterChange = (newFilter) => {
@@ -165,6 +188,11 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
       fetchFilteredData(range);
     });
   };
+
+  const totalRevenue = products.revenue_by_base.reduce((sum, b) => sum + parseFloat(b.revenue || 0), 0);
+  const pieData = products.revenue_by_base
+    .map(d => ({ ...d, revenue: parseFloat(d.revenue || 0) }))
+    .filter(d => d.revenue > 0);
 
   return (
     <div style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', maxWidth: '1400px', margin: '0 auto' }}>
@@ -203,7 +231,7 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
       {/* Row 1: KPI Cards */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(5, 1fr)', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
         gap: '24px', 
         marginBottom: '32px' 
       }}>
@@ -231,6 +259,13 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
           loading={isPending}
         />
         <KPICard 
+          label="Cost Price Per Soap" 
+          value={revenue.cost_price_per_soap > 0 ? `₹${fmt(revenue.cost_price_per_soap)}` : "—"} 
+          sub="Recurring spend ÷ soaps sold" 
+          color="#6B21A8"
+          loading={isPending}
+        />
+        <KPICard 
           label="Repeat Rate" 
           value={`${fmt(customers.repeat_rate, 1)}%`} 
           sub={`${fmt(customers.repeat_customers)} of ${fmt(customers.total_customers)} customers`} 
@@ -247,125 +282,171 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
         />
       </div>
 
-      {/* Row 2: Revenue & Volume */}
-      <div style={{ display: 'grid', gridTemplateColumns: '6fr 4fr', gap: '24px', marginBottom: '32px' }}>
+      {/* Row 2: Charts Side by Side */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
         <ChartCard title="Revenue by Month" loading={isPending} empty={monthly.length === 0} icon={DollarSign}>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={monthly} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} animationDuration={600}>
+            <BarChart data={monthly} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
               <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmt(v)}`} />
               <Tooltip content={<CustomTooltip isCurrency={true} />} />
-              <Bar dataKey="revenue" fill="#1B4332" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="revenue" name="Revenue" fill="#1B4332" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Order Trends" loading={isPending} empty={avgTrend.length === 0} icon={TrendingUp}>
+        <ChartCard title="Cost vs Selling Price per Soap" subtitle="Monthly trend" loading={isPending} empty={costTrend.length === 0} icon={TrendingUp}>
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={avgTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} animationDuration={600}>
+            <AreaChart data={costTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
               <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-              <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-              <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmt(v)}`} />
-              <Tooltip content={<CustomTooltip decimals={0} />} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmt(v)}`} />
+              <Tooltip content={<CustomTooltip isCurrency={true} />} />
               <Legend verticalAlign="bottom" height={36} content={({ payload }) => (
                 <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '12px', color: '#6B7280' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
-                    <span>Orders</span>
+                    <span>Avg Selling Price</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D4A017' }}></div>
-                    <span>Avg Order Value</span>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#DC2626' }}></div>
+                    <span>Cost Price</span>
                   </div>
                 </div>
               )} />
-              <Line yAxisId="left" type="monotone" dataKey="order_count" name="Orders" stroke="#1B4332" strokeWidth={2} dot={{ r: 4, fill: '#1B4332' }} />
-              <Line yAxisId="right" type="monotone" dataKey="avg_order_value" name="Avg Value" stroke="#D4A017" strokeDasharray="5 5" strokeWidth={2} dot={{ r: 4, fill: '#D4A017' }} />
-            </LineChart>
+              
+              {/* Shaded Area between lines */}
+              <defs>
+                <linearGradient id="colorMargin" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#1B4332" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#1B4332" stopOpacity={0.05}/>
+                </linearGradient>
+              </defs>
+              
+              <Area 
+                type="monotone" 
+                dataKey="avg_selling_price" 
+                stroke="#1B4332" 
+                strokeWidth={2} 
+                fill="rgba(27,67,50,0.08)" 
+                name="Avg Selling Price"
+                dot={{ r: 4, fill: '#1B4332', stroke: 'none' }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="cost_price_per_soap" 
+                stroke="#DC2626" 
+                strokeWidth={2} 
+                fill="none" 
+                name="Cost Price"
+                dot={{ r: 4, fill: '#DC2626', stroke: 'none' }}
+              />
+            </AreaChart>
           </ResponsiveContainer>
+          {costTrend.length === 1 && (
+            <div style={{ textAlign: 'center', fontSize: '11px', color: '#9CA3AF', marginTop: '8px' }}>
+              More data next month
+            </div>
+          )}
         </ChartCard>
       </div>
 
-      {/* Row 3: Customers & Bases */}
+      {/* Row 3: Product Performance */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
-        <ChartCard title="Customer Loyalty by Month" loading={isPending} empty={customers.new_vs_returning_by_month.length === 0} icon={Users}>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={customers.new_vs_returning_by_month} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} animationDuration={600}>
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend verticalAlign="bottom" height={36} />
-              <Bar dataKey="new_customers" name="New" stackId="a" fill="#D4A017" stroke="#92400E" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="returning_customers" name="Returning" stackId="a" fill="#D8F3DC" stroke="#1B4332" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        <ChartCard title="Revenue by Base Type" loading={isPending} empty={products.revenue_by_base.length === 0} icon={Package}>
-          <div style={{ position: 'relative', height: '280px' }}>
+        <ChartCard title="Revenue by Base Type" loading={isPending} empty={pieData.length === 0} icon={Package}>
+          <div style={{ position: 'relative', height: '240px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart animationDuration={600}>
+              <PieChart>
                 <Pie
-                  data={products.revenue_by_base}
+                  data={pieData}
                   dataKey="revenue"
                   nameKey="base_type"
                   cx="50%"
                   cy="50%"
-                  innerRadius={70}
-                  outerRadius={110}
-                  paddingAngle={3}
+                  innerRadius={65}
+                  outerRadius={100}
+                  paddingAngle={2}
+                  startAngle={90}
+                  endAngle={-270}
                 >
-                  {products.revenue_by_base.map((entry) => (
-                    <Cell key={entry.base_type} fill={BASE_COLOURS[entry.base_type] || BASE_COLOURS.Other} />
+                  {pieData.map((entry) => (
+                    <Cell
+                      key={entry.base_type}
+                      fill={BASE_COLOURS[entry.base_type] || '#9CA3AF'}
+                      stroke="none"
+                    />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`₹${fmt(value)}`, 'Revenue']} />
+                <Tooltip
+                  formatter={(value) => [`₹${Number(value).toLocaleString('en-IN')}`, 'Revenue']}
+                  contentStyle={{
+                    background: '#fff',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '8px',
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    fontSize: '13px',
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
-            
-            {/* Center Label */}
-            {!isPending && products.revenue_by_base.length > 0 && (
+
+            {/* Center label — absolutely positioned */}
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              pointerEvents: 'none',
+            }}>
               <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                textAlign: 'center',
-                pointerEvents: 'none'
+                fontFamily: 'DM Serif Display, serif',
+                fontSize: '20px',
+                color: '#1B4332',
+                lineHeight: 1.2,
               }}>
-                <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: '22px', color: '#1B4332', lineHeight: 1 }}>
-                  ₹{fmt(products.revenue_by_base.reduce((sum, b) => sum + parseFloat(b.revenue), 0))}
-                </div>
-                <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>
-                  Total
-                </div>
+                ₹{totalRevenue.toLocaleString('en-IN')}
               </div>
-            )}
+              <div style={{
+                fontFamily: 'Plus Jakarta Sans, sans-serif',
+                fontSize: '11px',
+                color: '#6B7280',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+              }}>
+                Total
+              </div>
+            </div>
           </div>
 
-          {/* Manual Legend */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 24px', marginTop: '20px', justifyContent: 'center' }}>
-            {products.revenue_by_base.map((entry, index) => (
-              <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '140px' }}>
-                <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: BASE_COLOURS[entry.base_type] || BASE_COLOURS.Other }}></div>
-                <span style={{ fontSize: '12px', color: '#374151', flex: 1 }}>{entry.base_type}</span>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#1A1A1A' }}>₹{fmt(entry.revenue)}</span>
+          {/* Manual legend below chart */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '16px', justifyContent: 'center' }}>
+            {pieData.map(entry => (
+              <div key={entry.base_type} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{
+                  width: '10px', height: '10px',
+                  borderRadius: '2px',
+                  background: BASE_COLOURS[entry.base_type] || '#9CA3AF',
+                  flexShrink: 0,
+                }} />
+                <span style={{ fontFamily: 'Plus Jakarta Sans', fontSize: '12px', color: '#6B7280' }}>
+                  {entry.base_type}
+                </span>
+                <span style={{ fontFamily: 'Plus Jakarta Sans', fontSize: '12px', fontWeight: 600, color: '#1A1A1A' }}>
+                  ₹{Number(entry.revenue).toLocaleString('en-IN')}
+                </span>
               </div>
             ))}
           </div>
         </ChartCard>
-      </div>
 
-      {/* Row 4: Products */}
-      <div style={{ display: 'grid', gridTemplateColumns: '6fr 4fr', gap: '24px', marginBottom: '32px' }}>
         <ChartCard title="Top Products by Units Sold" loading={isPending} empty={products.top_products.length === 0} icon={Package}>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart 
               layout="vertical" 
               data={products.top_products} 
-              margin={{ top: 5, right: 60, left: 20, bottom: 5 }}
-              animationDuration={600}
+              margin={{ top: 5, right: 80, left: 20, bottom: 5 }}
             >
               <XAxis type="number" hide />
               <YAxis 
@@ -377,53 +458,69 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
                 width={100}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="units_sold" name="Units" fill="#1B4332" radius={[0, 4, 4, 0]} label={{ position: 'right', formatter: (v) => `${fmt(v)} units` }} />
+              <Bar 
+                dataKey="units_sold" 
+                name="Units" 
+                radius={[0, 4, 4, 0]} 
+                label={(props) => {
+                  const { x, y, width, value, payload } = props;
+                  if (!payload || value === 0) return null;
+                  return (
+                    <text 
+                      x={x + width + 8} 
+                      y={y + 12} 
+                      fill="#6B7280" 
+                      fontSize={11} 
+                      fontFamily="Plus Jakarta Sans"
+                      dominantBaseline="middle"
+                    >
+                      {`${fmt(value)} units · ₹${fmt(payload.revenue)}`}
+                    </text>
+                  );
+                }}
+              >
+                {products.top_products.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={PRODUCT_BAR_COLORS[index % PRODUCT_BAR_COLORS.length]} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
+      </div>
 
-        <ChartCard title="Sales Breakdown" loading={isPending}>
-          <div style={{ maxHeight: '320px', overflowY: 'auto', border: '1px solid #F3F4F6', borderRadius: '8px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead style={{ position: 'sticky', top: 0, background: '#FFFFFF', zIndex: 10 }}>
-                <tr style={{ textAlign: 'left', borderBottom: '1px solid #E5E7EB', color: '#6B7280' }}>
-                  <th style={thStyle}>Product</th>
-                  <th style={thStyle}>Base Type</th>
-                  <th style={{ ...thStyle, textAlign: 'right' }}>Units</th>
-                  <th style={{ ...thStyle, textAlign: 'right' }}>Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.all_product_stats.map((p, i) => (
-                  <tr key={i} style={{ 
-                    borderBottom: '1px solid #F3F4F6',
-                    background: i === 0 && p.units_sold > 0 ? '#FAFDF9' : p.units_sold === 0 ? '#FFFBEB' : (i % 2 === 0 ? '#FFFFFF' : '#FAFAFA'),
-                    borderLeft: i === 0 && p.units_sold > 0 ? '3px solid #1B4332' : 'none'
-                  }}>
-                    <td style={tdStyle}>
-                      <div style={{ fontWeight: '600', color: p.units_sold === 0 ? '#9CA3AF' : '#1A1A1A' }}>{p.name}</div>
-                    </td>
-                    <td style={{ ...tdStyle, color: '#6B7280' }}>{p.base_type}</td>
-                    <td style={{ ...tdStyle, textAlign: 'right' }}>
-                      {p.units_sold === 0 ? (
-                        <span style={{ fontSize: '10px', background: '#FEF3C7', color: '#92400E', padding: '2px 6px', borderRadius: '4px', fontWeight: '600', whiteSpace: 'nowrap' }}>No sales</span>
-                      ) : fmt(p.units_sold)}
-                    </td>
-                    <td style={{ ...tdStyle, textAlign: 'right', fontWeight: '600', color: p.units_sold === 0 ? '#9CA3AF' : '#1A1A1A' }}>₹{fmt(p.revenue)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {/* Row 4: Customer Loyalty */}
+      <div style={{ marginBottom: '32px' }}>
+        <ChartCard title="Customer Loyalty by Month" loading={isPending} empty={customers.new_vs_returning_by_month.length === 0} icon={Users}>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={customers.new_vs_returning_by_month} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend verticalAlign="bottom" height={36} content={({ payload }) => (
+                <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '12px', color: '#6B7280' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D4A017' }}></div>
+                    <span>New</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
+                    <span>Returning</span>
+                  </div>
+                </div>
+              )} />
+              <Bar dataKey="new_customers" name="New" stackId="a" fill="#D4A017" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="returning_customers" name="Returning" stackId="a" fill="#1B4332" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </ChartCard>
       </div>
 
       {/* Row 5: Operations */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '8px' }}>
         {[
-          { title: 'Order to Dispatch', value: `${fmt(operations.avg_processing_days, 1)} days`, sub: 'Average from order date to dispatch', color: '#1B4332' },
-          { title: 'Dispatch to Delivery', value: `${fmt(operations.avg_dispatch_to_delivery, 1)} days`, sub: 'Average from dispatch to delivery', color: '#0F766E' },
-          { title: 'Soaps per Dispatch', value: `${fmt(operations.avg_soaps_per_batch, 1)} soaps`, sub: 'Average units per dispatch day', color: '#D4A017' },
+          { title: 'Order to Dispatch', value: `${fmtDays(operations.avg_processing_days)} days`, sub: 'Average from order date to dispatch', color: '#1B4332' },
+          { title: 'Dispatch to Delivery', value: `${fmtDays(operations.avg_dispatch_to_delivery)} days`, sub: 'Average from dispatch to delivery', color: '#0F766E' },
+          { title: 'Soaps per Dispatch', value: `${operations.avg_soaps_per_batch ? Math.ceil(operations.avg_soaps_per_batch) : '—'} soaps`, sub: 'Average units per dispatch day', color: '#D4A017' },
         ].map((op, i) => (
           <div key={i} style={{ 
             background: '#FFFFFF', 
@@ -440,6 +537,9 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
             <div style={{ fontSize: '13px', color: '#6B7280' }}>{op.sub}</div>
           </div>
         ))}
+      </div>
+      <div style={{ fontSize: '11px', color: '#9CA3AF', fontStyle: 'italic', marginBottom: '32px', fontFamily: 'Plus Jakarta Sans' }}>
+        * Based on estimated dispatch dates for historical orders
       </div>
 
       {/* Row 6: Aging Orders Alert */}
@@ -515,21 +615,6 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
       </div>
     </div>
   );
-};
-
-const thStyle = {
-  padding: '10px 12px',
-  fontSize: '11px',
-  textTransform: 'uppercase',
-  letterSpacing: '0.06em',
-  color: '#6B7280',
-  fontWeight: '600',
-  fontFamily: 'Plus Jakarta Sans, sans-serif'
-};
-
-const tdStyle = {
-  padding: '10px 12px',
-  fontFamily: 'Plus Jakarta Sans, sans-serif'
 };
 
 export default DashboardClient;

@@ -1,20 +1,18 @@
-import { getExpenses, getCategories, getExpenseSummary } from '@/lib/queries/expenses';
-import ExpensesClient from './ExpensesClient';
+import ExpensesClient from './ExpensesClient'
+import { getCategories, getExpenses, getExpenseSummary } from '@/lib/queries/expenses'
 
 export default async function ExpensesPage() {
-  const [expenses, categories, summary] = await Promise.all([
-    getExpenses(),
+  const [categories, expenses, summary] = await Promise.all([
     getCategories(),
-    getExpenseSummary()
-  ]);
-
+    getExpenses(),
+    getExpenseSummary(),
+  ])
+  
   return (
-    <div style={{ padding: '40px' }}>
-      <ExpensesClient 
-        initialExpenses={expenses} 
-        initialCategories={categories} 
-        initialSummary={summary} 
-      />
-    </div>
-  );
+    <ExpensesClient
+      initialCategories={categories}
+      initialExpenses={expenses}
+      summary={summary}
+    />
+  )
 }
