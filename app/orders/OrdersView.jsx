@@ -10,11 +10,17 @@ import { deleteOrderAction } from '@/lib/actions/orders';
 
 const statuses = ['All', 'Received', 'Payment Confirmed', 'In Production', 'Dispatched', 'Delivered', 'Cancelled'];
 
-const OrdersView = ({ orders }) => {
+const OrdersView = ({ orders: initialOrders }) => {
+  const [orders, setOrders] = useState(initialOrders);
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Sync state with props when they change
+  React.useEffect(() => {
+    setOrders(initialOrders);
+  }, [initialOrders]);
 
   const filteredOrders = orders.filter(order => {
     const matchesStatus = activeFilter === 'All' || order.status === activeFilter;

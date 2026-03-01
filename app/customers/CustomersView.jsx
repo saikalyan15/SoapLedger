@@ -6,12 +6,18 @@ import { addCustomerAction, editCustomerAction, deleteCustomerAction } from '@/l
 import PageHeader from '@/components/PageHeader';
 import EmptyState from '@/components/EmptyState';
 
-const CustomersView = ({ customers, stats }) => {
+const CustomersView = ({ customers: initialCustomers, stats }) => {
+  const [customers, setCustomers] = useState(initialCustomers);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+
+  // Sync state with props when they change
+  React.useEffect(() => {
+    setCustomers(initialCustomers);
+  }, [initialCustomers]);
 
   const handleAddClick = () => {
     setEditingCustomer(null);
