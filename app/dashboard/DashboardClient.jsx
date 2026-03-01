@@ -181,14 +181,16 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
     const now = new Date();
     let range = { from: null, to: null };
 
+    const toYMD = (d) => d.toISOString().split('T')[0];
+
     if (newFilter === 'This Month') {
-      range.from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      range.to = now.toISOString();
+      range.from = toYMD(new Date(now.getFullYear(), now.getMonth(), 1));
+      range.to = toYMD(now);
     } else if (newFilter === 'Last 3 Months') {
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setDate(now.getDate() - 90);
-      range.from = threeMonthsAgo.toISOString();
-      range.to = now.toISOString();
+      range.from = toYMD(threeMonthsAgo);
+      range.to = toYMD(now);
     } else if (newFilter === 'All Time') {
       range = { from: null, to: null };
     }
