@@ -770,7 +770,7 @@ const OrderForm = ({ products, settings, initialData }) => {
                 fontSize: '24px', 
                 color: '#1B4332' 
               }}>
-                ₹{subtotal}
+                ₹{(parseFloat(subtotal) + (parseFloat(shippingCharge) || 0)).toLocaleString('en-IN')}
               </div>
             </div>
           </div>

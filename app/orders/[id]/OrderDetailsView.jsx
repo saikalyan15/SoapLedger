@@ -189,20 +189,24 @@ const OrderDetailsView = ({ order, items }) => {
 
         {/* Right Column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Shipping Card */}
+          {/* Billing Summary */}
           <div style={cardStyle}>
-            <div style={sectionLabelStyle}>Shipping Info</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontWeight: '600', fontSize: '18px' }}>₹{order.shipping_charge}</div>
-              <div style={{ 
-                fontSize: '12px', 
-                padding: '4px 10px', 
-                borderRadius: '12px',
-                background: order.shipping_charge > 0 ? '#FFF7ED' : '#F0FDF4',
-                color: order.shipping_charge > 0 ? '#9A3412' : '#166534',
-                fontWeight: '600'
-              }}>
-                {order.shipping_charge > 0 ? 'Paid Shipping' : 'Free Shipping'}
+            <div style={sectionLabelStyle}>Billing Summary</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={summaryRowStyle}>
+                <span style={{ color: '#6B7280' }}>Subtotal</span>
+                <span style={{ fontWeight: '600' }}>₹{order.revenue}</span>
+              </div>
+              <div style={summaryRowStyle}>
+                <span style={{ color: '#6B7280' }}>Shipping</span>
+                <span style={{ fontWeight: '600' }}>₹{order.shipping_charge}</span>
+              </div>
+              <div style={{ height: '1px', background: '#F3F4F6', margin: '4px 0' }}></div>
+              <div style={{ ...summaryRowStyle, fontSize: '18px', marginBottom: 0 }}>
+                <span style={{ fontWeight: '700', color: '#111827' }}>Total</span>
+                <span style={{ fontWeight: '800', color: '#1B4332' }}>
+                  ₹{(parseFloat(order.revenue) + parseFloat(order.shipping_charge)).toLocaleString('en-IN')}
+                </span>
               </div>
             </div>
           </div>

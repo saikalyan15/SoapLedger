@@ -175,7 +175,9 @@ const OrdersView = ({ orders: initialOrders }) => {
                     <div style={{ fontSize: '12px', color: '#6B7280' }}>{order.customer_phone}</div>
                   </td>
                   <td style={tdStyle}>
-                    <div style={{ fontWeight: '700', color: '#1B4332' }}>₹{order.revenue}</div>
+                    <div style={{ fontWeight: '700', color: '#1B4332' }}>
+                      ₹{(parseFloat(order.revenue) + parseFloat(order.shipping_charge)).toLocaleString('en-IN')}
+                    </div>
                   </td>
                   <td style={tdStyle}>₹{order.shipping_charge}</td>
                   <td style={tdStyle}>
