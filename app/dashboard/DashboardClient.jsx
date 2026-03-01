@@ -292,65 +292,73 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
       {/* Row 2: Charts Side by Side */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
         <ChartCard title="Revenue by Month" loading={isPending} empty={monthly.length === 0} icon={DollarSign}>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={monthly} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmt(v)}`} />
-              <Tooltip content={<CustomTooltip isCurrency={true} />} />
-              <Bar dataKey="revenue" name="Revenue" fill="#1B4332" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div style={{ height: '280px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <BarChart data={monthly} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmt(v)}`} />
+                <Tooltip content={<CustomTooltip isCurrency={true} />} />
+                <Bar dataKey="revenue" name="Revenue" fill="#1B4332" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </ChartCard>
 
         <ChartCard title="Cost vs Selling Price per Soap" subtitle="Monthly trend" loading={isPending} empty={costTrend.length === 0} icon={TrendingUp}>
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={costTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmt(v)}`} />
-              <Tooltip content={<CustomTooltip isCurrency={true} />} />
-              <Legend verticalAlign="bottom" height={36} content={({ payload }) => (
-                <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '12px', color: '#6B7280' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
-                    <span>Avg Selling Price</span>
+          <div style={{ height: '280px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <AreaChart data={costTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmt(v)}`} />
+                <Tooltip content={<CustomTooltip isCurrency={true} />} />
+                <Legend verticalAlign="bottom" height={36} content={({ payload }) => (
+                  <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '12px', color: '#6B7280' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
+                      <span>Avg Selling Price</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#DC2626' }}></div>
+                      <span>Cost Price</span>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#DC2626' }}></div>
-                    <span>Cost Price</span>
-                  </div>
-                </div>
-              )} />
-              
-              {/* Shaded Area between lines */}
-              <defs>
-                <linearGradient id="colorMargin" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#1B4332" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#1B4332" stopOpacity={0.05}/>
-                </linearGradient>
-              </defs>
-              
-              <Area 
-                type="monotone" 
-                dataKey="avg_selling_price" 
-                stroke="#1B4332" 
-                strokeWidth={2} 
-                fill="rgba(27,67,50,0.08)" 
-                name="Avg Selling Price"
-                dot={{ r: 4, fill: '#1B4332', stroke: 'none' }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="cost_price_per_soap" 
-                stroke="#DC2626" 
-                strokeWidth={2} 
-                fill="none" 
-                name="Cost Price"
-                dot={{ r: 4, fill: '#DC2626', stroke: 'none' }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+                )} />
+                
+                {/* Shaded Area between lines */}
+                <defs>
+                  <linearGradient id="colorMargin" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#1B4332" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#1B4332" stopOpacity={0.05}/>
+                  </linearGradient>
+                </defs>
+                
+                <Area 
+                  type="monotone" 
+                  dataKey="avg_selling_price" 
+                  stroke="#1B4332" 
+                  strokeWidth={2} 
+                  fill="rgba(27,67,50,0.08)" 
+                  name="Avg Selling Price"
+                  dot={{ r: 4, fill: '#1B4332', stroke: 'none' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="cost_price_per_soap" 
+                  stroke="#DC2626" 
+                  strokeWidth={2} 
+                  fill="none" 
+                  name="Cost Price"
+                  dot={{ r: 4, fill: '#DC2626', stroke: 'none' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '12px', fontStyle: 'italic', lineHeight: '1.4', borderTop: '1px solid #F3F4F6', paddingTop: '8px' }}>
+            * Monthly Cost = (Recurring Expenses in Month) ÷ (Soaps Sold in Month)<br/>
+            * Avg Selling Price = (Revenue in Month) ÷ (Soaps Sold in Month)
+          </div>
           {costTrend.length === 1 && (
             <div style={{ textAlign: 'center', fontSize: '11px', color: '#9CA3AF', marginTop: '8px' }}>
               More data next month
@@ -363,7 +371,7 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
         <ChartCard title="Revenue by Base Type" loading={isPending} empty={pieData.length === 0} icon={Package}>
           <div style={{ position: 'relative', height: '240px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <PieChart>
                 <Pie
                   data={pieData}
@@ -449,76 +457,80 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
         </ChartCard>
 
         <ChartCard title="Top Products by Units Sold" loading={isPending} empty={products.top_products.length === 0} icon={Package}>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart 
-              layout="vertical" 
-              data={products.top_products} 
-              margin={{ top: 5, right: 80, left: 20, bottom: 5 }}
-            >
-              <XAxis type="number" hide />
-              <YAxis 
-                type="category" 
-                dataKey="name" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fontSize: 12, fill: '#1A1A1A', fontWeight: 500 }}
-                width={100}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar 
-                dataKey="units_sold" 
-                name="Units" 
-                radius={[0, 4, 4, 0]} 
-                label={(props) => {
-                  const { x, y, width, value, payload } = props;
-                  if (!payload || value === 0) return null;
-                  return (
-                    <text 
-                      x={x + width + 8} 
-                      y={y + 12} 
-                      fill="#6B7280" 
-                      fontSize={11} 
-                      fontFamily="Plus Jakarta Sans"
-                      dominantBaseline="middle"
-                    >
-                      {`${fmt(value)} units · ₹${fmt(payload.revenue)}`}
-                    </text>
-                  );
-                }}
+          <div style={{ height: '280px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <BarChart 
+                layout="vertical" 
+                data={products.top_products} 
+                margin={{ top: 5, right: 80, left: 20, bottom: 5 }}
               >
-                {products.top_products.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={PRODUCT_BAR_COLORS[index % PRODUCT_BAR_COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+                <XAxis type="number" hide />
+                <YAxis 
+                  type="category" 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 12, fill: '#1A1A1A', fontWeight: 500 }}
+                  width={100}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar 
+                  dataKey="units_sold" 
+                  name="Units" 
+                  radius={[0, 4, 4, 0]} 
+                  label={(props) => {
+                    const { x, y, width, value, payload } = props;
+                    if (!payload || value === 0) return null;
+                    return (
+                      <text 
+                        x={x + width + 8} 
+                        y={y + 12} 
+                        fill="#6B7280" 
+                        fontSize={11} 
+                        fontFamily="Plus Jakarta Sans"
+                        dominantBaseline="middle"
+                      >
+                        {`${fmt(value)} units · ₹${fmt(payload.revenue)}`}
+                      </text>
+                    );
+                  }}
+                >
+                  {products.top_products.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={PRODUCT_BAR_COLORS[index % PRODUCT_BAR_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </ChartCard>
       </div>
 
       {/* Row 4: Customer Loyalty */}
       <div style={{ marginBottom: '32px' }}>
         <ChartCard title="Customer Loyalty by Month" loading={isPending} empty={customers.new_vs_returning_by_month.length === 0} icon={Users}>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={customers.new_vs_returning_by_month} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend verticalAlign="bottom" height={36} content={({ payload }) => (
-                <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '12px', color: '#6B7280' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D4A017' }}></div>
-                    <span>New</span>
+          <div style={{ height: '280px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <BarChart data={customers.new_vs_returning_by_month} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend verticalAlign="bottom" height={36} content={({ payload }) => (
+                  <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '12px', color: '#6B7280' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D4A017' }}></div>
+                      <span>New</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
+                      <span>Returning</span>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
-                    <span>Returning</span>
-                  </div>
-                </div>
-              )} />
-              <Bar dataKey="new_customers" name="New" stackId="a" fill="#D4A017" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="returning_customers" name="Returning" stackId="a" fill="#1B4332" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+                )} />
+                <Bar dataKey="new_customers" name="New" stackId="a" fill="#D4A017" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="returning_customers" name="Returning" stackId="a" fill="#1B4332" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </ChartCard>
       </div>
 
