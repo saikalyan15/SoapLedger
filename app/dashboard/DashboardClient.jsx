@@ -262,6 +262,13 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
           loading={isPending}
         />
         <KPICard 
+          label="Soaps Sold" 
+          value={fmt(revenue.total_soaps_sold)} 
+          sub="Dispatched + Delivered" 
+          color="#1B4332"
+          loading={isPending}
+        />
+        <KPICard 
           label="Avg Order Value" 
           value={`₹${fmt(revenue.avg_order_value)}`} 
           trend={revenue.aov_trend} 
@@ -289,6 +296,13 @@ const DashboardClient = ({ initialRevenue, initialMonthly, initialCustomers, ini
           sub={revenue.pending_revenue > 0 ? "Awaiting dispatch" : "All clear"} 
           subColor={revenue.pending_revenue > 0 ? null : "#1B4332"}
           color="#D4A017"
+          loading={isPending}
+        />
+        <KPICard 
+          label="Pending Soaps" 
+          value={fmt(revenue.pending_soaps)} 
+          sub={revenue.pending_soaps > 0 ? "To be produced" : "Queue empty"} 
+          color="#92400E"
           loading={isPending}
         />
       </div>
