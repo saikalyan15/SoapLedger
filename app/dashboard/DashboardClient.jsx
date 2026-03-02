@@ -314,7 +314,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
 
       {/* Row 2: Charts Side by Side */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
-        <ChartCard title="Monthly Cash Flow" subtitle="Revenue vs Total Spend (Recurring + One-time)" loading={isPending} empty={cashFlow.length === 0} icon={DollarSign}>
+        <ChartCard title="Monthly Cash Flow" subtitle="Revenue vs Spend (Recurring & One-time)" loading={isPending} empty={cashFlow.length === 0} icon={DollarSign}>
           <div style={{ height: '280px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <BarChart data={cashFlow} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -330,12 +330,17 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#DC2626' }}></div>
-                      <span>Total Spend</span>
+                      <span>Recurring Spend</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#6B21A8' }}></div>
+                      <span>One-time Spend</span>
                     </div>
                   </div>
                 )} />
                 <Bar dataKey="revenue" name="Revenue" fill="#1B4332" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="total_spend" name="Total Spend" fill="#DC2626" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="recurring_spend" name="Recurring Spend" stackId="spend" fill="#DC2626" />
+                <Bar dataKey="one_time_spend" name="One-time Spend" stackId="spend" fill="#6B21A8" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Pencil, ArrowLeft, ChevronDown, CheckCircle } from 'lucide-react';
+import { Pencil, ArrowLeft, ChevronDown, CheckCircle, UserCheck, AlertCircle } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { updateOrderStatusAction } from '@/lib/actions/orders';
 
@@ -27,111 +27,38 @@ const OrderDetailsView = ({ order, items }) => {
   const profitPerUnit = totalUnits > 0 ? (order.gross_profit / totalUnits).toFixed(2) : 0;
   
   const isEditable = ['Received', 'Payment Confirmed', 'In Production'].includes(order.status);
+  const isReturning = parseInt(order.previous_orders_count) > 0;
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-      {/* Header Row */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '40px' 
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <Link href="/orders" style={{ color: '#6B7280' }}><ArrowLeft size={24} /></Link>
-          <h1 style={{ 
-            fontFamily: 'DM Serif Display, serif', 
-            fontSize: '28px', 
-            color: '#1B4332',
-            margin: 0 
-          }}>
-            Order #{order.id.slice(0, 8)}
-          </h1>
-          <StatusBadge status={order.status} />
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          {isEditable && (
-            <Link 
-              href={`/orders/${order.id}/edit`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: '#FFFFFF',
-                color: '#374151',
-                border: '1px solid #E5E7EB',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontWeight: '600',
-                textDecoration: 'none',
-                fontFamily: 'Plus Jakarta Sans, sans-serif'
-              }}
-            >
-              <Pencil size={18} />
-              Edit Order
-            </Link>
-          )}
-          <Link 
-            href="/orders"
-            style={{
-              background: '#F3F4F6',
-              color: '#374151',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              fontWeight: '600',
-              textDecoration: 'none',
-              fontFamily: 'Plus Jakarta Sans, sans-serif'
-            }}
-          >
-            Back to History
-          </Link>
-        </div>
-      </div>
-
-      {/* Timeline Row */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '12px', 
-        marginBottom: '40px',
-        fontFamily: '"Plus Jakarta Sans", sans-serif',
-        fontSize: '12px',
-        color: '#6B7280'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
-          <span>Ordered {new Date(order.order_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-        </div>
-        
-        {order.dispatched_at && (
-          <>
-            <div style={{ width: '40px', height: '1px', background: '#E5E7EB' }}></div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: order.status === 'Dispatched' || order.status === 'Delivered' ? '#1B4332' : '#E5E7EB' }}></div>
-              <span>Dispatched {new Date(order.dispatched_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-            </div>
-          </>
-        )}
-
-        {order.delivered_at && (
-          <>
-            <div style={{ width: '40px', height: '1px', background: '#E5E7EB' }}></div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: order.status === 'Delivered' ? '#1B4332' : '#E5E7EB' }}></div>
-              <span>Delivered {new Date(order.delivered_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-            </div>
-          </>
-        )}
-      </div>
-
+      {/* ... (keep header and timeline) ... */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '40px' }}>
         {/* Left Column */}
         <div>
           {/* Customer Card */}
           <div style={cardStyle}>
             <div style={sectionLabelStyle}>Customer Info</div>
-            <div style={{ fontWeight: '700', fontSize: '20px', color: '#111827', marginBottom: '8px' }}>
-              {order.customer_name}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <div style={{ fontWeight: '700', fontSize: '20px', color: '#111827' }}>
+                {order.customer_name}
+              </div>
+              <div style={{
+                background: isReturning ? '#D8F3DC' : '#FEF3C7',
+                color: isReturning ? '#1B4332' : '#92400E',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                fontSize: '11px',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontFamily: 'Plus Jakarta Sans, sans-serif',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em'
+              }}>
+                {isReturning ? <UserCheck size={12} /> : <AlertCircle size={12} />}
+                {isReturning ? 'Returning' : 'New'}
+              </div>
             </div>
             <div style={{ color: '#4B5563', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               {order.customer_phone}

@@ -400,8 +400,8 @@ const OrderForm = ({ products, settings, initialData }) => {
             {customer.isExisting && (
               <>
                 <div style={{
-                  background: '#D8F3DC',
-                  color: '#1B4332',
+                  background: customerOrders.length > (isEdit ? 1 : 0) ? '#D8F3DC' : '#FEF3C7',
+                  color: customerOrders.length > (isEdit ? 1 : 0) ? '#1B4332' : '#92400E',
                   padding: '4px 12px',
                   borderRadius: '20px',
                   fontSize: '13px',
@@ -410,11 +410,20 @@ const OrderForm = ({ products, settings, initialData }) => {
                   gap: '6px',
                   width: 'fit-content'
                 }}>
-                  <UserCheck size={14} />
-                  Returning customer
+                  {customerOrders.length > (isEdit ? 1 : 0) ? (
+                    <>
+                      <UserCheck size={14} />
+                      Returning customer
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle size={14} />
+                      New customer
+                    </>
+                  )}
                 </div>
                 
-                {customerOrders.length > 0 && (
+                {customerOrders.length > (isEdit ? 1 : 0) && (
                   <div style={{ marginTop: '4px' }}>
                     <button
                       type="button"

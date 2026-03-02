@@ -176,7 +176,20 @@ const OrdersView = ({ orders: initialOrders }) => {
                     })}
                   </td>
                   <td style={tdStyle}>
-                    <div style={{ fontWeight: '600', color: '#111827' }}>{order.customer_name}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ fontWeight: '600', color: '#111827' }}>{order.customer_name}</div>
+                      <span style={{ 
+                        fontSize: '9px', 
+                        fontWeight: '800', 
+                        padding: '1px 6px', 
+                        borderRadius: '4px',
+                        textTransform: 'uppercase',
+                        background: order.is_returning ? '#D8F3DC' : '#FEF3C7',
+                        color: order.is_returning ? '#1B4332' : '#92400E'
+                      }}>
+                        {order.is_returning ? 'Returning' : 'New'}
+                      </span>
+                    </div>
                     <div style={{ fontSize: '12px', color: '#6B7280' }}>{order.customer_phone}</div>
                   </td>
                   <td style={tdStyle}>
