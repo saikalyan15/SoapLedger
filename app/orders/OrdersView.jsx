@@ -224,21 +224,35 @@ const OrdersView = ({ orders }) => {
           )}
         </div>
       ) : (
-        /* Desktop Table View */
+        /* Desktop Table View — scrollable container */
         <div 
-          className="orders-table"
-          style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E5E7EB', overflow: 'hidden' }}
+          className="orders-table-container"
+          style={{ 
+            background: '#FFFFFF', 
+            borderRadius: '12px', 
+            border: '1px solid #E5E7EB', 
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch'
+          }}
         >
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table 
+            className="orders-table"
+            style={{ 
+              width: '100%', 
+              borderCollapse: 'collapse',
+              minWidth: '860px',
+              tableLayout: 'fixed'
+            }}
+          >
             <thead>
               <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
-                <th style={thStyle}>Order ID</th>
-                <th style={thStyle}>Date</th>
-                <th style={thStyle}>Customer</th>
-                <th style={thStyle}>Items</th>
-                <th style={thStyle}>Total</th>
-                <th style={thStyle}>Status</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
+                <th style={{ ...thStyle, width: '100px' }}>Order ID</th>
+                <th style={{ ...thStyle, width: '100px' }}>Date</th>
+                <th style={{ ...thStyle, width: '180px' }}>Customer</th>
+                <th style={{ ...thStyle }}>Items</th>
+                <th style={{ ...thStyle, width: '100px' }}>Total</th>
+                <th style={{ ...thStyle, width: '120px' }}>Status</th>
+                <th style={{ ...thStyle, width: '120px', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -280,10 +294,10 @@ const OrdersView = ({ orders }) => {
                     <td style={{ ...tdStyle, fontWeight: '700', color: '#111827' }}>
                       ₹{Math.round(Number(order.revenue || 0)).toLocaleString('en-IN')}
                     </td>
-                    <td style={tdStyle}>
-                      <StatusBadge status={order.status} />
+                    <td style={{ ...tdStyle, minWidth: '100px' }}>
+                      <StatusBadge status={order.status} short />
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'right' }}>
+                    <td style={{ ...tdStyle, width: '80px', textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                         <Link href={`/orders/${order.id}`} style={actionButtonStyle} title="View Details">
                           <Eye size={18} />
