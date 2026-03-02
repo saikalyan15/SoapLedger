@@ -240,13 +240,17 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
       </div>
       <div style={{ height: '2px', background: '#E5E7EB', marginBottom: '32px' }} />
 
-      {/* Row 1: KPI Cards */}
+      {/* Row 1: KPI Cards (Logical 3x3 Grid) */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+        gridTemplateColumns: 'repeat(3, 1fr)', 
         gap: '24px', 
         marginBottom: '32px' 
       }}>
+        {/* Group 1: Sales Volume */}
+        <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '-8px' }}>
+          Sales Volume
+        </div>
         <KPICard 
           label="Total Revenue" 
           value={`₹${fmt(revenue.total_revenue)}`} 
@@ -268,6 +272,11 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
           color="#1B4332"
           loading={isPending}
         />
+
+        {/* Group 2: Customer Growth */}
+        <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '-8px', marginTop: '12px' }}>
+          Customer Growth
+        </div>
         <KPICard 
           label="Repeat Rate" 
           value={`${fmt(customers.repeat_rate, 1)}%`} 
@@ -286,9 +295,14 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
           label="Avg Order Value" 
           value={`₹${fmt(revenue.avg_order_value)}`} 
           sub="Revenue per order" 
-          color="#6B21A8"
+          color="#0F766E"
           loading={isPending}
         />
+
+        {/* Group 3: Operations & Pipeline */}
+        <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '-8px', marginTop: '12px' }}>
+          Operations & Pipeline
+        </div>
         <KPICard 
           label="Cost Price Per Soap" 
           value={revenue.cost_price_per_soap > 0 ? `₹${fmt(revenue.cost_price_per_soap)}` : "—"} 
@@ -300,14 +314,14 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
           label="Pending Revenue" 
           value={`₹${fmt(revenue.pending_revenue || 0)}`} 
           sub="Orders being processed" 
-          color="#D4A017"
+          color="#6B21A8"
           loading={isPending}
         />
         <KPICard 
           label="Pending Soaps" 
           value={fmt(revenue.pending_soaps)} 
           sub="Units to be produced" 
-          color="#D4A017"
+          color="#6B21A8"
           loading={isPending}
         />
       </div>
