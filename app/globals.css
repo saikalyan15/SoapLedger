@@ -169,3 +169,34 @@
     gap: 24px !important;
   }
 }
+
+/* Global Mobile Fixes — Part 2 */
+
+@media (max-width: 767px) {
+  /* mobile only — prevent iOS input zoom globally */
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  input[type="email"],
+  input[type="tel"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Prevent horizontal scroll on body */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Better tap targets */
+  button, a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Comfortable padding for mobile content */
+  .page-content {
+    padding: 16px !important;
+  }
+}

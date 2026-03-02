@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 import { addCustomerAction, editCustomerAction, deleteCustomerAction } from '@/lib/actions/customers';
 import PageHeader from '@/components/PageHeader';
@@ -13,9 +13,18 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [isMobile, setIsMobile] = useState(false); /* mobile only */
+
+  // Detect Mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Sync state with props when they change
-  React.useEffect(() => {
+  useEffect(() => {
     setCustomers(initialCustomers);
   }, [initialCustomers]);
 
@@ -79,7 +88,7 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
   };
 
   return (
-    <div style={{ padding: '40px' }}>
+    <div style={{ padding: isMobile ? '16px' : '40px' }} className="page-content">
       <PageHeader 
         title="Customers" 
         subtitle="Your soap buyers" 
@@ -97,24 +106,27 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
               fontFamily: 'Plus Jakarta Sans, sans-serif'
             }}
           >
-            + Add Customer
+            + Add
           </button>
         }
       />
 
       {/* Summary Stats */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(3, 1fr)', 
-        gap: '20px', 
-        marginBottom: '40px' 
-      }}>
+      <div 
+        className="kpi-grid"
+        style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(3, 1fr)', 
+          gap: '20px', 
+          marginBottom: '40px' 
+        }}
+      >
         {[
           { label: 'Total Customers', value: stats.totalCustomers },
           { label: 'Repeat Customers', value: stats.repeatCustomers },
           { label: 'New This Month', value: stats.newThisMonth }
         ].map((stat, i) => (
-          <div key={i} style={{
+          <div key={i} className="kpi-card" style={{
             background: '#FFFFFF',
             border: '1px solid #E5E7EB',
             borderRadius: '12px',
@@ -128,9 +140,9 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
               marginBottom: '4px',
               fontFamily: 'Plus Jakarta Sans, sans-serif'
             }}>
-              {stat.label}
+              {isMobile ? stat.label.split(' ')[0] : stat.label}
             </div>
-            <div style={{
+            <div className="kpi-value" style={{
               fontSize: '24px',
               fontWeight: '700',
               color: '#1B4332',
@@ -144,13 +156,16 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
 
       {/* Inline Form */}
       {isFormOpen && (
-        <div style={{
-          background: '#F9FAFB',
-          border: '1px solid #E5E7EB',
-          borderRadius: '12px',
-          padding: '24px',
-          marginBottom: '40px',
-        }}>
+        <div 
+          className="customer-form"
+          style={{
+            background: '#F9FAFB',
+            border: '1px solid #E5E7EB',
+            borderRadius: '12px',
+            padding: '24px',
+            marginBottom: '40px',
+          }}
+        >
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
@@ -174,7 +189,10 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+            <div 
+              className="form-row-2col"
+              style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}
+            >
               <div>
                 <label style={labelStyle}>Name *</label>
                 <input 
@@ -203,7 +221,7 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
                 name="address" 
                 rows={3} 
                 defaultValue={editingCustomer?.address || ''} 
-                placeholder="Add later when ready to dispatch"
+                placeholder="Full delivery address"
                 style={inputStyle}
               />
             </div>
@@ -240,13 +258,15 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
                   fontFamily: 'Plus Jakarta Sans, sans-serif',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '8px',
+                  flex: isMobile ? 1 : 'none',
+                  justifyContent: 'center'
                 }}
               >
                 {isSubmitting ? 'Saving...' : (
                   <>
                     <Check size={18} />
-                    {editingCustomer ? 'Update Customer' : 'Save Customer'}
+                    {editingCustomer ? 'Update' : 'Save'}
                   </>
                 )}
               </button>
@@ -261,7 +281,8 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
                   borderRadius: '8px',
                   fontWeight: '600',
                   cursor: 'pointer',
-                  fontFamily: 'Plus Jakarta Sans, sans-serif'
+                  fontFamily: 'Plus Jakarta Sans, sans-serif',
+                  flex: isMobile ? 1 : 'none'
                 }}
               >
                 Cancel
@@ -271,128 +292,168 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
         </div>
       )}
 
-      {/* Customers Table */}
+      {/* Customers List Content */}
       {customers.length === 0 ? (
         <EmptyState 
           title="No customers yet"
           message="They'll appear here once you log your first order" 
         />
       ) : (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '12px', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
-                <th style={thStyle}>Name</th>
-                <th style={thStyle}>Phone</th>
-                <th style={thStyle}>Address</th>
-                <th style={thStyle}>Orders</th>
-                <th style={thStyle}>Joined</th>
-                <th style={thStyle}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customers.map((customer) => (
-                <tr key={customer.id} style={{ borderBottom: '1px solid #E5E7EB' }}>
-                  <td style={tdStyle}>
-                    <div style={{ fontWeight: '600', color: '#111827' }}>{customer.name}</div>
-                  </td>
-                  <td style={tdStyle}>{customer.phone}</td>
-                  <td style={tdStyle}>
-                    <div style={{ 
-                      maxWidth: '200px', 
-                      overflow: 'hidden', 
-                      textOverflow: 'ellipsis', 
-                      whiteSpace: 'nowrap',
-                      color: '#6B7280',
-                      fontSize: '13px'
-                    }}>
-                      {customer.address || '-'}
-                    </div>
-                  </td>
-                  <td style={tdStyle}>
-                    <span style={{ 
-                      background: '#F3F4F6', 
-                      padding: '2px 8px', 
-                      borderRadius: '12px', 
-                      fontSize: '12px',
-                      fontWeight: '600'
-                    }}>
-                      {customer.order_count}
-                    </span>
-                  </td>
-                  <td style={tdStyle}>
-                    {new Date(customer.created_at).toLocaleDateString('en-GB', { 
-                      day: 'numeric', month: 'short', year: 'numeric' 
-                    })}
-                  </td>
-                  <td style={tdStyle}>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        onClick={() => handleEditClick(customer)}
-                        style={{
-                          background: 'none',
-                          border: '1px solid #E5E7EB',
-                          borderRadius: '6px',
-                          padding: '6px',
-                          cursor: 'pointer',
-                          color: '#4B5563'
-                        }}
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      
-                      {parseInt(customer.order_count) === 0 ? (
-                        deletingId === customer.id ? (
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '4px',
-                            background: '#F9FAFB',
-                            padding: '2px 8px',
-                            borderRadius: '6px',
-                            border: '1px solid #E5E7EB'
-                          }}>
-                            <span style={{ fontSize: '11px', fontWeight: '600' }}>Sure?</span>
-                            <button 
-                              onClick={() => handleConfirmDelete(customer.id)}
-                              style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer' }}
-                            >
-                              <Check size={16} />
-                            </button>
-                            <button 
-                              onClick={handleCancelDelete}
-                              style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer' }}
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        ) : (
-                          <button 
-                            onClick={() => handleDeleteClick(customer.id)}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              borderRadius: '6px',
-                              padding: '6px',
-                              cursor: 'pointer',
-                              color: '#9CA3AF'
-                            }}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )
-                      ) : (
-                        <span style={{ fontSize: '11px', color: '#9CA3AF', alignSelf: 'center' }}>
-                          Has orders
-                        </span>
-                      )}
-                    </div>
-                  </td>
+        <>
+          {/* Desktop Table View */}
+          <div 
+            className="customers-table"
+            style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '12px', overflow: 'hidden' }}
+          >
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+                  <th style={thStyle}>Name</th>
+                  <th style={thStyle}>Phone</th>
+                  <th style={thStyle}>Address</th>
+                  <th style={thStyle}>Orders</th>
+                  <th style={thStyle}>Joined</th>
+                  <th style={thStyle}>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {customers.map((customer) => (
+                  <tr key={customer.id} style={{ borderBottom: '1px solid #E5E7EB' }}>
+                    <td style={tdStyle}>
+                      <div style={{ fontWeight: '600', color: '#111827' }}>{customer.name}</div>
+                    </td>
+                    <td style={tdStyle}>{customer.phone}</td>
+                    <td style={tdStyle}>
+                      <div style={{ 
+                        maxWidth: '200px', 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap',
+                        color: '#6B7280',
+                        fontSize: '13px'
+                      }}>
+                        {customer.address || '-'}
+                      </div>
+                    </td>
+                    <td style={tdStyle}>
+                      <span style={{ 
+                        background: '#F3F4F6', 
+                        padding: '2px 8px', 
+                        borderRadius: '12px', 
+                        fontSize: '12px',
+                        fontWeight: '600'
+                      }}>
+                        {customer.order_count}
+                      </span>
+                    </td>
+                    <td style={tdStyle}>
+                      {new Date(customer.created_at).toLocaleDateString('en-GB', { 
+                        day: 'numeric', month: 'short', year: 'numeric' 
+                      })}
+                    </td>
+                    <td style={tdStyle}>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={() => handleEditClick(customer)}
+                          style={actionButtonStyle}
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        
+                        {parseInt(customer.order_count) === 0 ? (
+                          deletingId === customer.id ? (
+                            <div style={deleteConfirmStyle}>
+                              <span style={{ fontSize: '11px', fontWeight: '600' }}>Sure?</span>
+                              <button 
+                                onClick={() => handleConfirmDelete(customer.id)}
+                                style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer' }}
+                              >
+                                <Check size={16} />
+                              </button>
+                              <button 
+                                onClick={handleCancelDelete}
+                                style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer' }}
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button 
+                              onClick={() => handleDeleteClick(customer.id)}
+                              style={{ ...actionButtonStyle, border: 'none', color: '#9CA3AF' }}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )
+                        ) : (
+                          <span style={{ fontSize: '11px', color: '#9CA3AF', alignSelf: 'center' }}>
+                            Has orders
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="customers-card-list">
+            {customers.map((customer) => (
+              <div key={customer.id} style={{
+                background: '#FFFFFF',
+                border: '1px solid #E5E7EB',
+                borderRadius: '12px',
+                padding: '16px',
+              }}>
+                {/* Name + order count */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 600 }}>{customer.name}</div>
+                  <div style={{
+                    background: '#D8F3DC',
+                    color: '#1B4332',
+                    borderRadius: '12px',
+                    padding: '2px 10px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                  }}>
+                    {customer.order_count} orders
+                  </div>
+                </div>
+                {/* Phone */}
+                <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '6px' }}>
+                  📱 {customer.phone}
+                </div>
+                {/* Address if present */}
+                {customer.address && (
+                  <div style={{ fontSize: '12px', color: '#9CA3AF', marginBottom: '10px' }}>
+                    {customer.address.substring(0, 80)}{customer.address.length > 80 ? '...' : ''}
+                  </div>
+                )}
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: '8px', paddingTop: '10px', borderTop: '1px solid #F3F4F6' }}>
+                  <button 
+                    onClick={() => handleEditClick(customer)}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      background: '#FFFFFF',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: '#1B4332',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -434,6 +495,25 @@ const tdStyle = {
   fontSize: '14px',
   fontFamily: 'Plus Jakarta Sans, sans-serif',
   color: '#374151'
+};
+
+const actionButtonStyle = {
+  background: 'none',
+  border: '1px solid #E5E7EB',
+  borderRadius: '6px',
+  padding: '6px',
+  cursor: 'pointer',
+  color: '#4B5563'
+};
+
+const deleteConfirmStyle = { 
+  display: 'flex', 
+  alignItems: 'center', 
+  gap: '4px',
+  background: '#F9FAFB',
+  padding: '2px 8px',
+  borderRadius: '6px',
+  border: '1px solid #E5E7EB'
 };
 
 export default CustomersView;

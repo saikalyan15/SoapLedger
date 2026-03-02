@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Eye, Pencil, Trash2, Check, X, Search, Plus } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
@@ -11,6 +11,15 @@ import { ORDER_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
 const OrdersView = ({ orders }) => {
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
+  const [isMobile, setIsMobile] = useState(false); /* mobile only */
+
+  // Detect Mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleDelete = async (id) => {
     if (confirm('Are you sure you want to delete this order?')) {
@@ -62,11 +71,18 @@ const OrdersView = ({ orders }) => {
         marginBottom: '24px',
         padding: '20px'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div 
+          className="orders-filter-row"
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}
+        >
+          <div 
+            className="status-filter-bar"
+            style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}
+          >
             {['All', ...ORDER_STATUSES].map(s => (
               <button
                 key={s}
+                className="filter-pill"
                 onClick={() => setFilter(s)}
                 style={{
                   padding: '6px 16px',
@@ -84,7 +100,10 @@ const OrdersView = ({ orders }) => {
               </button>
             ))}
           </div>
-          <div style={{ position: 'relative', width: '300px' }}>
+          <div 
+            className="orders-search"
+            style={{ position: 'relative', width: '300px' }}
+          >
             <input
               type="text"
               placeholder="Search orders..."
@@ -104,7 +123,11 @@ const OrdersView = ({ orders }) => {
         </div>
       </div>
 
-      <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+      {/* Desktop Table View */}
+      <div 
+        className="orders-table"
+        style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E5E7EB', overflow: 'hidden' }}
+      >
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
@@ -193,6 +216,95 @@ const OrdersView = ({ orders }) => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card List View */}
+      <div className="orders-card-list">
+        {filteredOrders.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280', background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
+            No orders found
+          </div>
+        ) : (
+          filteredOrders.map((order) => {
+            const dateObj = new Date(order.order_date);
+            const formattedDate = dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+            
+            // Extract first product and count for mobile summary
+            const productsList = order.products?.split(', ') || [];
+            const firstProduct = productsList[0] || 'No items';
+            const additionalCount = productsList.length - 1;
+
+            return (
+              <div key={order.id} style={{
+                background: '#FFFFFF',
+                border: '1px solid #E5E7EB',
+                borderRadius: '12px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}>
+                {/* Row 1: Customer name + Status badge */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{
+                      fontFamily: 'Plus Jakarta Sans, sans-serif',
+                      fontSize: '15px',
+                      fontWeight: 600,
+                      color: '#1A1A1A',
+                    }}>{order.customer_name}</div>
+                    <div style={{
+                      fontFamily: 'Plus Jakarta Sans, sans-serif',
+                      fontSize: '12px',
+                      color: '#6B7280',
+                      marginTop: '2px',
+                    }}>{order.customer_phone}</div>
+                  </div>
+                  <StatusBadge status={order.status} />
+                </div>
+
+                {/* Row 2: Products summary */}
+                <div style={{
+                  fontFamily: 'Plus Jakarta Sans, sans-serif',
+                  fontSize: '13px',
+                  color: '#4B5563',
+                }}>
+                  {firstProduct}{additionalCount > 0 ? ` +${additionalCount} more` : ''}
+                </div>
+
+                {/* Row 3: Date + Amount + Actions */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingTop: '8px',
+                  borderTop: '1px solid #F3F4F6',
+                }}>
+                  <div style={{
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    fontSize: '12px',
+                    color: '#9CA3AF',
+                  }}>{formattedDate}</div>
+                  <div style={{
+                    fontFamily: 'DM Serif Display, serif',
+                    fontSize: '16px',
+                    color: '#1B4332',
+                  }}>₹{Number(order.revenue || 0).toLocaleString('en-IN')}</div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <Link href={`/orders/${order.id}`}>
+                      <Eye size={16} color="#1B4332" />
+                    </Link>
+                    {EDITABLE_STATUSES.includes(order.status) && (
+                      <Link href={`/orders/${order.id}/edit`}>
+                        <Pencil size={16} color="#6B7280" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

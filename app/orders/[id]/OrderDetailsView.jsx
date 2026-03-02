@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Pencil, ArrowLeft, ChevronDown, CheckCircle, UserCheck, AlertCircle } from 'lucide-react';
@@ -12,6 +12,15 @@ const OrderDetailsView = ({ order, items }) => {
   const router = useRouter();
   const [newStatus, setNewStatus] = useState(order.status);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isMobile, setIsMobile] = useState(false); /* mobile only */
+
+  // Detect Mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const isEditable = EDITABLE_STATUSES.includes(order.status);
   const isReturning = parseInt(order.previous_orders_count) > 0;
@@ -40,17 +49,20 @@ const OrderDetailsView = ({ order, items }) => {
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
       {/* Header Row */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '40px' 
-      }}>
+      <div 
+        className="order-detail-header"
+        style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '40px' 
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <Link href="/orders" style={{ color: '#6B7280' }}><ArrowLeft size={24} /></Link>
           <h1 style={{ 
             fontFamily: 'DM Serif Display, serif', 
-            fontSize: '28px', 
+            fontSize: isMobile ? '24px' : '28px', 
             color: '#1B4332',
             margin: 0 
           }}>
@@ -77,7 +89,7 @@ const OrderDetailsView = ({ order, items }) => {
               }}
             >
               <Pencil size={18} />
-              Edit Order
+              {!isMobile && 'Edit Order'}
             </Link>
           )}
           <Link 
@@ -92,21 +104,24 @@ const OrderDetailsView = ({ order, items }) => {
               fontFamily: 'Plus Jakarta Sans, sans-serif'
             }}
           >
-            Back to History
+            {isMobile ? 'Back' : 'Back to History'}
           </Link>
         </div>
       </div>
 
-      {/* Timeline Row */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '12px', 
-        marginBottom: '40px',
-        fontFamily: '"Plus Jakarta Sans", sans-serif',
-        fontSize: '12px',
-        color: '#6B7280'
-      }}>
+      {/* Timeline Row (Top Summary) */}
+      <div 
+        className="order-timeline"
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '12px', 
+          marginBottom: '40px',
+          fontFamily: '"Plus Jakarta Sans", sans-serif',
+          fontSize: '12px',
+          color: '#6B7280'
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
           <span>Ordered {new Date(order.order_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
@@ -114,7 +129,7 @@ const OrderDetailsView = ({ order, items }) => {
         
         {order.dispatched_at && (
           <>
-            <div style={{ width: '40px', height: '1px', background: '#E5E7EB' }}></div>
+            <div className="timeline-connector" style={{ width: '40px', height: '1px', background: '#E5E7EB' }}></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
               <span>Dispatched {new Date(order.dispatched_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
@@ -124,7 +139,7 @@ const OrderDetailsView = ({ order, items }) => {
 
         {order.delivered_at && (
           <>
-            <div style={{ width: '40px', height: '1px', background: '#E5E7EB' }}></div>
+            <div className="timeline-connector" style={{ width: '40px', height: '1px', background: '#E5E7EB' }}></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
               <span>Delivered {new Date(order.delivered_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
@@ -133,14 +148,17 @@ const OrderDetailsView = ({ order, items }) => {
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '40px' }}>
+      <div 
+        className="order-detail-grid"
+        style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '40px' }}
+      >
         {/* Left Column */}
         <div>
           {/* Customer Card */}
           <div style={cardStyle}>
             <div style={sectionLabelStyle}>Customer Info</div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <div style={{ fontWeight: '700', fontSize: '20px', color: '#111827' }}>
+              <div style={{ fontWeight: '700', fontSize: isMobile ? '18px' : '20px', color: '#111827' }}>
                 {order.customer_name}
               </div>
               <div style={{
@@ -180,7 +198,9 @@ const OrderDetailsView = ({ order, items }) => {
           {/* Items Card */}
           <div style={cardStyle}>
             <div style={sectionLabelStyle}>Order Items</div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            
+            {/* Desktop Items Table */}
+            <table className="line-items-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
                   <th style={{ ...thStyle, paddingLeft: 0 }}>Product</th>
@@ -206,27 +226,62 @@ const OrderDetailsView = ({ order, items }) => {
               </tbody>
             </table>
 
+            {/* Mobile Items Cards */}
+            <div className="line-items-cards">
+              {items.map((item) => (
+                <div key={item.id} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 0',
+                  borderBottom: '1px solid #F3F4F6',
+                }}>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{item.product_name}</div>
+                    <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                      {item.quantity} × ₹{Number(item.unit_price).toLocaleString()}
+                    </div>
+                  </div>
+                  <div style={{
+                    fontFamily: 'DM Serif Display, serif',
+                    fontSize: '16px',
+                    color: '#1B4332',
+                  }}>
+                    ₹{Number(item.line_total).toLocaleString('en-IN')}
+                  </div>
+                </div>
+              ))}
+            </div>
+
             {/* Summary Lines */}
             <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'flex-end' }}>
-              <div style={summaryLineStyle}>
+              <div style={summaryLineStyle} className="w-full">
                 <span>Subtotal</span>
                 <span style={{ fontWeight: '600' }}>₹{subtotal.toLocaleString()}</span>
               </div>
               {(shipping > 0 || Number(order.packaging_cost) > 0) && (
-                <div style={summaryLineStyle}>
-                  <span>Charges (Shipping + Pack)</span>
+                <div style={summaryLineStyle} className="w-full">
+                  <span>Charges</span>
                   <span style={{ fontWeight: '600' }}>₹{(shipping + Number(order.packaging_cost)).toLocaleString()}</span>
                 </div>
               )}
               {discount > 0 && (
-                <div style={summaryLineStyle}>
+                <div style={summaryLineStyle} className="w-full">
                   <span>Discount</span>
                   <span style={{ fontWeight: '600', color: '#DC2626' }}>-₹{discount.toLocaleString()}</span>
                 </div>
               )}
-              <div style={{ ...summaryLineStyle, borderTop: '1px solid #F3F4F6', paddingTop: '12px', marginTop: '4px' }}>
-                <span style={{ fontWeight: '700', fontSize: '16px', color: '#111827' }}>Order Total</span>
-                <span style={{ fontWeight: '800', fontSize: '24px', color: '#1B4332' }}>₹{revenue.toLocaleString()}</span>
+              <div 
+                style={{ 
+                  ...summaryLineStyle, 
+                  borderTop: '1px solid #F3F4F6', 
+                  paddingTop: '12px', 
+                  marginTop: '4px',
+                  width: isMobile ? '100%' : '240px'
+                }} 
+              >
+                <span style={{ fontWeight: '700', fontSize: '16px', color: '#111827' }}>Total</span>
+                <span style={{ fontWeight: '800', fontSize: isMobile ? '20px' : '24px', color: '#1B4332' }}>₹{revenue.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -236,7 +291,10 @@ const OrderDetailsView = ({ order, items }) => {
         <div>
           <div style={cardStyle}>
             <div style={sectionLabelStyle}>Update Status</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div 
+              className="status-update-row"
+              style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+            >
               <div style={{ position: 'relative' }}>
                 <select 
                   value={newStatus}
@@ -370,7 +428,8 @@ const tdStyle = {
 const summaryLineStyle = {
   display: 'flex',
   justifyContent: 'space-between',
-  width: '240px',
+  width: '100%',
+  maxWidth: '240px',
   fontSize: '14px',
   color: '#4B5563',
   fontFamily: 'Plus Jakarta Sans, sans-serif'
