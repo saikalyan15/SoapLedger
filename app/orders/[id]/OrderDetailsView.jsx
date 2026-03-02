@@ -12,9 +12,9 @@ const OrderDetailsView = ({ order, items }) => {
   const router = useRouter();
   const [newStatus, setNewStatus] = useState(order.status);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [isMobile, setIsMobile] = useState(false); /* mobile only */
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Detect Mobile
+  // Detect Mobile — React State approach
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -23,13 +23,11 @@ const OrderDetailsView = ({ order, items }) => {
   }, []);
 
   const isEditable = EDITABLE_STATUSES.includes(order.status);
-  const isReturning = parseInt(order.previous_orders_count) > 0;
 
   // Calculate fields not stored directly in DB
   const subtotal = items.reduce((sum, item) => sum + (Number(item.line_total) || 0), 0);
   const revenue = Number(order.revenue) || 0;
   const shipping = Number(order.shipping_charge) || 0;
-  // discount = subtotal + shipping - revenue
   const discount = Math.max(0, subtotal + shipping - revenue);
 
   const handleUpdateStatus = async () => {
@@ -150,7 +148,7 @@ const OrderDetailsView = ({ order, items }) => {
 
       <div 
         className="order-detail-grid"
-        style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '40px' }}
+        style={{ display: isMobile ? 'flex' : 'grid', flexDirection: 'column', gridTemplateColumns: '1fr 340px', gap: '40px' }}
       >
         {/* Left Column */}
         <div>
@@ -199,59 +197,61 @@ const OrderDetailsView = ({ order, items }) => {
           <div style={cardStyle}>
             <div style={sectionLabelStyle}>Order Items</div>
             
-            {/* Desktop Items Table */}
-            <table className="line-items-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
-                  <th style={{ ...thStyle, paddingLeft: 0 }}>Product</th>
-                  <th style={{ ...thStyle, textAlign: 'center' }}>Qty</th>
-                  <th style={{ ...thStyle, textAlign: 'right' }}>Price</th>
-                  <th style={{ ...thStyle, textAlign: 'right', paddingRight: 0 }}>Total</th>
-                </tr>
-              </thead>
-              <tbody>
+            {isMobile ? (
+              /* Mobile Items Cards */
+              <div className="line-items-cards">
                 {items.map((item) => (
-                  <tr key={item.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
-                    <td style={{ ...tdStyle, paddingLeft: 0 }}>
-                      <div style={{ fontWeight: '600', color: '#111827' }}>{item.product_name}</div>
-                      <div style={{ fontSize: '12px', color: '#6B7280' }}>{item.base_type}</div>
-                    </td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>{item.quantity}</td>
-                    <td style={{ ...tdStyle, textAlign: 'right' }}>₹{Number(item.unit_price).toLocaleString()}</td>
-                    <td style={{ ...tdStyle, textAlign: 'right', fontWeight: '600', color: '#111827', paddingRight: 0 }}>
-                      ₹{Number(item.line_total).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Mobile Items Cards */}
-            <div className="line-items-cards">
-              {items.map((item) => (
-                <div key={item.id} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '12px 0',
-                  borderBottom: '1px solid #F3F4F6',
-                }}>
-                  <div>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{item.product_name}</div>
-                    <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                      {item.quantity} × ₹{Number(item.unit_price).toLocaleString()}
+                  <div key={item.id} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px 0',
+                    borderBottom: '1px solid #F3F4F6',
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{item.product_name}</div>
+                      <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                        {item.quantity} × ₹{Number(item.unit_price).toLocaleString()}
+                      </div>
+                    </div>
+                    <div style={{
+                      fontFamily: 'DM Serif Display, serif',
+                      fontSize: '16px',
+                      color: '#1B4332',
+                    }}>
+                      ₹{Number(item.line_total).toLocaleString('en-IN')}
                     </div>
                   </div>
-                  <div style={{
-                    fontFamily: 'DM Serif Display, serif',
-                    fontSize: '16px',
-                    color: '#1B4332',
-                  }}>
-                    ₹{Number(item.line_total).toLocaleString('en-IN')}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              /* Desktop Items Table */
+              <table className="line-items-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
+                    <th style={{ ...thStyle, paddingLeft: 0 }}>Product</th>
+                    <th style={{ ...thStyle, textAlign: 'center' }}>Qty</th>
+                    <th style={{ ...thStyle, textAlign: 'right' }}>Price</th>
+                    <th style={{ ...thStyle, textAlign: 'right', paddingRight: 0 }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => (
+                    <tr key={item.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
+                      <td style={{ ...tdStyle, paddingLeft: 0 }}>
+                        <div style={{ fontWeight: '600', color: '#111827' }}>{item.product_name}</div>
+                        <div style={{ fontSize: '12px', color: '#6B7280' }}>{item.base_type}</div>
+                      </td>
+                      <td style={{ ...tdStyle, textAlign: 'center' }}>{item.quantity}</td>
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>₹{Number(item.unit_price).toLocaleString()}</td>
+                      <td style={{ ...tdStyle, textAlign: 'right', fontWeight: '600', color: '#111827', paddingRight: 0 }}>
+                        ₹{Number(item.line_total).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
 
             {/* Summary Lines */}
             <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'flex-end' }}>
