@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, PlusCircle, ShoppingBag, Users,
-  Package, FlaskConical, Receipt, Settings
+  Package, FlaskConical, Receipt, Settings, X
 } from 'lucide-react'
 
 const navItems = [
@@ -16,21 +16,47 @@ const navItems = [
   { label: 'Settings',      href: '/settings',     icon: Settings },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, setIsOpen }) {
   const pathname = usePathname()
 
   return (
-    <aside style={{
-      position: 'fixed',
-      top: 0, left: 0,
-      width: '240px',
-      height: '100vh',
-      backgroundColor: '#1B4332',
-      display: 'flex',
-      flexDirection: 'column',
-      zIndex: 100,
-      borderRight: '1px solid rgba(255,255,255,0.08)',
-    }}>
+    <aside 
+      className={`sidebar ${isOpen ? 'open' : ''}`}
+      style={{
+        position: 'fixed',
+        top: 0, left: 0,
+        width: '240px',
+        height: '100vh',
+        backgroundColor: '#1B4332',
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 200,
+        borderRight: '1px solid rgba(255,255,255,0.08)',
+      }}
+    >
+      {/* Close button — mobile only */}
+      <button
+        onClick={() => setIsOpen(false)}
+        className="sidebar-close-btn"
+        style={{
+          display: 'none', /* shown via media query on mobile */
+          position: 'absolute',
+          top: '12px',
+          right: '12px',
+          background: 'rgba(255,255,255,0.1)',
+          border: 'none',
+          borderRadius: '6px',
+          color: '#FFFFFF',
+          cursor: 'pointer',
+          padding: '6px',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 210,
+        }}
+      >
+        <X size={18} />
+      </button>
+
       {/* Brand */}
       <div style={{
         padding: '28px 24px 24px',

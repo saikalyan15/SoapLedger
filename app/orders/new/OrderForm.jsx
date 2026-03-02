@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   ShoppingBag, Check, Plus, Trash2, ChevronDown, 
-  Search, UserPlus, UserCheck, AlertCircle, Loader2, X
+  Search, UserPlus, UserCheck, AlertCircle, Loader2, X, Clock
 } from 'lucide-react';
 import { createOrderAction, updateOrderAction } from '@/lib/actions/orders';
 import { ORDER_STATUSES } from '@/lib/constants';
@@ -14,6 +14,15 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   const isEdit = !!initialData;
   const isPendingRef = useRef(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMobile, setIsMobile] = useState(false); /* mobile only */
+
+  // Detect Mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Customer State
   const [customer, setCustomer] = useState({
@@ -60,6 +69,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
   const [customerOrders, setCustomerOrders] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
   const searchRef = useRef(null);
 
   // Close search results on click outside
@@ -210,6 +220,9 @@ const OrderForm = ({ products, settings, initialData = null }) => {
     }
   };
 
+  // Order history logic
+  const displayedOrders = isMobile ? customerOrders.slice(0, 3) : customerOrders; /* mobile only */
+
   // Styles
   const containerStyle = {
     maxWidth: '800px',
@@ -221,13 +234,13 @@ const OrderForm = ({ products, settings, initialData = null }) => {
     background: '#FFFFFF',
     border: '1px solid #E5E7EB',
     borderRadius: '12px',
-    padding: '32px',
+    padding: isMobile ? '20px' : '32px', /* mobile adjustment */
     marginBottom: '24px'
   };
 
   const sectionTitleStyle = {
     fontFamily: 'DM Serif Display, serif',
-    fontSize: '20px',
+    fontSize: isMobile ? '18px' : '20px', /* mobile adjustment */
     color: '#1B4332',
     marginBottom: '24px',
     display: 'flex',
@@ -240,7 +253,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
     padding: '12px 16px',
     borderRadius: '8px',
     border: '1px solid #E5E7EB',
-    fontSize: '14px',
+    fontSize: isMobile ? '16px' : '14px', /* prevent iOS zoom */
     fontFamily: 'inherit',
     outline: 'none',
     transition: 'border-color 0.2s',
@@ -263,9 +276,14 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   };
 
   return (
-    <div style={containerStyle}>
+    <div style={containerStyle} className="order-form-container">
       <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '32px', color: '#1B4332', margin: '0 0 8px 0' }}>
+        <h1 style={{ 
+          fontFamily: 'DM Serif Display, serif', 
+          fontSize: isMobile ? '28px' : '32px', /* mobile only */
+          color: '#1B4332', 
+          margin: '0 0 8px 0' 
+        }}>
           {isEdit ? 'Edit Order' : 'New Order'}
         </h1>
         <p style={{ color: '#6B7280', fontSize: '14px' }}>
@@ -297,20 +315,23 @@ const OrderForm = ({ products, settings, initialData = null }) => {
               </div>
 
               {showResults && searchResults.length > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  background: '#FFFFFF',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '8px',
-                  marginTop: '4px',
-                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                  zIndex: 50,
-                  maxHeight: '200px',
-                  overflowY: 'auto'
-                }}>
+                <div 
+                  className="customer-dropdown"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    background: '#FFFFFF',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '8px',
+                    marginTop: '4px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                    zIndex: 50,
+                    maxHeight: '200px',
+                    overflowY: 'auto'
+                  }}
+                >
                   {searchResults.map(c => (
                     <div
                       key={c.id}
@@ -360,7 +381,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
             </div>
           )}
 
-          <div style={rowStyle}>
+          <div style={rowStyle} className="form-row-2col">
             <div>
               <label style={labelStyle}>Customer Name</label>
               <input
@@ -401,17 +422,21 @@ const OrderForm = ({ products, settings, initialData = null }) => {
           <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {customer.isExisting && (
               <>
-                <div style={{
-                  background: customerOrders.length > (isEdit ? 1 : 0) ? '#D8F3DC' : '#FEF3C7',
-                  color: customerOrders.length > (isEdit ? 1 : 0) ? '#1B4332' : '#92400E',
-                  padding: '4px 12px',
-                  borderRadius: '20px',
-                  fontSize: '13px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  width: 'fit-content'
-                }}>
+                <div 
+                  onClick={() => setShowHistory(!showHistory)}
+                  style={{
+                    background: customerOrders.length > (isEdit ? 1 : 0) ? '#D8F3DC' : '#FEF3C7',
+                    color: customerOrders.length > (isEdit ? 1 : 0) ? '#1B4332' : '#92400E',
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    width: 'fit-content',
+                    cursor: 'pointer'
+                  }}
+                >
                   {customerOrders.length > (isEdit ? 1 : 0) ? (
                     <>
                       <UserCheck size={14} />
@@ -423,11 +448,41 @@ const OrderForm = ({ products, settings, initialData = null }) => {
                       New customer
                     </>
                   )}
+                  {customerOrders.length > (isEdit ? 1 : 0) && <ChevronDown size={14} style={{ transform: showHistory ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />}
                 </div>
                 
                 {customerOrders.length > (isEdit ? 1 : 0) && (
                   <div style={{ fontSize: '12px', color: '#059669', fontWeight: '500', marginLeft: '4px' }}>
                     Has ordered {customerOrders.length} times before
+                  </div>
+                )}
+
+                {/* Order History Panel — mobile optimized */}
+                {showHistory && customerOrders.length > 0 && (
+                  <div style={{ 
+                    marginTop: '12px', 
+                    border: '1px solid #E5E7EB', 
+                    borderRadius: '8px', 
+                    background: '#FFFFFF',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ background: '#F9FAFB', padding: '8px 12px', fontSize: '12px', fontWeight: '600', color: '#4B5563', borderBottom: '1px solid #E5E7EB' }}>
+                      Recent Orders
+                    </div>
+                    {displayedOrders.map((ord, idx) => (
+                      <div key={ord.id} style={{ padding: '10px 12px', borderBottom: idx === displayedOrders.length - 1 ? 'none' : '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: '600' }}>₹{ord.order_value.toLocaleString()}</div>
+                          <div style={{ fontSize: '11px', color: '#6B7280' }}>{new Date(ord.order_date).toLocaleDateString()}</div>
+                        </div>
+                        <div style={{ fontSize: '11px', background: '#F3F4F6', padding: '2px 8px', borderRadius: '10px' }}>{ord.status}</div>
+                      </div>
+                    ))}
+                    {isMobile && customerOrders.length > 3 && (
+                      <div style={{ padding: '8px', textAlign: 'center', fontSize: '11px', color: '#6B7280', borderTop: '1px solid #F3F4F6', background: '#F9FAFB' }}>
+                        + {customerOrders.length - 3} more orders
+                      </div>
+                    )}
                   </div>
                 )}
               </>
@@ -458,7 +513,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
             Order Details
           </div>
 
-          <div style={rowStyle}>
+          <div style={rowStyle} className="form-row-2col">
             <div>
               <label style={labelStyle}>Order Date</label>
               <input
@@ -509,21 +564,27 @@ const OrderForm = ({ products, settings, initialData = null }) => {
               </button>
             </div>
 
-            <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                <thead style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#4B5563' }}>Product</th>
-                    <th style={{ textAlign: 'center', padding: '12px 16px', fontWeight: '600', color: '#4B5563', width: '80px' }}>Qty</th>
-                    <th style={{ textAlign: 'right', padding: '12px 16px', fontWeight: '600', color: '#4B5563', width: '100px' }}>Price</th>
-                    <th style={{ textAlign: 'right', padding: '12px 16px', fontWeight: '600', color: '#4B5563', width: '100px' }}>Total</th>
-                    <th style={{ width: '40px' }}></th>
-                  </tr>
-                </thead>
+            <div style={{ border: isMobile ? 'none' : '1px solid #E5E7EB', borderRadius: '8px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }} className="line-items-table">
+                {!isMobile && (
+                  <thead style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+                    <tr>
+                      <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#4B5563' }}>Product</th>
+                      <th style={{ textAlign: 'center', padding: '12px 16px', fontWeight: '600', color: '#4B5563', width: '80px' }}>Qty</th>
+                      <th style={{ textAlign: 'right', padding: '12px 16px', fontWeight: '600', color: '#4B5563', width: '100px' }}>Price</th>
+                      <th style={{ textAlign: 'right', padding: '12px 16px', fontWeight: '600', color: '#4B5563', width: '100px' }}>Total</th>
+                      <th style={{ width: '40px' }}></th>
+                    </tr>
+                  </thead>
+                )}
                 <tbody>
                   {items.map((item, index) => (
-                    <tr key={index} style={{ borderBottom: index === items.length - 1 ? 'none' : '1px solid #F3F4F6' }}>
-                      <td style={{ padding: '12px 16px' }}>
+                    <tr 
+                      key={index} 
+                      className="line-item-row"
+                      style={{ borderBottom: index === items.length - 1 ? 'none' : '1px solid #F3F4F6' }}
+                    >
+                      <td style={{ padding: isMobile ? '0' : '12px 16px' }} className="product-select">
                         <select
                           value={item.product_id}
                           onChange={(e) => updateItem(index, 'product_id', e.target.value)}
@@ -536,39 +597,83 @@ const OrderForm = ({ products, settings, initialData = null }) => {
                           ))}
                         </select>
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                          style={{ ...inputBaseStyle, padding: '8px', textAlign: 'center' }}
-                          required
-                        />
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={item.unit_price}
-                          onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
-                          style={{ ...inputBaseStyle, padding: '8px', textAlign: 'right' }}
-                          required
-                        />
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#111827' }}>
-                        ₹{parseFloat(item.total_price || 0).toLocaleString()}
-                      </td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          onClick={() => removeItem(index)}
-                          style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer' }}
-                          disabled={items.length === 1}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
+                      
+                      {isMobile ? (
+                        /* Mobile Item Sub-row */
+                        <td style={{ padding: 0 }}>
+                          <div className="line-item-bottom">
+                            <input
+                              type="number"
+                              min="1"
+                              placeholder="Qty"
+                              value={item.quantity}
+                              onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                              style={{ ...inputBaseStyle, padding: '8px', textAlign: 'center', width: '70px' }}
+                              className="qty-input"
+                              required
+                            />
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="Price"
+                              value={item.unit_price}
+                              onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
+                              style={{ ...inputBaseStyle, padding: '8px', textAlign: 'right', width: '90px' }}
+                              className="price-input"
+                              required
+                            />
+                            <div style={{ flex: 1, textAlign: 'right', fontWeight: '700', fontSize: '14px' }} className="line-total">
+                              ₹{(item.total_price || 0).toLocaleString()}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeItem(index)}
+                              style={{ background: '#FEE2E2', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '8px', borderRadius: '6px' }}
+                              className="remove-btn"
+                              disabled={items.length === 1}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      ) : (
+                        /* Desktop Table Cells */
+                        <>
+                          <td style={{ padding: '12px 16px' }}>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                              style={{ ...inputBaseStyle, padding: '8px', textAlign: 'center' }}
+                              required
+                            />
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={item.unit_price}
+                              onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
+                              style={{ ...inputBaseStyle, padding: '8px', textAlign: 'right' }}
+                              required
+                            />
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#111827' }}>
+                            ₹{parseFloat(item.total_price || 0).toLocaleString()}
+                          </td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => removeItem(index)}
+                              style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer' }}
+                              disabled={items.length === 1}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -577,8 +682,11 @@ const OrderForm = ({ products, settings, initialData = null }) => {
           </div>
 
           {/* Charges & Summary */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '40px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div 
+            style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 280px', gap: isMobile ? '24px' : '40px' }}
+            className="order-summary-grid"
+          >
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }} className="form-row-2col">
               <div>
                 <label style={labelStyle}>Shipping Charge (₹)</label>
                 <input
@@ -589,7 +697,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
                 />
               </div>
               <div>
-                <label style={labelStyle}>Packaging Cost (Internal) (₹)</label>
+                <label style={labelStyle}>Packaging Cost (₹)</label>
                 <input
                   type="number"
                   value={packaging}
@@ -597,7 +705,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
                   style={inputBaseStyle}
                 />
               </div>
-              <div style={{ gridColumn: 'span 2' }}>
+              <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
                 <label style={labelStyle}>Discount (₹)</label>
                 <input
                   type="number"
@@ -648,7 +756,8 @@ const OrderForm = ({ products, settings, initialData = null }) => {
               background: '#FFFFFF',
               color: '#374151',
               fontWeight: '600',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              flex: isMobile ? 1 : 'none'
             }}
           >
             Cancel
@@ -667,7 +776,8 @@ const OrderForm = ({ products, settings, initialData = null }) => {
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              minWidth: '160px',
+              minWidth: isMobile ? 'none' : '160px',
+              flex: isMobile ? 2 : 'none',
               justifyContent: 'center',
               opacity: isSubmitting ? 0.7 : 1
             }}

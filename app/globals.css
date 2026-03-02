@@ -41,3 +41,131 @@
     font-family: var(--font-serif);
   }
 }
+
+/* Mobile Responsiveness — Part 1 */
+
+@media (max-width: 1023px) {
+  /* Sidebar mobile behavior */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 200;
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .mobile-topbar {
+    display: block !important;
+  }
+
+  .mobile-overlay {
+    display: block !important;
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+    padding: 24px 16px !important; /* adjust padding for mobile */
+    padding-top: 80px !important; /* account for mobile top bar (56px) + extra space */
+  }
+
+  .mobile-fab {
+    display: flex !important;
+  }
+
+  .sidebar-close-btn {
+    display: flex !important;
+  }
+}
+
+/* New Order Form Mobile Adjustments */
+@media (max-width: 767px) {
+  .order-form-container {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .form-row-2col {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  .form-row-2col > * {
+    width: 100% !important;
+  }
+
+  /* Line Item Mobile Cards */
+  .line-item-row {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 12px !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+    border-radius: 8px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .line-item-row .product-select {
+    width: 100% !important;
+  }
+
+  .line-item-row .line-item-bottom {
+    display: flex !important;
+    gap: 8px !important;
+    align-items: center !important;
+  }
+
+  .line-item-row .qty-input {
+    width: 70px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .line-item-row .price-input {
+    width: 90px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .line-item-row .line-total {
+    flex: 1 !important;
+    text-align: right !important;
+  }
+
+  .line-item-row .remove-btn {
+    flex-shrink: 0 !important;
+  }
+
+  /* Customer Dropdown */
+  .customer-dropdown {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+  }
+
+  /* Prevent iOS Zoom */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Hide table headers on mobile */
+  .line-items-table thead {
+    display: none !important;
+  }
+
+  .line-items-table, .line-items-table tbody, .line-items-table tr, .line-items-table td {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  /* Order Summary Grid */
+  .order-summary-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+}
