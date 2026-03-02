@@ -21,10 +21,10 @@ import {
   getBreakEvenProjection
 } from '@/lib/queries/dashboard';
 
-const fmt = (n, decimals = 0) => 
-  n == null ? '—' : Number(n).toLocaleString('en-IN', { 
-    minimumFractionDigits: decimals, 
-    maximumFractionDigits: decimals 
+const fmt = (n) => 
+  n == null ? '—' : Math.round(Number(n)).toLocaleString('en-IN', { 
+    minimumFractionDigits: 0, 
+    maximumFractionDigits: 0 
   });
 
 const BASE_COLOURS = {
@@ -122,7 +122,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         }}>
           <span>{p.name}</span>
           <span style={{ fontWeight: 600 }}>
-            ₹{Number(p.value).toLocaleString('en-IN')}
+            ₹{Math.round(Number(p.value)).toLocaleString('en-IN')}
           </span>
         </div>
       ))}
@@ -250,7 +250,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
         <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '-8px', marginTop: '12px' }}>
           Customer Growth
         </div>
-        <KPICard label="Repeat Rate" value={`${fmt(customers.repeat_rate, 1)}%`} sub={`${fmt(customers.repeat_customers)} repeat`} color="#0F766E" loading={isPending} isMobile={isMobile} />
+        <KPICard label="Repeat Rate" value={`${fmt(customers.repeat_rate)}%`} sub={`${fmt(customers.repeat_customers)} repeat`} color="#0F766E" loading={isPending} isMobile={isMobile} />
         <KPICard label="Re-order" value={`${fmt(customers.avg_reorder_days)}d`} sub="Avg. gap" color="#0F766E" loading={isPending} isMobile={isMobile} />
         <KPICard label="Avg Order" value={`₹${fmt(revenue.avg_order_value)}`} sub="Per order" color="#0F766E" loading={isPending} isMobile={isMobile} />
 
@@ -427,11 +427,11 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
           >
             <div style={{ padding: '12px 16px', background: '#F9FAFB', borderRadius: '12px', border: '1px solid #E5E7EB', flex: 1 }}>
               <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', marginBottom: '4px' }}>Actual Growth</div>
-              <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: '#1B4332' }}>{(projection.rawGrowthRate * 100).toFixed(1)}%</div>
+              <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: '#1B4332' }}>{Math.round(projection.rawGrowthRate * 100)}%</div>
             </div>
             <div style={{ padding: '12px 16px', background: '#F0FDF4', borderRadius: '12px', border: '1px solid #DCFCE7', flex: 1 }}>
               <div style={{ fontSize: '11px', color: '#166534', textTransform: 'uppercase', marginBottom: '4px' }}>Projected Rate</div>
-              <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: '#1B4332' }}>{(projection.cappedGrowthRate * 100).toFixed(1)}%</div>
+              <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: '#1B4332' }}>{Math.round(projection.cappedGrowthRate * 100)}%</div>
             </div>
           </div>
         </ChartCard>
