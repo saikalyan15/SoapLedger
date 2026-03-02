@@ -550,7 +550,10 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
                   }}
                 >
                   {products.top_products.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={PRODUCT_BAR_COLORS[index % PRODUCT_BAR_COLORS.length]} />
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={index === 0 ? '#1B4332' : '#40916C'} 
+                    />
                   ))}
                 </Bar>
               </BarChart>
