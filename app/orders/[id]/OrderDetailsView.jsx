@@ -162,8 +162,8 @@ const OrderDetailsView = ({ order, items }) => {
                 {order.customer_name}
               </div>
               <div style={{
-                background: isReturning ? '#D8F3DC' : '#FEF3C7',
-                color: isReturning ? '#1B4332' : '#92400E',
+                background: order.customer_type === 'Returning' ? '#D8F3DC' : '#FEF3C7',
+                color: order.customer_type === 'Returning' ? '#1B4332' : '#92400E',
                 padding: '4px 10px',
                 borderRadius: '20px',
                 fontSize: '11px',
@@ -175,8 +175,8 @@ const OrderDetailsView = ({ order, items }) => {
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em'
               }}>
-                {isReturning ? <UserCheck size={12} /> : <AlertCircle size={12} />}
-                {isReturning ? 'Returning' : 'New'}
+                {order.customer_type === 'Returning' ? <UserCheck size={12} /> : <AlertCircle size={12} />}
+                {order.customer_type}
               </div>
             </div>
             <div style={{ color: '#4B5563', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>

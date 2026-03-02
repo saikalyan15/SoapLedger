@@ -266,10 +266,10 @@ const OrdersView = ({ orders }) => {
                           padding: '1px 6px', 
                           borderRadius: '4px',
                           textTransform: 'uppercase',
-                          background: order.is_returning ? '#D8F3DC' : '#FEF3C7',
-                          color: order.is_returning ? '#1B4332' : '#92400E'
+                          background: order.customer_type === 'Returning' ? '#D8F3DC' : '#FEF3C7',
+                          color: order.customer_type === 'Returning' ? '#1B4332' : '#92400E'
                         }}>
-                          {order.is_returning ? 'Returning' : 'New'}
+                          {order.customer_type}
                         </span>
                       </div>
                       <div style={{ fontSize: '12px', color: '#6B7280' }}>{order.customer_phone}</div>
