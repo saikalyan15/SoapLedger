@@ -5,21 +5,23 @@ import {
   getOperationsMetrics, 
   getAvgOrderValueTrend,
   getCostPriceTrend,
-  getCashFlowTrend
+  getCashFlowTrend,
+  getBreakEvenProjection
 } from '@/lib/queries/dashboard';
 import DashboardClient from './DashboardClient';
 
 export default async function DashboardPage() {
   const range = { from: null, to: null }; // default all time
 
-  const [revenue, customers, products, operations, avgTrend, costTrend, cashFlow] = await Promise.all([
+  const [revenue, customers, products, operations, avgTrend, costTrend, cashFlow, projection] = await Promise.all([
     getRevenueKPIs(range),
     getRepeatCustomerRate(range),
     getProductPerformance(range),
     getOperationsMetrics(range),
     getAvgOrderValueTrend(range),
     getCostPriceTrend(range),
-    getCashFlowTrend(range)
+    getCashFlowTrend(range),
+    getBreakEvenProjection()
   ]);
 
   return (
@@ -32,6 +34,7 @@ export default async function DashboardPage() {
         initialAvgTrend={avgTrend}
         initialCostTrend={costTrend}
         initialCashFlow={cashFlow}
+        initialProjection={projection}
       />
     </div>
   );

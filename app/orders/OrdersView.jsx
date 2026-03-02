@@ -2,58 +2,37 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Eye, Pencil, Trash2, Check, X, Search } from 'lucide-react';
+import { Eye, Pencil, Trash2, Check, X, Search, Plus } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import StatusBadge from '@/components/StatusBadge';
-import EmptyState from '@/components/EmptyState';
 import { deleteOrderAction } from '@/lib/actions/orders';
+import { ORDER_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
 
-const statuses = ['All', 'Received', 'Payment Confirmed', 'In Production', 'Dispatched', 'Delivered', 'Cancelled'];
+const OrdersView = ({ orders }) => {
+  const [filter, setFilter] = useState('All');
+  const [search, setSearch] = useState('');
 
-const OrdersView = ({ orders: initialOrders }) => {
-  const [orders, setOrders] = useState(initialOrders);
-  const [activeFilter, setActiveFilter] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [deletingId, setDeletingId] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // Sync state with props when they change
-  React.useEffect(() => {
-    setOrders(initialOrders);
-  }, [initialOrders]);
+  const handleDelete = async (id) => {
+    if (confirm('Are you sure you want to delete this order?')) {
+      const result = await deleteOrderAction(id);
+      if (!result.success) alert(result.error);
+    }
+  };
 
   const filteredOrders = orders.filter(order => {
-    const matchesStatus = activeFilter === 'All' || order.status === activeFilter;
+    const matchesFilter = filter === 'All' || order.status === filter;
     const matchesSearch = 
-      order.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer_phone.includes(searchQuery);
-    return matchesStatus && matchesSearch;
+      order.customer_name.toLowerCase().includes(search.toLowerCase()) ||
+      order.id.toLowerCase().includes(search.toLowerCase()) ||
+      (order.customer_phone && order.customer_phone.includes(search));
+    return matchesFilter && matchesSearch;
   });
-
-  const handleDeleteClick = (id) => {
-    setDeletingId(id);
-  };
-
-  const handleCancelDelete = () => {
-    setDeletingId(null);
-  };
-
-  const handleConfirmDelete = async (id) => {
-    setIsDeleting(true);
-    const result = await deleteOrderAction(id);
-    if (result.success) {
-      setDeletingId(null);
-    } else {
-      alert(result.error || 'Failed to delete order');
-    }
-    setIsDeleting(false);
-  };
 
   return (
     <div>
       <PageHeader 
         title="Orders" 
-        subtitle="Your order history" 
+        subtitle="Manage and track customer orders"
         action={
           <Link 
             href="/orders/new"
@@ -62,118 +41,97 @@ const OrdersView = ({ orders: initialOrders }) => {
               color: '#FFFFFF',
               padding: '10px 20px',
               borderRadius: '8px',
-              fontWeight: '600',
+              fontWeight: '700',
               textDecoration: 'none',
-              fontFamily: 'Plus Jakarta Sans, sans-serif'
+              fontSize: '14px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px'
             }}
           >
-            + New Order
+            <Plus size={18} />
+            New Order
           </Link>
         }
       />
 
-      {/* Search Bar */}
-      <div style={{ position: 'relative', marginBottom: '20px' }}>
-        <input
-          type="text"
-          placeholder="Search by customer name or phone..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '12px 16px 12px 40px',
-            borderRadius: '8px',
-            border: '1px solid #E5E7EB',
-            fontSize: '14px',
-            fontFamily: 'Plus Jakarta Sans, sans-serif',
-            outline: 'none',
-          }}
-        />
-        <Search 
-          size={18} 
-          style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} 
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery('')}
-            style={{
-              position: 'absolute',
-              right: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: '#9CA3AF',
-              padding: '4px'
-            }}
-          >
-            <X size={16} />
-          </button>
-        )}
-      </div>
-
-      {/* Filter Bar */}
       <div style={{ 
-        display: 'flex', 
-        gap: '8px', 
-        overflowX: 'auto', 
-        marginBottom: '32px',
-        paddingBottom: '8px' 
+        background: '#FFFFFF', 
+        borderRadius: '12px', 
+        border: '1px solid #E5E7EB',
+        marginBottom: '24px',
+        padding: '20px'
       }}>
-        {statuses.map(status => (
-          <button
-            key={status}
-            onClick={() => setActiveFilter(status)}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '20px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              fontFamily: 'Plus Jakarta Sans, sans-serif',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.2s',
-              border: '1px solid #1B4332',
-              background: activeFilter === status ? '#1B4332' : '#FFFFFF',
-              color: activeFilter === status ? '#FFFFFF' : '#1B4332',
-            }}
-          >
-            {status}
-          </button>
-        ))}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {['All', ...ORDER_STATUSES].map(s => (
+              <button
+                key={s}
+                onClick={() => setFilter(s)}
+                style={{
+                  padding: '6px 16px',
+                  borderRadius: '20px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  border: '1px solid #E5E7EB',
+                  background: filter === s ? '#1B4332' : '#FFFFFF',
+                  color: filter === s ? '#FFFFFF' : '#6B7280',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          <div style={{ position: 'relative', width: '300px' }}>
+            <input
+              type="text"
+              placeholder="Search orders..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 16px 10px 40px',
+                borderRadius: '8px',
+                border: '1px solid #E5E7EB',
+                fontSize: '14px',
+                outline: 'none'
+              }}
+            />
+            <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+          </div>
+        </div>
       </div>
 
-      {filteredOrders.length === 0 ? (
-        <EmptyState 
-          title="No orders found"
-          message={searchQuery || activeFilter !== 'All' ? "Try adjusting your filters or search terms" : "Log your first order from WhatsApp"} 
-        />
-      ) : (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '12px', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
-                <th style={thStyle}>Date</th>
-                <th style={thStyle}>Customer</th>
-                <th style={thStyle}>
-                  Order Value
-                  <div style={{ fontSize: '9px', textTransform: 'none', fontWeight: '400', color: '#9CA3AF', marginTop: '2px' }}>
-                    (incl. shipping)
-                  </div>
-                </th>
-                <th style={thStyle}>Shipping</th>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>Actions</th>
+      <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+              <th style={thStyle}>Order ID</th>
+              <th style={thStyle}>Date</th>
+              <th style={thStyle}>Customer</th>
+              <th style={thStyle}>Items</th>
+              <th style={thStyle}>Total</th>
+              <th style={thStyle}>Status</th>
+              <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredOrders.length === 0 ? (
+              <tr>
+                <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>
+                  No orders found
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {filteredOrders.map(order => (
-                <tr key={order.id} style={{ borderBottom: '1px solid #E5E7EB' }}>
+            ) : (
+              filteredOrders.map((order) => (
+                <tr key={order.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
                   <td style={tdStyle}>
-                    {new Date(order.order_date).toLocaleDateString('en-GB', { 
-                      day: 'numeric', month: 'short', year: 'numeric' 
-                    })}
+                    <span style={{ fontWeight: '700', color: '#1B4332' }}>#{order.id.slice(0, 8)}</span>
+                  </td>
+                  <td style={tdStyle}>
+                    {new Date(order.order_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                   </td>
                   <td style={tdStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -192,107 +150,62 @@ const OrdersView = ({ orders: initialOrders }) => {
                     </div>
                     <div style={{ fontSize: '12px', color: '#6B7280' }}>{order.customer_phone}</div>
                   </td>
-                  <td style={tdStyle}>
-                    <div style={{ fontWeight: '700', color: '#1B4332' }}>
-                      ₹{(parseFloat(order.revenue) + parseFloat(order.shipping_charge)).toLocaleString('en-IN')}
-                    </div>
+                  <td style={{ ...tdStyle, maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {order.products}
                   </td>
-                  <td style={tdStyle}>₹{order.shipping_charge}</td>
+                  <td style={{ ...tdStyle, fontWeight: '700', color: '#111827' }}>
+                    ₹{Number(order.revenue || 0).toLocaleString('en-IN')}
+                  </td>
                   <td style={tdStyle}>
                     <StatusBadge status={order.status} />
                   </td>
-                  <td style={tdStyle}>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                  <td style={{ ...tdStyle, textAlign: 'right' }}>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                       <Link 
                         href={`/orders/${order.id}`}
-                        style={{
-                          border: '1px solid #E5E7EB',
-                          borderRadius: '6px',
-                          padding: '6px',
-                          color: '#4B5563',
-                          display: 'flex'
-                        }}
+                        style={actionButtonStyle}
+                        title="View Details"
                       >
-                        <Eye size={16} />
+                        <Eye size={18} />
                       </Link>
-                      
-                      {['Received', 'Payment Confirmed', 'In Production'].includes(order.status) && (
+                      {EDITABLE_STATUSES.includes(order.status) && (
                         <>
                           <Link 
                             href={`/orders/${order.id}/edit`}
-                            style={{
-                              border: '1px solid #E5E7EB',
-                              borderRadius: '6px',
-                              padding: '6px',
-                              color: '#4B5563',
-                              display: 'flex'
-                            }}
+                            style={actionButtonStyle}
+                            title="Edit Order"
                           >
-                            <Pencil size={16} />
+                            <Pencil size={18} />
                           </Link>
-                          
-                          {deletingId === order.id ? (
-                            <div style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '4px',
-                              background: '#F9FAFB',
-                              padding: '2px 8px',
-                              borderRadius: '6px',
-                              border: '1px solid #E5E7EB'
-                            }}>
-                              <span style={{ fontSize: '11px', fontWeight: '600' }}>Sure?</span>
-                              <button 
-                                onClick={() => handleConfirmDelete(order.id)}
-                                disabled={isDeleting}
-                                style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer' }}
-                              >
-                                <Check size={16} />
-                              </button>
-                              <button 
-                                onClick={handleCancelDelete}
-                                disabled={isDeleting}
-                                style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer' }}
-                              >
-                                <X size={16} />
-                              </button>
-                            </div>
-                          ) : (
-                            <button 
-                              onClick={() => handleDeleteClick(order.id)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                borderRadius: '6px',
-                                padding: '6px',
-                                cursor: 'pointer',
-                                color: '#9CA3AF'
-                              }}
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
+                          <button 
+                            onClick={() => handleDelete(order.id)}
+                            style={{ ...actionButtonStyle, color: '#DC2626' }}
+                            title="Delete Order"
+                          >
+                            <Trash2 size={18} />
+                          </button>
                         </>
                       )}
                     </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
 
 const thStyle = {
   padding: '16px 20px',
-  fontSize: '11px',
+  textAlign: 'left',
+  fontSize: '12px',
+  fontWeight: '700',
   textTransform: 'uppercase',
-  letterSpacing: '0.08em',
+  letterSpacing: '0.05em',
   color: '#6B7280',
-  fontWeight: '600',
   fontFamily: 'Plus Jakarta Sans, sans-serif'
 };
 
@@ -301,6 +214,21 @@ const tdStyle = {
   fontSize: '14px',
   fontFamily: 'Plus Jakarta Sans, sans-serif',
   color: '#374151'
+};
+
+const actionButtonStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '36px',
+  height: '36px',
+  borderRadius: '8px',
+  border: '1px solid #E5E7EB',
+  background: '#FFFFFF',
+  color: '#4B5563',
+  cursor: 'pointer',
+  transition: 'all 0.2s',
+  textDecoration: 'none'
 };
 
 export default OrdersView;

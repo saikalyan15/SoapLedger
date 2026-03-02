@@ -8,7 +8,7 @@ import {
 } from 'recharts';
 import { 
   TrendingUp, TrendingDown, Clock, Package, 
-  Users, ShoppingBag, DollarSign, ChevronRight, AlertTriangle, Loader2, Calendar
+  Users, ShoppingBag, DollarSign, ChevronRight, AlertTriangle, Loader2, Calendar, CheckCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { 
@@ -18,7 +18,8 @@ import {
   getOperationsMetrics, 
   getAvgOrderValueTrend,
   getCostPriceTrend,
-  getCashFlowTrend
+  getCashFlowTrend,
+  getBreakEvenProjection
 } from '@/lib/queries/dashboard';
 import StatusBadge from '@/components/StatusBadge';
 
@@ -146,7 +147,7 @@ const ChartCard = ({ title, subtitle, children, loading, empty, icon: Icon, heig
   </div>
 );
 
-const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, initialOperations, initialAvgTrend, initialCostTrend, initialCashFlow }) => {
+const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, initialOperations, initialAvgTrend, initialCostTrend, initialCashFlow, initialProjection }) => {
   const [filter, setFilter] = useState('All Time');
   const [isPending, startTransition] = useTransition();
   
@@ -157,9 +158,10 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
   const [avgTrend, setAvgTrend] = useState(initialAvgTrend);
   const [costTrend, setCostTrend] = useState(initialCostTrend);
   const [cashFlow, setCashFlow] = useState(initialCashFlow);
+  const [projection, setProjection] = useState(initialProjection);
 
   const fetchFilteredData = async (range) => {
-    const [rev, cust, prod, oper, trend, cTrend, cFlow] = await Promise.all([
+    const [rev, cust, prod, oper, trend, cTrend, cFlow, proj] = await Promise.all([
       getRevenueKPIs(range),
       getRepeatCustomerRate(range),
       getProductPerformance(range),
@@ -167,6 +169,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
       getAvgOrderValueTrend(range),
       getCostPriceTrend(range),
       getCashFlowTrend(range),
+      getBreakEvenProjection()
     ]);
     setRevenue(rev);
     setCustomers(cust);
@@ -175,6 +178,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
     setAvgTrend(trend);
     setCostTrend(cTrend);
     setCashFlow(cFlow);
+    setProjection(proj);
   };
 
   const handleFilterChange = (newFilter) => {
@@ -562,8 +566,8 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
         </ChartCard>
       </div>
 
-      {/* Row 4: Customer Loyalty */}
-      <div style={{ marginBottom: '32px' }}>
+      {/* Row 4: Customer Loyalty & Break-even */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
         <ChartCard title="Customer Loyalty by Month" loading={isPending} empty={customers.new_vs_returning_by_month.length === 0} icon={Users}>
           <div style={{ height: '280px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
@@ -588,6 +592,99 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </ChartCard>
+
+        <ChartCard 
+          title="Break-even Projection" 
+          subtitle="Cumulative Revenue vs Expenses (incl. Growth Rate)" 
+          loading={isPending} 
+          empty={projection.length === 0} 
+          icon={TrendingUp}
+        >
+          <div style={{ height: '280px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <AreaChart data={projection} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#1B4332" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#1B4332" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fill: '#6B7280' }} 
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 10, fill: '#6B7280' }} 
+                  tickFormatter={(v) => `₹${fmt(v)}`}
+                />
+                <Tooltip content={<CustomTooltip isCurrency={true} />} />
+                <Legend verticalAlign="bottom" height={36} content={({ payload }) => (
+                  <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', fontSize: '11px', color: '#6B7280' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '12px', height: '2px', background: '#1B4332' }}></div>
+                      <span>Cum. Revenue</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '12px', height: '2px', background: '#DC2626' }}></div>
+                      <span>Cum. Expenses</span>
+                    </div>
+                  </div>
+                )} />
+                <Area 
+                  type="monotone" 
+                  dataKey="cumRevenue" 
+                  stroke="#1B4332" 
+                  strokeWidth={2}
+                  fillOpacity={1} 
+                  fill="url(#colorProfit)"
+                  strokeDasharray={ (d) => d?.isProjected ? "5 5" : "0" }
+                  name="Cum. Revenue"
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="cumExpenses" 
+                  stroke="#DC2626" 
+                  strokeWidth={2}
+                  fill="none"
+                  strokeDasharray={ (d) => d?.isProjected ? "5 5" : "0" }
+                  name="Cum. Expenses"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          {(() => {
+            const bePoint = projection.find((p, i) => p.cumRevenue >= p.cumExpenses && (i === 0 || projection[i-1].cumRevenue < projection[i-1].cumExpenses));
+            if (bePoint) {
+              return (
+                <div style={{ 
+                  marginTop: '12px', 
+                  padding: '8px 12px', 
+                  background: bePoint.isProjected ? '#F0F9FF' : '#D8F3DC', 
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  color: bePoint.isProjected ? '#0369A1' : '#1B4332',
+                  fontWeight: '600',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <CheckCircle size={14} />
+                  Break-even: {bePoint.month} {bePoint.isProjected ? '(Projected)' : '(Achieved!)'}
+                </div>
+              );
+            }
+            return (
+              <div style={{ marginTop: '12px', fontSize: '11px', color: '#6B7280', fontStyle: 'italic' }}>
+                Profitability horizon beyond current projection.
+              </div>
+            );
+          })()}
         </ChartCard>
       </div>
 

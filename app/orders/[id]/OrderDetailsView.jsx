@@ -6,32 +6,133 @@ import { useRouter } from 'next/navigation';
 import { Pencil, ArrowLeft, ChevronDown, CheckCircle, UserCheck, AlertCircle } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { updateOrderStatusAction } from '@/lib/actions/orders';
+import { ORDER_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
 
 const OrderDetailsView = ({ order, items }) => {
   const router = useRouter();
   const [newStatus, setNewStatus] = useState(order.status);
   const [isUpdating, setIsUpdating] = useState(false);
 
+  const isEditable = EDITABLE_STATUSES.includes(order.status);
+  const isReturning = parseInt(order.previous_orders_count) > 0;
+
+  // Calculate fields not stored directly in DB
+  const subtotal = items.reduce((sum, item) => sum + (Number(item.line_total) || 0), 0);
+  const revenue = Number(order.revenue) || 0;
+  const shipping = Number(order.shipping_charge) || 0;
+  // discount = subtotal + shipping - revenue
+  const discount = Math.max(0, subtotal + shipping - revenue);
+
   const handleUpdateStatus = async () => {
+    if (newStatus === order.status) return;
+    
     setIsUpdating(true);
     const result = await updateOrderStatusAction(order.id, newStatus);
-    if (result.success) {
-      // Revalidation is handled in the action
-    } else {
-      alert(result.error || 'Failed to update status');
-    }
     setIsUpdating(false);
+    
+    if (result.success) {
+      router.refresh();
+    } else {
+      alert(result.error);
+    }
   };
-
-  const totalUnits = items.reduce((sum, item) => sum + parseInt(item.quantity), 0);
-  const profitPerUnit = totalUnits > 0 ? (order.gross_profit / totalUnits).toFixed(2) : 0;
-  
-  const isEditable = ['Received', 'Payment Confirmed', 'In Production'].includes(order.status);
-  const isReturning = parseInt(order.previous_orders_count) > 0;
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-      {/* ... (keep header and timeline) ... */}
+      {/* Header Row */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '40px' 
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <Link href="/orders" style={{ color: '#6B7280' }}><ArrowLeft size={24} /></Link>
+          <h1 style={{ 
+            fontFamily: 'DM Serif Display, serif', 
+            fontSize: '28px', 
+            color: '#1B4332',
+            margin: 0 
+          }}>
+            Order #{order.id.slice(0, 8)}
+          </h1>
+          <StatusBadge status={order.status} />
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {isEditable && (
+            <Link 
+              href={`/orders/${order.id}/edit`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: '#FFFFFF',
+                color: '#374151',
+                border: '1px solid #E5E7EB',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                fontWeight: '600',
+                textDecoration: 'none',
+                fontFamily: 'Plus Jakarta Sans, sans-serif'
+              }}
+            >
+              <Pencil size={18} />
+              Edit Order
+            </Link>
+          )}
+          <Link 
+            href="/orders"
+            style={{
+              background: '#F3F4F6',
+              color: '#374151',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              fontWeight: '600',
+              textDecoration: 'none',
+              fontFamily: 'Plus Jakarta Sans, sans-serif'
+            }}
+          >
+            Back to History
+          </Link>
+        </div>
+      </div>
+
+      {/* Timeline Row */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '12px', 
+        marginBottom: '40px',
+        fontFamily: '"Plus Jakarta Sans", sans-serif',
+        fontSize: '12px',
+        color: '#6B7280'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
+          <span>Ordered {new Date(order.order_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+        </div>
+        
+        {order.dispatched_at && (
+          <>
+            <div style={{ width: '40px', height: '1px', background: '#E5E7EB' }}></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
+              <span>Dispatched {new Date(order.dispatched_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+            </div>
+          </>
+        )}
+
+        {order.delivered_at && (
+          <>
+            <div style={{ width: '40px', height: '1px', background: '#E5E7EB' }}></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
+              <span>Delivered {new Date(order.delivered_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+            </div>
+          </>
+        )}
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '40px' }}>
         {/* Left Column */}
         <div>
@@ -65,142 +166,147 @@ const OrderDetailsView = ({ order, items }) => {
             </div>
             {order.customer_address && (
               <div style={{ 
-                background: '#F9FAFB', 
-                padding: '16px', 
-                borderRadius: '8px',
-                fontSize: '14px',
+                paddingTop: '16px', 
+                borderTop: '1px solid #F3F4F6',
                 color: '#374151',
-                lineHeight: 1.5,
-                border: '1px solid #E5E7EB'
+                fontSize: '14px',
+                lineHeight: '1.6'
               }}>
                 {order.customer_address}
               </div>
             )}
           </div>
 
-          {/* Items Table */}
-          <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: '20px 24px', ...sectionLabelStyle, marginBottom: 0 }}>Soaps Ordered</div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          {/* Items Card */}
+          <div style={cardStyle}>
+            <div style={sectionLabelStyle}>Order Items</div>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
-                  <th style={thStyle}>Product</th>
-                  <th style={thStyle}>Qty</th>
-                  <th style={thStyle}>Unit Price</th>
-                  <th style={{ ...thStyle, textAlign: 'right' }}>Total</th>
+                <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
+                  <th style={{ ...thStyle, paddingLeft: 0 }}>Product</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Qty</th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>Price</th>
+                  <th style={{ ...thStyle, textAlign: 'right', paddingRight: 0 }}>Total</th>
                 </tr>
               </thead>
               <tbody>
-                {items.map(item => (
-                  <tr key={item.id} style={{ borderBottom: '1px solid #E5E7EB' }}>
-                    <td style={tdStyle}>{item.product_name}</td>
-                    <td style={tdStyle}>{item.quantity}</td>
-                    <td style={tdStyle}>₹{item.unit_price}</td>
-                    <td style={{ ...tdStyle, textAlign: 'right', fontWeight: '600' }}>₹{item.line_total}</td>
+                {items.map((item) => (
+                  <tr key={item.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
+                    <td style={{ ...tdStyle, paddingLeft: 0 }}>
+                      <div style={{ fontWeight: '600', color: '#111827' }}>{item.product_name}</div>
+                      <div style={{ fontSize: '12px', color: '#6B7280' }}>{item.base_type}</div>
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>{item.quantity}</td>
+                    <td style={{ ...tdStyle, textAlign: 'right' }}>₹{Number(item.unit_price).toLocaleString()}</td>
+                    <td style={{ ...tdStyle, textAlign: 'right', fontWeight: '600', color: '#111827', paddingRight: 0 }}>
+                      ₹{Number(item.line_total).toLocaleString()}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
 
-          {/* Notes */}
-          {order.notes && (
-            <div style={cardStyle}>
-              <div style={sectionLabelStyle}>Internal Notes</div>
-              <div style={{ fontSize: '14px', color: '#4B5563', lineHeight: 1.6 }}>
-                {order.notes}
+            {/* Summary Lines */}
+            <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'flex-end' }}>
+              <div style={summaryLineStyle}>
+                <span>Subtotal</span>
+                <span style={{ fontWeight: '600' }}>₹{subtotal.toLocaleString()}</span>
+              </div>
+              {(shipping > 0 || Number(order.packaging_cost) > 0) && (
+                <div style={summaryLineStyle}>
+                  <span>Charges (Shipping + Pack)</span>
+                  <span style={{ fontWeight: '600' }}>₹{(shipping + Number(order.packaging_cost)).toLocaleString()}</span>
+                </div>
+              )}
+              {discount > 0 && (
+                <div style={summaryLineStyle}>
+                  <span>Discount</span>
+                  <span style={{ fontWeight: '600', color: '#DC2626' }}>-₹{discount.toLocaleString()}</span>
+                </div>
+              )}
+              <div style={{ ...summaryLineStyle, borderTop: '1px solid #F3F4F6', paddingTop: '12px', marginTop: '4px' }}>
+                <span style={{ fontWeight: '700', fontSize: '16px', color: '#111827' }}>Order Total</span>
+                <span style={{ fontWeight: '800', fontSize: '24px', color: '#1B4332' }}>₹{revenue.toLocaleString()}</span>
               </div>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Right Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Billing Summary */}
+        {/* Right Column: Actions */}
+        <div>
           <div style={cardStyle}>
-            <div style={sectionLabelStyle}>Billing Summary</div>
+            <div style={sectionLabelStyle}>Update Status</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={summaryRowStyle}>
-                <span style={{ color: '#6B7280' }}>Subtotal</span>
-                <span style={{ fontWeight: '600' }}>₹{order.revenue}</span>
+              <div style={{ position: 'relative' }}>
+                <select 
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #E5E7EB',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    appearance: 'none',
+                    background: '#FFFFFF',
+                    outline: 'none'
+                  }}
+                >
+                  {ORDER_STATUSES.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <ChevronDown size={16} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF', pointerEvents: 'none' }} />
               </div>
-              <div style={summaryRowStyle}>
-                <span style={{ color: '#6B7280' }}>Shipping</span>
-                <span style={{ fontWeight: '600' }}>₹{order.shipping_charge}</span>
-              </div>
-              <div style={{ height: '1px', background: '#F3F4F6', margin: '4px 0' }}></div>
-              <div style={{ ...summaryRowStyle, fontSize: '18px', marginBottom: 0 }}>
-                <span style={{ fontWeight: '700', color: '#111827' }}>Total</span>
-                <span style={{ fontWeight: '800', color: '#1B4332' }}>
-                  ₹{(parseFloat(order.revenue) + parseFloat(order.shipping_charge)).toLocaleString('en-IN')}
-                </span>
-              </div>
+              <button
+                onClick={handleUpdateStatus}
+                disabled={newStatus === order.status || isUpdating}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: newStatus === order.status ? '#F3F4F6' : '#1B4332',
+                  color: newStatus === order.status ? '#9CA3AF' : '#FFFFFF',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                  cursor: newStatus === order.status ? 'default' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {isUpdating ? 'Updating...' : 'Update Status'}
+              </button>
             </div>
           </div>
 
-          {/* Quick Status Update */}
-          <div style={cardStyle}>
-            <div style={sectionLabelStyle}>Update Status</div>
-            {['Dispatched', 'Delivered', 'Cancelled'].includes(order.status) ? (
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px',
-                color: '#6B7280',
-                fontSize: '14px'
-              }}>
-                <CheckCircle size={18} />
-                Order is closed
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ position: 'relative' }}>
-                  <select
-                    value={newStatus}
-                    onChange={(e) => setNewStatus(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      borderRadius: '8px',
-                      border: '1px solid #E5E7EB',
-                      fontSize: '14px',
-                      fontFamily: 'Plus Jakarta Sans, sans-serif',
-                      appearance: 'none',
-                      background: '#FFFFFF',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="Received">Received</option>
-                    <option value="Payment Confirmed">Payment Confirmed</option>
-                    <option value="In Production">In Production</option>
-                    <option value="Dispatched">Dispatched</option>
-                    <option value="Delivered">Delivered</option>
-                    <option value="Cancelled">Cancelled</option>
-                  </select>
-                  <ChevronDown 
-                    size={18} 
-                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#6B7280' }} 
-                  />
-                </div>
-                <button
-                  onClick={handleUpdateStatus}
-                  disabled={isUpdating || newStatus === order.status}
-                  style={{
-                    background: newStatus === order.status ? '#F3F4F6' : '#1B4332',
-                    color: newStatus === order.status ? '#9CA3AF' : '#FFFFFF',
-                    border: 'none',
-                    padding: '10px',
-                    borderRadius: '8px',
-                    fontWeight: '600',
-                    cursor: newStatus === order.status ? 'default' : 'pointer',
-                    fontFamily: 'Plus Jakarta Sans, sans-serif',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {isUpdating ? 'Updating...' : 'Update Status'}
-                </button>
-              </div>
-            )}
+          <div style={{ ...cardStyle, background: '#F9FAFB' }}>
+            <div style={sectionLabelStyle}>Order Timeline</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <TimelineItem 
+                label="Order Placed" 
+                date={new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                active={true}
+              />
+              {order.dispatched_at && (
+                <TimelineItem 
+                  label="Dispatched" 
+                  date={new Date(order.dispatched_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  active={true}
+                />
+              )}
+              {order.delivered_at && (
+                <TimelineItem 
+                  label="Delivered" 
+                  date={new Date(order.delivered_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  active={true}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -208,47 +314,66 @@ const OrderDetailsView = ({ order, items }) => {
   );
 };
 
+const TimelineItem = ({ label, date, active }) => (
+  <div style={{ display: 'flex', gap: '12px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ 
+        width: '12px', 
+        height: '12px', 
+        borderRadius: '50%', 
+        background: active ? '#1B4332' : '#E5E7EB',
+        border: active ? '2px solid #D8F3DC' : 'none'
+      }}></div>
+      <div style={{ flex: 1, width: '2px', background: '#E5E7EB', marginTop: '4px' }}></div>
+    </div>
+    <div style={{ paddingBottom: '4px' }}>
+      <div style={{ fontSize: '13px', fontWeight: '700', color: active ? '#111827' : '#9CA3AF' }}>{label}</div>
+      <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>{date}</div>
+    </div>
+  </div>
+);
+
 const cardStyle = {
   background: '#FFFFFF',
   border: '1px solid #E5E7EB',
-  borderRadius: '16px',
+  borderRadius: '12px',
   padding: '24px',
   marginBottom: '24px'
 };
 
 const sectionLabelStyle = {
   fontSize: '11px',
+  fontWeight: '800',
   textTransform: 'uppercase',
-  letterSpacing: '0.08em',
-  color: '#6B7280',
-  marginBottom: '16px',
-  fontWeight: '600',
-  fontFamily: 'Plus Jakarta Sans, sans-serif'
-};
-
-const summaryRowStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  fontSize: '14px',
-  marginBottom: '8px',
+  letterSpacing: '0.05em',
+  color: '#9CA3AF',
+  marginBottom: '20px',
   fontFamily: 'Plus Jakarta Sans, sans-serif'
 };
 
 const thStyle = {
-  padding: '12px 24px',
-  fontSize: '11px',
-  textTransform: 'uppercase',
-  letterSpacing: '0.08em',
+  padding: '12px 0',
+  textAlign: 'left',
+  fontSize: '12px',
+  fontWeight: '700',
   color: '#6B7280',
-  fontWeight: '600',
   fontFamily: 'Plus Jakarta Sans, sans-serif'
 };
 
 const tdStyle = {
-  padding: '16px 24px',
+  padding: '16px 0',
   fontSize: '14px',
   fontFamily: 'Plus Jakarta Sans, sans-serif',
   color: '#374151'
+};
+
+const summaryLineStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  width: '240px',
+  fontSize: '14px',
+  color: '#4B5563',
+  fontFamily: 'Plus Jakarta Sans, sans-serif'
 };
 
 export default OrderDetailsView;

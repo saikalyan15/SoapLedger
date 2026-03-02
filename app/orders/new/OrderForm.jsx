@@ -4,167 +4,121 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   ShoppingBag, Check, Plus, Trash2, ChevronDown, 
-  Search, UserPlus, UserCheck, AlertCircle, Loader2
+  Search, UserPlus, UserCheck, AlertCircle, Loader2, X
 } from 'lucide-react';
 import { createOrderAction, updateOrderAction } from '@/lib/actions/orders';
-import StatusBadge from '@/components/StatusBadge';
+import { ORDER_STATUSES } from '@/lib/constants';
 
-const OrderForm = ({ products, settings, initialData }) => {
+const OrderForm = ({ products, settings, initialData = null }) => {
   const router = useRouter();
   const isEdit = !!initialData;
-  
-  // --- Form State ---
-  const [customer, setCustomer] = useState(initialData?.order ? {
-    id: initialData.order.customer_id,
-    name: initialData.order.customer_name,
-    phone: initialData.order.customer_phone,
-    address: initialData.order.customer_address,
-    isExisting: true
-  } : {
-    id: null,
-    name: '',
-    phone: '',
-    address: '',
-    isExisting: false,
-    isNew: false
+  const isPendingRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Customer State
+  const [customer, setCustomer] = useState({
+    id: initialData?.order?.customer_id || '',
+    name: initialData?.order?.customer_name || '',
+    phone: initialData?.order?.customer_phone || '',
+    address: initialData?.order?.customer_address || '',
+    isExisting: !!initialData?.order?.customer_id
   });
 
+  // Order Info State
   const [orderDate, setOrderDate] = useState(
     initialData?.order?.order_date 
-    ? new Date(initialData.order.order_date).toISOString().split('T')[0]
-    : new Date().toISOString().split('T')[0]
+      ? new Date(initialData.order.order_date).toISOString().split('T')[0] 
+      : new Date().toISOString().split('T')[0]
   );
-
-  const [dispatchedAt, setDispatchedAt] = useState(
-    initialData?.order?.dispatched_at 
-    ? new Date(initialData.order.dispatched_at).toISOString().split('T')[0]
-    : ''
-  );
-
-  const [deliveredAt, setDeliveredAt] = useState(
-    initialData?.order?.delivered_at 
-    ? new Date(initialData.order.delivered_at).toISOString().split('T')[0]
-    : ''
-  );
+  const [status, setStatus] = useState(initialData?.order?.status || 'Order Placed');
   
-  const [status, setStatus] = useState(initialData?.order?.status || 'Received');
-  
-  const [items, setItems] = useState(initialData?.items?.map(item => ({
-    product_id: item.product_id,
-    quantity: item.quantity,
-    unit_price: item.unit_price,
-    line_total: item.quantity * item.unit_price
-  })) || [{ product_id: '', quantity: 1, unit_price: 0, line_total: 0 }]);
+  // Shipping and Packaging
+  const [shipping, setShipping] = useState(Number(initialData?.order?.shipping_charge) || 0);
+  const [packaging, setPackaging] = useState(Number(initialData?.order?.packaging_cost) || (settings?.default_packaging_cost || 0));
 
-  const [shippingCharge, setShippingCharge] = useState(
-    initialData?.order?.shipping_charge || 0
-  );
-  
-  const [notes, setNotes] = useState(initialData?.order?.notes || '');
+  // Items State
+  const [items, setItems] = useState(() => {
+    if (initialData?.items) {
+      return initialData.items.map(item => ({
+        product_id: item.product_id,
+        quantity: parseInt(item.quantity) || 0,
+        unit_price: parseFloat(item.unit_price) || 0,
+        total_price: parseFloat(item.line_total) || (parseInt(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)
+      }));
+    }
+    return [{ product_id: '', quantity: 1, unit_price: 0, total_price: 0 }];
+  });
 
-  // --- UI State ---
+  // Discount (Calculated for display in edit mode since it's not in DB)
+  const initialSubtotal = items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
+  const initialRevenue = Number(initialData?.order?.revenue || 0);
+  const initialDiscount = isEdit ? Math.max(0, initialSubtotal + shipping - initialRevenue) : 0;
+  const [discount, setDiscount] = useState(initialDiscount);
+
+  // Search/UI State
+  const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState(null); // 'loading', 'success', 'error'
-  const [errorMsg, setErrorMsg] = useState('');
-
+  const [showResults, setShowResults] = useState(false);
   const [customerOrders, setCustomerOrders] = useState([]);
-  const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
-
   const searchRef = useRef(null);
 
-  // --- Calculations ---
-  const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.line_total) || 0), 0);
-  
-  const fetchCustomerHistory = async (customerId) => {
-    try {
-      const res = await fetch(`/api/customers/${customerId}/orders`);
-      const data = await res.json();
-      setCustomerOrders(data.orders || []);
-    } catch (err) {
-      console.error('Error fetching customer history:', err);
-    }
-  };
-
+  // Close search results on click outside
   useEffect(() => {
-    if (isEdit && initialData?.order?.customer_id) {
-      fetchCustomerHistory(initialData.order.customer_id);
-    }
-  }, [isEdit, initialData]);
-
-  // Auto-calculate shipping if not manually changed (in new mode)
-  useEffect(() => {
-    if (!isEdit && subtotal > 0) {
-      const threshold = parseFloat(settings.free_shipping_threshold) || 1000;
-      const charge = parseFloat(settings.shipping_charge_below) || 100;
-      if (subtotal >= threshold) {
-        setShippingCharge(0);
-      } else {
-        setShippingCharge(charge);
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowResults(false);
       }
-    }
-  }, [subtotal, settings, isEdit]);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  const orderValue = subtotal; // Revenue from soaps
-
-  // --- Handlers ---
-  const handleCustomerSearch = async (query) => {
-    // If name is edited or cleared, reset everything customer-related
-    setCustomer({
-      id: null,
-      name: query,
-      phone: '',
-      address: '',
-      isExisting: false,
-      isNew: false
-    });
-    setCustomerOrders([]);
-    setIsHistoryExpanded(false);
-
-    if (query.length >= 2) {
-      setIsSearching(true);
-      try {
-        const res = await fetch(`/api/customers/search?name=${encodeURIComponent(query)}`);
+  // Customer Search
+  useEffect(() => {
+    const delayDebounce = setTimeout(async () => {
+      if (searchQuery.trim().length >= 2) {
+        const res = await fetch(`/api/customers/search?q=${encodeURIComponent(searchQuery)}`);
         const data = await res.json();
         setSearchResults(data.customers || []);
-        setShowDropdown(true);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsSearching(false);
+        setShowResults(true);
+      } else {
+        setSearchResults([]);
       }
-    } else {
-      setSearchResults([]);
-      setShowDropdown(false);
-    }
-  };
+    }, 300);
+    return () => clearTimeout(delayDebounce);
+  }, [searchQuery]);
 
-  const selectCustomer = (c) => {
+  // Fetch Customer History
+  useEffect(() => {
+    if (customer.id) {
+      fetch(`/api/customers/${customer.id}/orders`)
+        .then(res => res.json())
+        .then(data => setCustomerOrders(data.orders || []));
+    } else {
+      setCustomerOrders([]);
+    }
+  }, [customer.id]);
+
+  const handleSelectCustomer = (c) => {
     setCustomer({
       id: c.id,
       name: c.name,
       phone: c.phone,
       address: c.address || '',
-      isExisting: true,
-      isNew: false
+      isExisting: true
     });
-    setShowDropdown(false);
-    fetchCustomerHistory(c.id);
+    setSearchQuery('');
+    setShowResults(false);
   };
 
-  const startNewCustomer = () => {
-    setCustomer(prev => ({
-      ...prev,
-      isExisting: false,
-      isNew: true
-    }));
-    setShowDropdown(false);
+  const resetCustomer = () => {
+    setCustomer({ id: '', name: '', phone: '', address: '', isExisting: false });
+    setSearchQuery('');
   };
 
+  // Item Management
   const addItem = () => {
-    setItems([...items, { product_id: '', quantity: 1, unit_price: 0, line_total: 0 }]);
+    setItems([...items, { product_id: '', quantity: 1, unit_price: 0, total_price: 0 }]);
   };
 
   const removeItem = (index) => {
@@ -176,223 +130,271 @@ const OrderForm = ({ products, settings, initialData }) => {
   const updateItem = (index, field, value) => {
     const newItems = [...items];
     const item = { ...newItems[index] };
-    
-    item[field] = value;
-    
+
     if (field === 'product_id') {
       const product = products.find(p => p.id === value);
-      if (product) {
-        item.unit_price = parseFloat(product.unit_price);
-      }
+      item.product_id = value;
+      item.unit_price = product ? parseFloat(product.unit_price) : 0;
+    } else if (field === 'quantity') {
+      item.quantity = parseInt(value) || 0;
+    } else if (field === 'unit_price') {
+      item.unit_price = parseFloat(value) || 0;
     }
-    
-    item.line_total = (parseInt(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+
+    item.total_price = item.quantity * item.unit_price;
     newItems[index] = item;
     setItems(newItems);
   };
 
+  // Calculations
+  const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
+  const orderValue = Math.max(0, subtotal - parseFloat(discount || 0) + parseFloat(shipping || 0));
+
+  // Auto-shipping logic
+  useEffect(() => {
+    if (!isEdit) {
+      if (subtotal >= (settings?.free_shipping_threshold || 1000)) {
+        setShipping(0);
+      } else {
+        setShipping(settings?.shipping_charge_below || 100);
+      }
+    }
+  }, [subtotal, settings, isEdit]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!customer.phone) {
-      setErrorMsg('Phone number is required');
-      return;
-    }
-    if (items.some(item => !item.product_id)) {
-      setErrorMsg('Please select a product for all line items');
+    if (isPendingRef.current) return;
+    
+    if (!customer.name || !customer.phone) {
+      alert("Please provide customer name and phone number");
       return;
     }
 
+    if (items.some(item => !item.product_id || item.quantity <= 0)) {
+      alert("Please select products and quantities for all items");
+      return;
+    }
+
+    isPendingRef.current = true;
     setIsSubmitting(true);
-    setSubmitStatus('loading');
-    setErrorMsg('');
-
-    const customerData = {
-      name: customer.name,
-      phone: customer.phone,
-      address: customer.address,
-      notes: '' // Not used in customer upsert here
-    };
 
     const orderData = {
       order_date: orderDate,
-      dispatched_at: dispatchedAt || null,
-      delivered_at: deliveredAt || null,
-      order_value: orderValue,
-      shipping_charge: parseFloat(shippingCharge),
-      packaging_cost: 0, // Removed from form
-      material_cost: 0, // Removed from form
-      status: status,
-      notes: notes
+      status,
+      shipping_charge: parseFloat(shipping || 0),
+      packaging_cost: parseFloat(packaging || 0),
+      order_value: parseFloat(orderValue || 0)
     };
-
-    const formattedItems = items.map(item => ({
-      product_id: item.product_id,
-      quantity: item.quantity,
-      unit_price: item.unit_price
-    }));
 
     try {
       let result;
       if (isEdit) {
-        result = await updateOrderAction(initialData.order.id, orderData, formattedItems);
+        result = await updateOrderAction(initialData.order.id, customer, orderData, items);
       } else {
-        result = await createOrderAction(customerData, orderData, formattedItems);
+        result = await createOrderAction(customer, orderData, items);
       }
 
       if (result.success) {
-        setSubmitStatus('success');
-        setTimeout(() => {
-          router.push('/orders');
-        }, 1500);
+        router.push(isEdit ? `/orders/${initialData.order.id}` : '/orders');
+        router.refresh();
       } else {
-        setSubmitStatus('error');
-        setErrorMsg(result.error || 'Something went wrong');
+        alert(result.error || "Something went wrong");
+        isPendingRef.current = false;
+        setIsSubmitting(false);
       }
     } catch (err) {
-      setSubmitStatus('error');
-      setErrorMsg('Failed to save order');
-    } finally {
+      console.error(err);
+      alert("An unexpected error occurred");
+      isPendingRef.current = false;
       setIsSubmitting(false);
     }
   };
 
-  // --- Styles ---
-  const sectionLabelStyle = {
-    fontSize: '11px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: '#6B7280',
-    marginBottom: '16px',
-    fontWeight: '600',
-    fontFamily: '"Plus Jakarta Sans", sans-serif',
+  // Styles
+  const containerStyle = {
+    maxWidth: '800px',
+    margin: '0 auto',
+    fontFamily: '"Plus Jakarta Sans", sans-serif'
+  };
+
+  const cardStyle = {
+    background: '#FFFFFF',
+    border: '1px solid #E5E7EB',
+    borderRadius: '12px',
+    padding: '32px',
+    marginBottom: '24px'
+  };
+
+  const sectionTitleStyle = {
+    fontFamily: 'DM Serif Display, serif',
+    fontSize: '20px',
+    color: '#1B4332',
+    marginBottom: '24px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px'
   };
 
   const inputBaseStyle = {
     width: '100%',
-    padding: '10px 14px',
+    padding: '12px 16px',
     borderRadius: '8px',
     border: '1px solid #E5E7EB',
     fontSize: '14px',
-    fontFamily: '"Plus Jakarta Sans", sans-serif',
+    fontFamily: 'inherit',
     outline: 'none',
-    transition: 'all 0.2s',
+    transition: 'border-color 0.2s',
+    boxSizing: 'border-box'
+  };
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: '8px'
+  };
+
+  const rowStyle = {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '20px',
+    marginBottom: '20px'
   };
 
   return (
-    <div style={{ maxWidth: '680px', margin: '0 auto', paddingBottom: '100px' }}>
-      {/* Header */}
+    <div style={containerStyle}>
       <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ 
-          fontFamily: '"DM Serif Display", serif', 
-          fontSize: '36px', 
-          color: '#1B4332',
-          margin: '0 0 8px 0'
-        }}>
+        <h1 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '32px', color: '#1B4332', margin: '0 0 8px 0' }}>
           {isEdit ? 'Edit Order' : 'New Order'}
         </h1>
-        <p style={{ 
-          fontFamily: '"Plus Jakarta Sans", sans-serif', 
-          fontSize: '14px', 
-          color: '#6B7280',
-          margin: 0
-        }}>
-          {isEdit ? `Order #${initialData.order.id.slice(0, 8)}` : 'Log an order from WhatsApp'}
+        <p style={{ color: '#6B7280', fontSize: '14px' }}>
+          {isEdit ? `Modifying order #${initialData.order.id.slice(0,8)}` : 'Fill in the details to create a new order'}
         </p>
-        <div style={{ height: '2px', background: '#E5E7EB', marginTop: '16px' }} />
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* Section 1: Customer */}
-        <section style={{ marginBottom: '40px' }}>
-          <div style={sectionLabelStyle}>Customer</div>
-          
-          <div style={{ position: 'relative' }} ref={searchRef}>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                placeholder="Type customer name..."
-                value={customer.name}
-                onChange={(e) => handleCustomerSearch(e.target.value)}
-                autoFocus={!isEdit}
-                required
-                style={{
-                  ...inputBaseStyle,
-                  paddingLeft: '36px',
-                }}
-              />
-              <Search 
-                size={16} 
-                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} 
-              />
-              {isSearching && (
-                <Loader2 
-                  size={16} 
-                  className="animate-spin" 
-                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} 
+        {/* Customer Section */}
+        <div style={cardStyle}>
+          <div style={sectionTitleStyle}>
+            <Search size={20} />
+            Customer Information
+          </div>
+
+          {!customer.isExisting && !isEdit ? (
+            <div style={{ position: 'relative', marginBottom: '20px' }} ref={searchRef}>
+              <label style={labelStyle}>Search Existing Customer</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="Search by name or phone..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => searchQuery.length >= 2 && setShowResults(true)}
+                  style={{ ...inputBaseStyle, paddingLeft: '44px' }}
                 />
+                <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+              </div>
+
+              {showResults && searchResults.length > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  background: '#FFFFFF',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '8px',
+                  marginTop: '4px',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                  zIndex: 50,
+                  maxHeight: '200px',
+                  overflowY: 'auto'
+                }}>
+                  {searchResults.map(c => (
+                    <div
+                      key={c.id}
+                      onClick={() => handleSelectCustomer(c)}
+                      style={{
+                        padding: '12px 16px',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid #F3F4F6',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#F9FAFB'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#FFFFFF'}
+                    >
+                      <div style={{ fontWeight: '600', fontSize: '14px' }}>{c.name}</div>
+                      <div style={{ fontSize: '12px', color: '#6B7280' }}>{c.phone}</div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-
-            {/* Customer Dropdown */}
-            {showDropdown && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                background: '#FFFFFF',
-                border: '1px solid #E5E7EB',
-                borderRadius: '8px',
-                marginTop: '4px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                zIndex: 50,
-                overflow: 'hidden'
-              }}>
-                {searchResults.map(c => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => selectCustomer(c)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      border: 'none',
-                      background: 'none',
-                      cursor: 'pointer',
-                      borderBottom: '1px solid #F3F4F6',
-                      textAlign: 'left'
-                    }}
-                  >
-                    <span style={{ fontWeight: '600', fontSize: '14px', color: '#111827' }}>{c.name}</span>
-                    <span style={{ fontSize: '12px', color: '#6B7280' }}>{c.phone}</span>
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={startNewCustomer}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    border: 'none',
-                    background: '#F9FAFB',
-                    cursor: 'pointer',
-                    color: '#1B4332',
-                    fontWeight: '600',
-                    fontSize: '14px',
-                    textAlign: 'left'
-                  }}
-                >
-                  <UserPlus size={16} />
-                  Add "{customer.name}" as new customer
-                </button>
+          ) : (
+            <div style={{ 
+              background: '#F9FAFB', 
+              padding: '16px', 
+              borderRadius: '8px', 
+              marginBottom: '20px',
+              border: '1px solid #E5E7EB',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start'
+            }}>
+              <div>
+                <div style={{ fontWeight: '700', fontSize: '16px', color: '#111827', marginBottom: '4px' }}>{customer.name}</div>
+                <div style={{ fontSize: '14px', color: '#4B5563' }}>{customer.phone}</div>
               </div>
-            )}
+              {!isEdit && (
+                <button 
+                  type="button" 
+                  onClick={resetCustomer}
+                  style={{ background: 'none', border: 'none', color: '#DC2626', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                >
+                  Change
+                </button>
+              )}
+            </div>
+          )}
+
+          <div style={rowStyle}>
+            <div>
+              <label style={labelStyle}>Customer Name</label>
+              <input
+                type="text"
+                value={customer.name}
+                onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+                placeholder="Full Name"
+                style={inputBaseStyle}
+                required
+                disabled={customer.isExisting}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Phone Number (WhatsApp)</label>
+              <input
+                type="text"
+                value={customer.phone}
+                onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                placeholder="WhatsApp Number"
+                style={inputBaseStyle}
+                required
+              />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 0 }}>
+            <label style={labelStyle}>Shipping Address</label>
+            <textarea
+              value={customer.address}
+              onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+              placeholder="Full delivery address..."
+              rows={3}
+              style={{ ...inputBaseStyle, resize: 'none' }}
+            />
           </div>
 
           {/* Customer Feedback Pills */}
@@ -424,87 +426,13 @@ const OrderForm = ({ products, settings, initialData }) => {
                 </div>
                 
                 {customerOrders.length > (isEdit ? 1 : 0) && (
-                  <div style={{ marginTop: '4px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        background: 'none',
-                        border: 'none',
-                        padding: 0,
-                        cursor: 'pointer',
-                        fontFamily: '"Plus Jakarta Sans", sans-serif',
-                        fontSize: '12px',
-                        color: '#6B7280'
-                      }}
-                    >
-                      <span>
-                        {customerOrders.length} previous order{customerOrders.length > 1 ? 's' : ''} · ₹{customerOrders.reduce((sum, o) => sum + parseFloat(o.order_value), 0)} total
-                      </span>
-                      <ChevronDown 
-                        size={14} 
-                        style={{ 
-                          transition: 'transform 0.2s', 
-                          transform: isHistoryExpanded ? 'rotate(180deg)' : 'rotate(0)' 
-                        }} 
-                      />
-                    </button>
-                    
-                    {isHistoryExpanded && (
-                      <div style={{
-                        marginTop: '8px',
-                        background: '#FAFAFA',
-                        border: '1px solid #E5E7EB',
-                        borderRadius: '8px',
-                        padding: '12px 16px',
-                      }}>
-                        {customerOrders.map((order, idx) => (
-                          <div key={order.id}>
-                            <div style={{ 
-                              display: 'flex', 
-                              justifyContent: 'space-between', 
-                              alignItems: 'center',
-                              padding: '8px 0'
-                            }}>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
-                                <div style={{ fontSize: '13px', color: '#6B7280' }}>
-                                  {new Date(order.order_date).toLocaleDateString('en-GB', { 
-                                    day: 'numeric', month: 'short', year: 'numeric' 
-                                  })}
-                                </div>
-                                <div style={{ 
-                                  fontSize: '13px', 
-                                  color: '#1A1A1A',
-                                  maxWidth: '280px',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
-                                }}>
-                                  {order.products}
-                                </div>
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>
-                                  ₹{order.order_value}
-                                </div>
-                                <StatusBadge status={order.status} />
-                              </div>
-                            </div>
-                            {idx < customerOrders.length - 1 && (
-                              <div style={{ height: '1px', background: '#F3F4F6' }} />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                  <div style={{ fontSize: '12px', color: '#059669', fontWeight: '500', marginLeft: '4px' }}>
+                    Has ordered {customerOrders.length} times before
                   </div>
                 )}
               </>
             )}
-            {customer.isNew && (
+            {!customer.isExisting && customer.name && (
               <div style={{
                 background: '#FEF3C7',
                 color: '#92400E',
@@ -513,338 +441,241 @@ const OrderForm = ({ products, settings, initialData }) => {
                 fontSize: '13px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                width: 'fit-content'
               }}>
-                <AlertCircle size={14} />
+                <UserPlus size={14} />
                 New customer — please add phone number
               </div>
             )}
           </div>
+        </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginTop: '16px' }}>
-            <div>
-              <label style={{ ...sectionLabelStyle, marginBottom: '8px', display: 'block' }}>Phone Number</label>
-              <input
-                type="text"
-                value={customer.phone}
-                onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
-                required
-                placeholder="WhatsApp Number"
-                style={{
-                  ...inputBaseStyle,
-                  borderColor: !customer.phone && submitStatus === 'error' ? '#EF4444' : '#E5E7EB'
-                }}
-              />
-            </div>
-            <div>
-              <label style={{ ...sectionLabelStyle, marginBottom: '8px', display: 'block' }}>Delivery Address</label>
-              <textarea
-                value={customer.address}
-                onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                rows={3}
-                placeholder="Add later when ready to dispatch"
-                style={{
-                  ...inputBaseStyle,
-                  fontSize: '13px',
-                  borderColor: '#E5E7EB',
-                }}
-              />
-            </div>
+        {/* Order Details Section */}
+        <div style={cardStyle}>
+          <div style={sectionTitleStyle}>
+            <ShoppingBag size={20} />
+            Order Details
           </div>
-        </section>
 
-        <div style={{ height: '1px', background: '#E5E7EB', margin: '28px 0' }} />
-
-        {/* Section 2: Order Details */}
-        <section style={{ marginBottom: '40px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '20px' }}>
+          <div style={rowStyle}>
             <div>
-              <div style={sectionLabelStyle}>Order Date</div>
+              <label style={labelStyle}>Order Date</label>
               <input
                 type="date"
                 value={orderDate}
                 onChange={(e) => setOrderDate(e.target.value)}
                 style={inputBaseStyle}
+                required
               />
             </div>
             <div>
-              <div style={sectionLabelStyle}>Dispatch Date</div>
-              <input
-                type="date"
-                value={dispatchedAt}
-                onChange={(e) => setDispatchedAt(e.target.value)}
-                style={{
-                  ...inputBaseStyle,
-                  borderColor: (status === 'Dispatched' || status === 'Delivered') && !dispatchedAt ? '#F59E0B' : '#E5E7EB'
-                }}
-              />
-            </div>
-            <div>
-              <div style={sectionLabelStyle}>Delivery Date</div>
-              <input
-                type="date"
-                value={deliveredAt}
-                onChange={(e) => setDeliveredAt(e.target.value)}
-                style={inputBaseStyle}
-              />
-            </div>
-            <div>
-              <div style={sectionLabelStyle}>Status</div>
+              <label style={labelStyle}>Order Status</label>
               <div style={{ position: 'relative' }}>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  style={{
-                    ...inputBaseStyle,
-                    appearance: 'none',
-                    paddingRight: '40px',
-                  }}
+                  style={{ ...inputBaseStyle, appearance: 'none' }}
                 >
-                  <option value="Received">Received</option>
-                  <option value="Payment Confirmed">Payment Confirmed</option>
-                  <option value="In Production">In Production</option>
-                  <option value="Dispatched">Dispatched</option>
-                  <option value="Delivered">Delivered</option>
-                  <option value="Cancelled">Cancelled</option>
+                  {ORDER_STATUSES.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
                 </select>
-                <ChevronDown 
-                  size={18} 
-                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#6B7280' }} 
-                />
+                <ChevronDown size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF', pointerEvents: 'none' }} />
               </div>
             </div>
           </div>
-          {(status === 'Dispatched' || status === 'Delivered') && !dispatchedAt && (
-            <div style={{ fontSize: '11px', color: '#B45309', marginTop: '8px' }}>
-              Please add dispatch date when marking as dispatched
+
+          {/* Items Table */}
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ ...labelStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Products</span>
+              <button 
+                type="button" 
+                onClick={addItem}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  color: '#1B4332', 
+                  fontSize: '12px', 
+                  fontWeight: '700', 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <Plus size={14} /> Add Product
+              </button>
             </div>
-          )}
-        </section>
 
-        <div style={{ height: '1px', background: '#E5E7EB', margin: '28px 0' }} />
-
-        {/* Section 3: Soaps Ordered */}
-        <section style={{ marginBottom: '40px' }}>
-          <div style={sectionLabelStyle}>Soaps Ordered</div>
-          <div style={{
-            background: '#FAFDF9',
-            border: '1px solid #D8F3DC',
-            borderRadius: '12px',
-            padding: '20px',
-          }}>
-            {items.map((item, index) => (
-              <div key={index} style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '1fr 70px 90px 80px 40px', 
-                gap: '12px', 
-                alignItems: 'end',
-                marginBottom: index === items.length - 1 ? 0 : '16px'
-              }}>
-                <div>
-                  {index === 0 && <label style={{ ...sectionLabelStyle, fontSize: '10px' }}>Product</label>}
-                  <select
-                    value={item.product_id}
-                    onChange={(e) => updateItem(index, 'product_id', e.target.value)}
-                    style={inputBaseStyle}
-                  >
-                    <option value="">Select Soap...</option>
-                    {/* Group by base_type if possible, but keep it simple for now */}
-                    {products.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} — ₹{p.unit_price}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  {index === 0 && <label style={{ ...sectionLabelStyle, fontSize: '10px' }}>Qty</label>}
-                  <input
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                    style={inputBaseStyle}
-                  />
-                </div>
-                <div>
-                  {index === 0 && <label style={{ ...sectionLabelStyle, fontSize: '10px' }}>Price ₹</label>}
-                  <input
-                    type="number"
-                    value={item.unit_price}
-                    onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
-                    style={inputBaseStyle}
-                  />
-                </div>
-                <div style={{ textAlign: 'right', paddingBottom: '10px' }}>
-                  {index === 0 && <label style={{ ...sectionLabelStyle, fontSize: '10px', display: 'block', textAlign: 'right' }}>Total</label>}
-                  <div style={{ 
-                    fontFamily: '"DM Serif Display", serif', 
-                    fontSize: '15px', 
-                    color: '#1B4332' 
-                  }}>
-                    ₹{item.line_total}
-                  </div>
-                </div>
-                <div>
-                  {items.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#9CA3AF',
-                        cursor: 'pointer',
-                        padding: '10px',
-                        marginBottom: '2px'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.color = '#EF4444'}
-                      onMouseOut={(e) => e.currentTarget.style.color = '#9CA3AF'}
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            <button
-              type="button"
-              onClick={addItem}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#1B4332',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                marginTop: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: 0
-              }}
-            >
-              <Plus size={16} />
-              Add Another Soap
-            </button>
+            <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                <thead style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#4B5563' }}>Product</th>
+                    <th style={{ textAlign: 'center', padding: '12px 16px', fontWeight: '600', color: '#4B5563', width: '80px' }}>Qty</th>
+                    <th style={{ textAlign: 'right', padding: '12px 16px', fontWeight: '600', color: '#4B5563', width: '100px' }}>Price</th>
+                    <th style={{ textAlign: 'right', padding: '12px 16px', fontWeight: '600', color: '#4B5563', width: '100px' }}>Total</th>
+                    <th style={{ width: '40px' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, index) => (
+                    <tr key={index} style={{ borderBottom: index === items.length - 1 ? 'none' : '1px solid #F3F4F6' }}>
+                      <td style={{ padding: '12px 16px' }}>
+                        <select
+                          value={item.product_id}
+                          onChange={(e) => updateItem(index, 'product_id', e.target.value)}
+                          style={{ ...inputBaseStyle, padding: '8px 12px' }}
+                          required
+                        >
+                          <option value="">Select Product</option>
+                          {products.map(p => (
+                            <option key={p.id} value={p.id}>{p.name} ({p.base_type})</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                          style={{ ...inputBaseStyle, padding: '8px', textAlign: 'center' }}
+                          required
+                        />
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={item.unit_price}
+                          onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
+                          style={{ ...inputBaseStyle, padding: '8px', textAlign: 'right' }}
+                          required
+                        />
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: '#111827' }}>
+                        ₹{parseFloat(item.total_price || 0).toLocaleString()}
+                      </td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => removeItem(index)}
+                          style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer' }}
+                          disabled={items.length === 1}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {/* Order Summary Box */}
-          <div style={{
-            background: '#F9F6F0',
-            border: '1px solid #E5E7EB',
-            borderRadius: '10px',
-            padding: '16px 20px',
-            marginTop: '20px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <div style={{ display: 'flex', gap: '32px' }}>
+          {/* Charges & Summary */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '40px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
-                <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase' }}>Subtotal</div>
-                <div style={{ fontWeight: '600', fontSize: '16px' }}>₹{subtotal}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase' }}>Shipping</div>
+                <label style={labelStyle}>Shipping Charge (₹)</label>
                 <input
                   type="number"
-                  value={shippingCharge}
-                  onChange={(e) => setShippingCharge(e.target.value)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    borderBottom: '1px dashed #9CA3AF',
-                    width: '60px',
-                    fontWeight: '600',
-                    fontSize: '16px',
-                    padding: 0,
-                    outline: 'none'
-                  }}
+                  value={shipping}
+                  onChange={(e) => setShipping(e.target.value)}
+                  style={inputBaseStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Packaging Cost (Internal) (₹)</label>
+                <input
+                  type="number"
+                  value={packaging}
+                  onChange={(e) => setPackaging(e.target.value)}
+                  style={inputBaseStyle}
+                />
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={labelStyle}>Discount (₹)</label>
+                <input
+                  type="number"
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
+                  style={inputBaseStyle}
                 />
               </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase' }}>Order Value</div>
-              <div style={{ 
-                fontFamily: '"DM Serif Display", serif', 
-                fontSize: '24px', 
-                color: '#1B4332' 
-              }}>
-                ₹{(parseFloat(subtotal) + (parseFloat(shippingCharge) || 0)).toLocaleString('en-IN')}
+
+            <div style={{ 
+              background: '#F9FAFB', 
+              borderRadius: '12px', 
+              padding: '20px',
+              border: '1px solid #E5E7EB'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '14px', color: '#4B5563' }}>
+                <span>Subtotal</span>
+                <span>₹{subtotal.toLocaleString()}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '14px', color: '#4B5563' }}>
+                <span>Shipping</span>
+                <span>₹{parseFloat(shipping || 0).toLocaleString()}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontSize: '14px', color: '#DC2626' }}>
+                <span>Discount</span>
+                <span>-₹{parseFloat(discount || 0).toLocaleString()}</span>
+              </div>
+              <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>Final Bill</span>
+                  <span style={{ fontSize: '10px', color: '#6B7280' }}>Exc. Packaging</span>
+                </div>
+                <span style={{ fontSize: '24px', fontWeight: '800', color: '#1B4332' }}>₹{orderValue.toLocaleString()}</span>
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        <div style={{ height: '1px', background: '#E5E7EB', margin: '28px 0' }} />
-
-        {/* Section 5: Notes */}
-        <section style={{ marginBottom: '48px' }}>
-          <div style={sectionLabelStyle}>Notes</div>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            placeholder="Special instructions, gift message, how they found us..."
-            style={inputBaseStyle}
-          />
-        </section>
-
-        {/* Submit Button */}
-        <div style={{ position: 'sticky', bottom: '24px', zIndex: 10 }}>
-          {errorMsg && (
-            <div style={{ 
-              background: '#FEE2E2', 
-              color: '#DC2626', 
-              padding: '12px', 
-              borderRadius: '8px', 
-              marginBottom: '16px',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              border: '1px solid #FECACA'
-            }}>
-              <AlertCircle size={16} />
-              {errorMsg}
-            </div>
-          )}
-          
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginBottom: '100px' }}>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            style={{
+              padding: '12px 24px',
+              borderRadius: '8px',
+              border: '1px solid #E5E7EB',
+              background: '#FFFFFF',
+              color: '#374151',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Cancel
+          </button>
           <button
             type="submit"
-            disabled={isSubmitting || submitStatus === 'success'}
+            disabled={isSubmitting}
             style={{
-              width: '100%',
-              height: '52px',
-              background: submitStatus === 'success' ? '#1B4332' : '#1B4332',
-              color: '#FFFFFF',
+              padding: '12px 32px',
+              borderRadius: '8px',
               border: 'none',
-              borderRadius: '12px',
-              fontSize: '16px',
+              background: '#1B4332',
+              color: '#FFFFFF',
               fontWeight: '700',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
+              gap: '8px',
+              minWidth: '160px',
               justifyContent: 'center',
-              gap: '12px',
-              boxShadow: '0 4px 12px rgba(27,67,50,0.2)',
-              transition: 'all 0.2s'
+              opacity: isSubmitting ? 0.7 : 1
             }}
           >
-            {submitStatus === 'loading' ? (
+            {isSubmitting ? (
               <>
                 <Loader2 size={20} className="animate-spin" />
                 Saving...
-              </>
-            ) : submitStatus === 'success' ? (
-              <>
-                <Check size={20} />
-                Order Saved!
-              </>
-            ) : isEdit ? (
-              <>
-                <Check size={20} />
-                Update Order
               </>
             ) : (
               <>
