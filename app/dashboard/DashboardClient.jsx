@@ -4,7 +4,7 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   LineChart, Line, CartesianGrid, Legend, Cell, PieChart, Pie, AreaChart, Area,
-  ReferenceLine, ComposedChart
+  ComposedChart
 } from 'recharts';
 import { 
   TrendingUp, TrendingDown, Clock, Package, 
@@ -17,7 +17,7 @@ import {
   getOperationsMetrics, 
   getAvgOrderValueTrend,
   getCostPriceTrend,
-  getCashFlowTrend,
+  getMonthlySurplusDeficit,
   getBreakEvenProjection
 } from '@/lib/queries/dashboard';
 
@@ -122,7 +122,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         }}>
           <span>{p.name}</span>
           <span style={{ fontWeight: 600 }}>
-            ₹{Math.round(Number(p.value)).toLocaleString('en-IN')}
+            {p.name?.includes('Qty') || p.name?.includes('Units') ? fmt(p.value) : `₹${fmt(p.value)}`}
           </span>
         </div>
       ))}
@@ -130,7 +130,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, initialOperations, initialAvgTrend, initialCostTrend, initialCashFlow, initialProjection }) => {
+const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, initialOperations, initialAvgTrend, initialCostTrend, initialProfitability, initialProjection }) => {
   const [filter, setFilter] = useState('All Time');
   const [isPending, startTransition] = useTransition();
   const [isMobile, setIsMobile] = useState(false); /* mobile only */
@@ -149,18 +149,18 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
   const [operations, setOperations] = useState(initialOperations);
   const [avgTrend, setAvgTrend] = useState(initialAvgTrend);
   const [costTrend, setCostTrend] = useState(initialCostTrend);
-  const [cashFlow, setCashFlow] = useState(initialCashFlow);
+  const [profitability, setProfitability] = useState(initialProfitability);
   const [projection, setProjection] = useState(initialProjection);
 
   const fetchFilteredData = async (range) => {
-    const [rev, cust, prod, oper, trend, cTrend, cFlow, proj] = await Promise.all([
+    const [rev, cust, prod, oper, trend, cTrend, cProf, proj] = await Promise.all([
       getRevenueKPIs(range),
       getRepeatCustomerRate(range),
       getProductPerformance(range),
       getOperationsMetrics(range),
       getAvgOrderValueTrend(range),
       getCostPriceTrend(range),
-      getCashFlowTrend(range),
+      getMonthlySurplusDeficit(),
       getBreakEvenProjection()
     ]);
     setRevenue(rev);
@@ -169,7 +169,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
     setOperations(oper);
     setAvgTrend(trend);
     setCostTrend(cTrend);
-    setCashFlow(cFlow);
+    setProfitability(cProf);
     setProjection(proj);
   };
 
@@ -191,7 +191,6 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
     });
   };
 
-  const lastActualMonth = projection.data?.filter(p => !p.isProjected).slice(-1)[0]?.month;
   const totalBaseRevenue = products.revenue_by_base.reduce((sum, item) => sum + item.revenue, 0);
 
   return (
@@ -243,9 +242,9 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
         <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '-8px' }}>
           Sales Volume
         </div>
-        <KPICard label="Revenue" value={`₹${fmt(revenue.total_revenue)}`} sub="Delivered" color="#1B4332" loading={isPending} isMobile={isMobile} />
+        <KPICard label="Revenue" value={`₹${fmt(revenue.total_revenue)}`} sub="Confirmed orders" color="#1B4332" loading={isPending} isMobile={isMobile} />
         <KPICard label="Orders" value={fmt(revenue.orders_count)} sub="Delivered" color="#1B4332" loading={isPending} isMobile={isMobile} />
-        <KPICard label="Soaps Sold" value={fmt(revenue.total_soaps_sold)} sub="Units" color="#1B4332" loading={isPending} isMobile={isMobile} />
+        <KPICard label="Soaps Sold" value={fmt(revenue.total_soaps_sold)} sub="Units confirmed" color="#1B4332" loading={isPending} isMobile={isMobile} />
 
         <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '-8px', marginTop: '12px' }}>
           Customer Growth
@@ -258,33 +257,34 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
           Operations
         </div>
         <KPICard label="Cost Price" value={revenue.cost_price_per_soap > 0 ? `₹${fmt(revenue.cost_price_per_soap)}` : "—"} sub="Avg per soap" color="#6B21A8" loading={isPending} isMobile={isMobile} />
-        <KPICard label="Pending ₹" value={`₹${fmt(revenue.pending_revenue || 0)}`} sub="Pipeline" color="#6B21A8" loading={isPending} isMobile={isMobile} />
+        <KPICard label="Pending ₹" value={`₹${fmt(revenue.pending_revenue || 0)}`} sub="Awaiting payment" color="#6B21A8" loading={isPending} isMobile={isMobile} />
         <KPICard label="Pending Qty" value={fmt(revenue.pending_soaps)} sub="Units" color="#6B21A8" loading={isPending} isMobile={isMobile} />
       </div>
 
-      {/* Row 2: Cash Flow & Base Type */}
+      {/* Row 2: Monthly Profitability & Base Type */}
       <div 
         className="chart-row-2col"
         style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', marginBottom: '32px' }}
       >
-        <ChartCard title="Monthly Cash Flow" subtitle="Revenue vs Spend" loading={isPending} empty={cashFlow.length === 0} icon={DollarSign} isMobile={isMobile}>
-          <div style={{ height: isMobile ? '220px' : '320px', width: '100%' }} className="recharts-responsive-container">
+        <ChartCard title="Monthly Profitability" subtitle="Surplus/Deficit Trend" loading={isPending} empty={profitability.length === 0} icon={DollarSign} isMobile={isMobile}>
+          <div style={{ height: isMobile ? '280px' : '360px', width: '100%' }} className="recharts-responsive-container">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={cashFlow} barCategoryGap="20%" margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ComposedChart data={profitability} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${(v/1000).toFixed(0)}k`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                <Bar dataKey="revenue" name="Rev" fill="#1B4332" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="recurring_spend" name="Spend" fill="#DC2626" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <Bar dataKey="revenue" name="Revenue" fill="#1B4332" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="recurring_costs" name="Costs" fill="#DC2626" radius={[4, 4, 0, 0]} />
+                <Line type="monotone" dataKey="surplus_deficit" name="Surplus/Deficit" stroke="#10B981" strokeWidth={3} dot={{ fill: '#10B981' }} />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </ChartCard>
 
         <ChartCard title="Revenue by Base" subtitle="Sales distribution" loading={isPending} empty={products.revenue_by_base.length === 0} icon={Package} isMobile={isMobile}>
-          <div style={{ height: isMobile ? '220px' : '320px', width: '100%', display: 'flex', flexDirection: 'column' }} className="donut-container">
+          <div style={{ height: isMobile ? '280px' : '360px', width: '100%', display: 'flex', flexDirection: 'column' }} className="donut-container">
             <div style={{ flex: 1, position: 'relative' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -303,9 +303,22 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
                     ))}
                   </Pie>
                   <Tooltip content={<CustomTooltip />} />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36} 
+                    iconType="circle"
+                    formatter={(value, entry) => {
+                      const item = products.revenue_by_base.find(d => d.base_type === value);
+                      return (
+                        <span style={{ color: '#4B5563', fontSize: '12px' }}>
+                          {value}: <span style={{ fontWeight: 600 }}>₹{fmt(item?.revenue)}</span>
+                        </span>
+                      );
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', top: '42%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
                 <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 800, color: '#111827', fontFamily: 'DM Serif Display, serif' }}>₹{fmt(totalBaseRevenue)}</div>
               </div>
             </div>
@@ -319,7 +332,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
         style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', marginBottom: '32px' }}
       >
         <ChartCard title="Unit Cost vs ASP" subtitle="Profitability per unit" loading={isPending} empty={costTrend.length === 0} icon={TrendingDown} isMobile={isMobile}>
-          <div style={{ height: isMobile ? '200px' : '280px', width: '100%' }} className="recharts-responsive-container">
+          <div style={{ height: isMobile ? '240px' : '320px', width: '100%' }} className="recharts-responsive-container">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={costTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
@@ -336,13 +349,14 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
         </ChartCard>
 
         <ChartCard title="Avg Order Value" subtitle="Revenue trend" loading={isPending} empty={avgTrend.length === 0} icon={TrendingUp} isMobile={isMobile}>
-          <div style={{ height: isMobile ? '200px' : '280px', width: '100%' }} className="recharts-responsive-container">
+          <div style={{ height: isMobile ? '240px' : '320px', width: '100%' }} className="recharts-responsive-container">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={avgTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmt(v)}`} />
                 <Tooltip content={<CustomTooltip />} />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 <Line type="monotone" dataKey="avg_order_value" name="AOV" stroke="#1B4332" strokeWidth={2} dot={!isMobile} />
               </LineChart>
             </ResponsiveContainer>
@@ -356,12 +370,13 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
         style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}
       >
         <ChartCard title="Top Products" subtitle="By units sold" loading={isPending} empty={products.top_products.length === 0} icon={Package} isMobile={isMobile}>
-          <div style={{ height: isMobile ? '200px' : '280px', width: '100%' }} className="recharts-responsive-container">
+          <div style={{ height: isMobile ? '240px' : '320px', width: '100%' }} className="recharts-responsive-container">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart layout="vertical" data={products.top_products} margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
                 <XAxis type="number" hide />
                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#111827' }} width={isMobile ? 80 : 100} />
                 <Tooltip content={<CustomTooltip />} />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 <Bar dataKey="units_sold" name="Units" fill="#1B4332" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -369,12 +384,14 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
         </ChartCard>
 
         <ChartCard title="Customer Loyalty" subtitle="New vs Returning" loading={isPending} empty={customers.new_vs_returning_by_month.length === 0} icon={Users} isMobile={isMobile}>
-          <div style={{ height: isMobile ? '200px' : '280px', width: '100%' }} className="recharts-responsive-container">
+          <div style={{ height: isMobile ? '240px' : '320px', width: '100%' }} className="recharts-responsive-container">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={customers.new_vs_returning_by_month} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                 <Tooltip content={<CustomTooltip />} />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 <Bar dataKey="new_customers" name="New" stackId="a" fill="#D4A017" />
                 <Bar dataKey="returning_customers" name="Repeat" stackId="a" fill="#1B4332" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -415,6 +432,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#6B7280' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#6B7280' }} tickFormatter={(v) => `₹${(v/1000).toFixed(0)}k`} />
                 <Tooltip content={<CustomTooltip />} />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 <Area type="monotone" dataKey="cumRevenue" stroke="#1B4332" strokeWidth={2} fill="#D8F3DC" fillOpacity={0.4} name="Revenue" />
                 <Area type="monotone" dataKey="cumExpenses" stroke="#DC2626" strokeWidth={2} fill="none" name="Expenses" />
               </AreaChart>
