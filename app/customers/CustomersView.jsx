@@ -13,9 +13,9 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
-  const [isMobile, setIsMobile] = useState(false); /* mobile only */
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Detect Mobile
+  // Detect Mobile — React State approach
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -116,8 +116,8 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
         className="kpi-grid"
         style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(3, 1fr)', 
-          gap: '20px', 
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
+          gap: isMobile ? '10px' : '20px', 
           marginBottom: '40px' 
         }}
       >
@@ -130,7 +130,7 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
             background: '#FFFFFF',
             border: '1px solid #E5E7EB',
             borderRadius: '12px',
-            padding: '20px',
+            padding: isMobile ? '14px 16px' : '20px',
           }}>
             <div style={{
               fontSize: '11px',
@@ -143,7 +143,7 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
               {isMobile ? stat.label.split(' ')[0] : stat.label}
             </div>
             <div className="kpi-value" style={{
-              fontSize: '24px',
+              fontSize: isMobile ? '24px' : '24px',
               fontWeight: '700',
               color: '#1B4332',
               fontFamily: 'DM Serif Display, serif'
@@ -162,7 +162,7 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
             background: '#F9FAFB',
             border: '1px solid #E5E7EB',
             borderRadius: '12px',
-            padding: '24px',
+            padding: isMobile ? '16px' : '24px',
             marginBottom: '40px',
           }}
         >
@@ -191,7 +191,12 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
           <form onSubmit={handleSubmit}>
             <div 
               className="form-row-2col"
-              style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}
+              style={{ 
+                display: 'grid', 
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
+                gap: isMobile ? '16px' : '20px', 
+                marginBottom: '20px' 
+              }}
             >
               <div>
                 <label style={labelStyle}>Name *</label>
@@ -259,7 +264,7 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  flex: isMobile ? 1 : 'none',
+                  flex: 1,
                   justifyContent: 'center'
                 }}
               >
@@ -282,7 +287,7 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
                   fontWeight: '600',
                   cursor: 'pointer',
                   fontFamily: 'Plus Jakarta Sans, sans-serif',
-                  flex: isMobile ? 1 : 'none'
+                  flex: 1
                 }}
               >
                 Cancel
@@ -292,15 +297,67 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
         </div>
       )}
 
-      {/* Customers List Content */}
+      {/* Customers List Content — Conditional Rendering */}
       {customers.length === 0 ? (
         <EmptyState 
           title="No customers yet"
           message="They'll appear here once you log your first order" 
         />
       ) : (
-        <>
-          {/* Desktop Table View */}
+        isMobile ? (
+          /* Mobile Card View */
+          <div className="customers-card-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {customers.map((customer) => (
+              <div key={customer.id} style={{
+                background: '#FFFFFF',
+                border: '1px solid #E5E7EB',
+                borderRadius: '12px',
+                padding: '16px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: 600 }}>{customer.name}</div>
+                  <div style={{
+                    background: '#D8F3DC',
+                    color: '#1B4332',
+                    borderRadius: '12px',
+                    padding: '2px 10px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                  }}>
+                    {customer.order_count} orders
+                  </div>
+                </div>
+                <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '6px' }}>
+                  📱 {customer.phone}
+                </div>
+                {customer.address && (
+                  <div style={{ fontSize: '12px', color: '#9CA3AF', marginBottom: '10px' }}>
+                    {customer.address.substring(0, 80)}{customer.address.length > 80 ? '...' : ''}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '8px', paddingTop: '10px', borderTop: '1px solid #F3F4F6' }}>
+                  <button 
+                    onClick={() => handleEditClick(customer)}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      background: '#FFFFFF',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: '#1B4332',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Desktop Table View */
           <div 
             className="customers-table"
             style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '12px', overflow: 'hidden' }}
@@ -397,63 +454,7 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
               </tbody>
             </table>
           </div>
-
-          {/* Mobile Card View */}
-          <div className="customers-card-list">
-            {customers.map((customer) => (
-              <div key={customer.id} style={{
-                background: '#FFFFFF',
-                border: '1px solid #E5E7EB',
-                borderRadius: '12px',
-                padding: '16px',
-              }}>
-                {/* Name + order count */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <div style={{ fontSize: '15px', fontWeight: 600 }}>{customer.name}</div>
-                  <div style={{
-                    background: '#D8F3DC',
-                    color: '#1B4332',
-                    borderRadius: '12px',
-                    padding: '2px 10px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                  }}>
-                    {customer.order_count} orders
-                  </div>
-                </div>
-                {/* Phone */}
-                <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '6px' }}>
-                  📱 {customer.phone}
-                </div>
-                {/* Address if present */}
-                {customer.address && (
-                  <div style={{ fontSize: '12px', color: '#9CA3AF', marginBottom: '10px' }}>
-                    {customer.address.substring(0, 80)}{customer.address.length > 80 ? '...' : ''}
-                  </div>
-                )}
-                {/* Actions */}
-                <div style={{ display: 'flex', gap: '8px', paddingTop: '10px', borderTop: '1px solid #F3F4F6' }}>
-                  <button 
-                    onClick={() => handleEditClick(customer)}
-                    style={{
-                      flex: 1,
-                      padding: '8px',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: '8px',
-                      background: '#FFFFFF',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      color: '#1B4332',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Edit
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
+        )
       )}
     </div>
   );
@@ -474,7 +475,7 @@ const inputStyle = {
   padding: '10px 14px',
   borderRadius: '8px',
   border: '1px solid #E5E7EB',
-  fontSize: '14px',
+  fontSize: '16px', // prevent iOS zoom
   fontFamily: 'Plus Jakarta Sans, sans-serif',
   outline: 'none',
   transition: 'border-color 0.2s',

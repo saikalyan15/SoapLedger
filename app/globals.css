@@ -170,8 +170,7 @@
   }
 }
 
-/* Global Mobile Fixes — Part 2 */
-
+/* Global Mobile Fixes */
 @media (max-width: 767px) {
   /* mobile only — prevent iOS input zoom globally */
   input[type="text"],
