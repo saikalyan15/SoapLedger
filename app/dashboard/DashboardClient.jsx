@@ -4,11 +4,12 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   LineChart, Line, CartesianGrid, Legend, Cell, PieChart, Pie, AreaChart, Area,
-  ComposedChart
+  ComposedChart, ReferenceLine, ReferenceArea
 } from 'recharts';
 import { 
   TrendingUp, TrendingDown, Clock, Package, 
-  Users, ShoppingBag, DollarSign, ChevronRight, AlertTriangle, Loader2, Calendar, CheckCircle
+  Users, ShoppingBag, DollarSign, ChevronRight, AlertTriangle, Loader2, Calendar, CheckCircle,
+  Factory
 } from 'lucide-react';
 import { 
   getRevenueKPIs, 
@@ -18,14 +19,30 @@ import {
   getAvgOrderValueTrend,
   getCostPriceTrend,
   getMonthlySurplusDeficit,
-  getBreakEvenProjection
+  getBreakEvenProjection,
+  getMonthlyProductionData
 } from '@/lib/queries/dashboard';
 
-const fmt = (n) => 
-  n == null ? '—' : Math.round(Number(n)).toLocaleString('en-IN', { 
-    minimumFractionDigits: 0, 
-    maximumFractionDigits: 0 
+const fmt = (n, decimals = 0) => {
+  if (n == null) return '—';
+  return Number(n).toLocaleString('en-IN', { 
+    minimumFractionDigits: decimals, 
+    maximumFractionDigits: decimals 
   });
+};
+
+// For currency — round to nearest 10
+const fmtCurrency = (n) => {
+  if (n == null) return '—';
+  const rounded = Math.round(Number(n) / 10) * 10;
+  return `₹${rounded.toLocaleString('en-IN')}`;
+};
+
+// For days/units — whole numbers only
+const fmtNum = (n) => {
+  if (n == null) return '—';
+  return Math.round(Number(n)).toLocaleString('en-IN');
+};
 
 const BASE_COLOURS = {
   'Glycerine': '#1B4332',
@@ -122,7 +139,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         }}>
           <span>{p.name}</span>
           <span style={{ fontWeight: 600 }}>
-            {p.name?.includes('Qty') || p.name?.includes('Units') ? fmt(p.value) : `₹${fmt(p.value)}`}
+            {p.name?.includes('Qty') || p.name?.includes('Units') || p.name?.includes('Soaps') || p.name === 'Orders' ? fmtNum(p.value) : fmtCurrency(p.value)}
           </span>
         </div>
       ))}
@@ -130,7 +147,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, initialOperations, initialAvgTrend, initialCostTrend, initialProfitability, initialProjection }) => {
+const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, initialOperations, initialAvgTrend, initialCostTrend, initialProfitability, initialProjection, initialProduction }) => {
   const [filter, setFilter] = useState('All Time');
   const [isPending, startTransition] = useTransition();
   const [isMobile, setIsMobile] = useState(false); /* mobile only */
@@ -151,9 +168,10 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
   const [costTrend, setCostTrend] = useState(initialCostTrend);
   const [profitability, setProfitability] = useState(initialProfitability);
   const [projection, setProjection] = useState(initialProjection);
+  const [production, setProduction] = useState(initialProduction);
 
   const fetchFilteredData = async (range) => {
-    const [rev, cust, prod, oper, trend, cTrend, cProf, proj] = await Promise.all([
+    const [rev, cust, prod, oper, trend, cTrend, cProf, proj, prodData] = await Promise.all([
       getRevenueKPIs(range),
       getRepeatCustomerRate(range),
       getProductPerformance(range),
@@ -161,7 +179,8 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
       getAvgOrderValueTrend(range),
       getCostPriceTrend(range),
       getMonthlySurplusDeficit(),
-      getBreakEvenProjection()
+      getBreakEvenProjection(),
+      getMonthlyProductionData(range)
     ]);
     setRevenue(rev);
     setCustomers(cust);
@@ -171,6 +190,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
     setCostTrend(cTrend);
     setProfitability(cProf);
     setProjection(proj);
+    setProduction(prodData);
   };
 
   const handleFilterChange = (label) => {
@@ -242,23 +262,23 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
         <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '-8px' }}>
           Sales Volume
         </div>
-        <KPICard label="Revenue" value={`₹${fmt(revenue.total_revenue)}`} sub="Confirmed orders" color="#1B4332" loading={isPending} isMobile={isMobile} />
-        <KPICard label="Orders" value={fmt(revenue.orders_count)} sub="Delivered" color="#1B4332" loading={isPending} isMobile={isMobile} />
-        <KPICard label="Soaps Sold" value={fmt(revenue.total_soaps_sold)} sub="Units confirmed" color="#1B4332" loading={isPending} isMobile={isMobile} />
+        <KPICard label="Revenue" value={fmtCurrency(revenue.total_revenue)} sub="Confirmed orders" color="#1B4332" loading={isPending} isMobile={isMobile} />
+        <KPICard label="Orders" value={fmtNum(revenue.orders_count)} sub="Delivered" color="#1B4332" loading={isPending} isMobile={isMobile} />
+        <KPICard label="Soaps Sold" value={fmtNum(revenue.total_soaps_sold)} sub="Units confirmed" color="#1B4332" loading={isPending} isMobile={isMobile} />
 
         <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '-8px', marginTop: '12px' }}>
           Customer Growth
         </div>
-        <KPICard label="Repeat Rate" value={`${fmt(customers.repeat_rate)}%`} sub={`${fmt(customers.repeat_customers)} repeat`} color="#0F766E" loading={isPending} isMobile={isMobile} />
-        <KPICard label="Re-order" value={`${fmt(customers.avg_reorder_days)}d`} sub="Avg. gap" color="#0F766E" loading={isPending} isMobile={isMobile} />
-        <KPICard label="Avg Order" value={`₹${fmt(revenue.avg_order_value)}`} sub="Per order" color="#0F766E" loading={isPending} isMobile={isMobile} />
+        <KPICard label="Repeat Rate" value={`${fmt(customers.repeat_rate)}%`} sub={`${fmtNum(customers.repeat_customers)} repeat`} color="#0F766E" loading={isPending} isMobile={isMobile} />
+        <KPICard label="Re-order" value={`${fmtNum(customers.avg_reorder_days)}d`} sub="Avg. gap" color="#0F766E" loading={isPending} isMobile={isMobile} />
+        <KPICard label="Avg Order" value={fmtCurrency(revenue.avg_order_value)} sub="Per order" color="#0F766E" loading={isPending} isMobile={isMobile} />
 
         <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '-8px', marginTop: '12px' }}>
           Operations
         </div>
-        <KPICard label="Cost Price" value={revenue.cost_price_per_soap > 0 ? `₹${fmt(revenue.cost_price_per_soap)}` : "—"} sub="Avg per soap" color="#6B21A8" loading={isPending} isMobile={isMobile} />
-        <KPICard label="Pending ₹" value={`₹${fmt(revenue.pending_revenue || 0)}`} sub="Awaiting payment" color="#6B21A8" loading={isPending} isMobile={isMobile} />
-        <KPICard label="Pending Qty" value={fmt(revenue.pending_soaps)} sub="Units" color="#6B21A8" loading={isPending} isMobile={isMobile} />
+        <KPICard label="Cost Price" value={revenue.cost_price_per_soap > 0 ? fmtCurrency(revenue.cost_price_per_soap) : "—"} sub="Avg per soap" color="#6B21A8" loading={isPending} isMobile={isMobile} />
+        <KPICard label="Pending ₹" value={fmtCurrency(revenue.pending_revenue || 0)} sub="Awaiting payment" color="#6B21A8" loading={isPending} isMobile={isMobile} />
+        <KPICard label="Pending Qty" value={fmtNum(revenue.pending_soaps)} sub="Units" color="#6B21A8" loading={isPending} isMobile={isMobile} />
       </div>
 
       {/* Row 2: Monthly Profitability & Base Type */}
@@ -272,7 +292,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
               <ComposedChart data={profitability} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${(v/1000).toFixed(0)}k`} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmtNum(Math.round(v/10)*10)}`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 <Bar dataKey="revenue" name="Revenue" fill="#1B4332" radius={[4, 4, 0, 0]} />
@@ -311,7 +331,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
                       const item = products.revenue_by_base.find(d => d.base_type === value);
                       return (
                         <span style={{ color: '#4B5563', fontSize: '12px' }}>
-                          {value}: <span style={{ fontWeight: 600 }}>₹{fmt(item?.revenue)}</span>
+                          {value}: <span style={{ fontWeight: 600 }}>{fmtCurrency(item?.revenue)}</span>
                         </span>
                       );
                     }}
@@ -319,9 +339,141 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
                 </PieChart>
               </ResponsiveContainer>
               <div style={{ position: 'absolute', top: '42%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
-                <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 800, color: '#111827', fontFamily: 'DM Serif Display, serif' }}>₹{fmt(totalBaseRevenue)}</div>
+                <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 800, color: '#111827', fontFamily: 'DM Serif Display, serif' }}>{fmtCurrency(totalBaseRevenue)}</div>
               </div>
             </div>
+          </div>
+        </ChartCard>
+      </div>
+
+      {/* Production Capacity Chart */}
+      <div style={{ marginBottom: '32px' }}>
+        <ChartCard title="Production Capacity" subtitle="Confirmed soaps vs Monthly limit" loading={isPending} empty={!production.actualData || production.actualData.length === 0} icon={Factory} isMobile={isMobile}>
+          <div style={{ height: isMobile ? '240px' : '320px', width: '100%' }} className="production-chart">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart 
+                data={[
+                  ...production.actualData, 
+                  ...(() => {
+                    if (!production.actualData || production.actualData.length === 0) return [];
+                    const lastActual = production.actualData[production.actualData.length - 1];
+                    const lastSoaps = lastActual?.soaps || 0;
+                    const months = [];
+                    let d = new Date(lastActual.month_key + '-01');
+                    for(let i=1; i<=6; i++) {
+                      d.setMonth(d.getMonth() + 1);
+                      months.push({
+                        month: d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
+                        projected: lastSoaps
+                      });
+                    }
+                    return months;
+                  })()
+                ]} 
+                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#6B7280' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#6B7280' }} tickFormatter={(v) => fmtNum(v)} />
+                
+                <Bar dataKey="soaps" name="Soaps Made" radius={[4, 4, 0, 0]} maxBarSize={48}>
+                  {production.actualData.map((entry, index) => {
+                    const threshold = Math.round(production.monthlyCapacity * 0.8);
+                    const color = entry.soaps >= production.monthlyCapacity ? '#DC2626' : 
+                                  entry.soaps >= threshold ? '#D4A017' : '#1B4332';
+                    return <Cell key={`cell-${index}`} fill={color} />;
+                  })}
+                </Bar>
+
+                <Line 
+                  type="monotone" 
+                  dataKey="projected" 
+                  name="Projected" 
+                  stroke="#1B4332" 
+                  strokeWidth={2} 
+                  strokeDasharray="6 4" 
+                  dot={false} 
+                  connectNulls 
+                />
+
+                <ReferenceLine 
+                  y={production.monthlyCapacity} 
+                  stroke="#DC2626" 
+                  strokeWidth={1.5} 
+                  strokeDasharray="4 4" 
+                  label={{
+                    value: `Capacity: ${production.monthlyCapacity} soaps`,
+                    position: 'insideTopRight',
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    fontSize: 11,
+                    fill: '#DC2626',
+                  }}
+                />
+
+                <ReferenceArea 
+                  y1={Math.round(production.monthlyCapacity * 0.8)} 
+                  y2={production.monthlyCapacity} 
+                  fill="rgba(212,160,23,0.08)" 
+                  strokeOpacity={0} 
+                />
+
+                <Tooltip content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  return (
+                    <div style={{
+                      background: '#fff', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px 16px',
+                      fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '13px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                    }}>
+                      <p style={{ fontWeight: 700, marginBottom: '6px', color: '#1A1A1A' }}>{label}</p>
+                      {payload.map(p => (
+                        <div key={p.name} style={{ color: p.color, marginBottom: '4px', display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+                          <span>{p.name}:</span>
+                          <span style={{ fontWeight: 600 }}>{fmtNum(p.value)} soaps</span>
+                        </div>
+                      ))}
+                      <div style={{ color: '#DC2626', marginTop: '4px', fontSize: '12px', borderTop: '1px solid #F3F4F6', paddingTop: '4px' }}>
+                        Capacity: {production.monthlyCapacity} soaps
+                      </div>
+                    </div>
+                  );
+                }} />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="breakeven-stats" style={{ display: 'flex', gap: '24px', marginTop: '16px' }}>
+            {(() => {
+              const lastMonthSoaps = production.actualData[production.actualData.length - 1]?.soaps || 0;
+              const lastMonthName = production.actualData[production.actualData.length - 1]?.month || 'this month';
+              const threshold = Math.round(production.monthlyCapacity * 0.8);
+              return (
+                <>
+                  <div style={{ padding: '12px 16px', background: '#F9FAFB', borderRadius: '12px', border: '1px solid #E5E7EB', flex: 1 }}>
+                    <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', marginBottom: '4px' }}>Capacity Utilisation</div>
+                    <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: '#1B4332' }}>
+                      {Math.round((lastMonthSoaps / production.monthlyCapacity) * 100)}%
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>{lastMonthSoaps} of {production.monthlyCapacity} soaps in {lastMonthName}</div>
+                  </div>
+                  <div style={{ 
+                    padding: '12px 16px', 
+                    background: lastMonthSoaps >= production.monthlyCapacity ? '#FEF2F2' : lastMonthSoaps >= threshold ? '#FFFBEB' : '#F0FDF4', 
+                    borderRadius: '12px', 
+                    border: '1px solid',
+                    borderColor: lastMonthSoaps >= production.monthlyCapacity ? '#FEE2E2' : lastMonthSoaps >= threshold ? '#FEF3C7' : '#DCFCE7',
+                    flex: 1 
+                  }}>
+                    <div style={{ fontSize: '11px', color: lastMonthSoaps >= threshold ? '#92400E' : '#166534', textTransform: 'uppercase', marginBottom: '4px' }}>At Current Rate</div>
+                    <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: '#1B4332' }}>
+                      {lastMonthSoaps >= production.monthlyCapacity ? 'At capacity now' : 
+                       lastMonthSoaps >= threshold ? 'Approaching capacity' : 'Within capacity'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>Update capacity in Settings when you scale</div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </ChartCard>
       </div>
@@ -337,7 +489,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
               <ComposedChart data={costTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmt(v)}`} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmtNum(Math.round(v/10)*10)}`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 <Bar dataKey="soaps_sold" name="Units" fill="#D8F3DC" radius={[4, 4, 0, 0]} />
@@ -354,7 +506,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
               <LineChart data={avgTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmt(v)}`} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmtNum(Math.round(v/10)*10)}`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 <Line type="monotone" dataKey="avg_order_value" name="AOV" stroke="#1B4332" strokeWidth={2} dot={!isMobile} />
@@ -389,7 +541,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
               <BarChart data={customers.new_vs_returning_by_month} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => fmtNum(v)} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 <Bar dataKey="new_customers" name="New" stackId="a" fill="#D4A017" />
@@ -407,17 +559,17 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
       >
         <div style={{ padding: '24px', background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
           <div style={{ fontSize: '11px', color: '#9CA3AF', textTransform: 'uppercase', fontWeight: 800, marginBottom: '8px' }}>Processing</div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>{fmt(operations.avg_processing_days)} days</div>
+          <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>{fmtNum(operations.avg_processing_days)} days</div>
           <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>Avg. dispatch time</div>
         </div>
         <div style={{ padding: '24px', background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
           <div style={{ fontSize: '11px', color: '#9CA3AF', textTransform: 'uppercase', fontWeight: 800, marginBottom: '8px' }}>Shipping</div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>{fmt(operations.avg_dispatch_to_delivery)} days</div>
+          <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>{fmtNum(operations.avg_dispatch_to_delivery)} days</div>
           <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>Avg. delivery time</div>
         </div>
         <div style={{ padding: '24px', background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
           <div style={{ fontSize: '11px', color: '#9CA3AF', textTransform: 'uppercase', fontWeight: 800, marginBottom: '8px' }}>Batch Size</div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>{fmt(operations.avg_soaps_per_batch)} units</div>
+          <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>{fmtNum(operations.avg_soaps_per_batch)} units</div>
           <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>Avg. per order</div>
         </div>
       </div>
@@ -430,7 +582,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
               <AreaChart data={projection.data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#6B7280' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#6B7280' }} tickFormatter={(v) => `₹${(v/1000).toFixed(0)}k`} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmtNum(Math.round(v/1000))}k`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 <Area type="monotone" dataKey="cumRevenue" stroke="#1B4332" strokeWidth={2} fill="#D8F3DC" fillOpacity={0.4} name="Revenue" />
@@ -446,7 +598,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
             <div style={{ padding: '12px 16px', background: '#F9FAFB', borderRadius: '12px', border: '1px solid #E5E7EB', flex: 1 }}>
               <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', marginBottom: '4px' }}>Current Run Rate</div>
               <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: '#1B4332' }}>
-                ₹{fmt(projection.currentRunRate)} / month
+                {fmtCurrency(projection.currentRunRate)} / month
               </div>
               <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>Revenue in {projection.lastCompleteMonthName}</div>
             </div>
@@ -456,7 +608,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
                 {projection.flatBreakEvenMonth}
               </div>
               <div style={{ fontSize: '11px', color: '#166534', marginTop: '2px' }}>
-                ₹{fmt(projection.monthlyContribution)}/mo surplus closing ₹{fmt(projection.gapToClose)} gap
+                {fmtCurrency(projection.monthlyContribution)}/mo surplus closing {fmtCurrency(projection.gapToClose)} gap
               </div>
             </div>
           </div>

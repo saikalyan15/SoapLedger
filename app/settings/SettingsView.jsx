@@ -7,6 +7,9 @@ import { updateSettingAction } from '@/lib/actions/settings';
 export default function SettingsView({ settings }) {
   const [savingKey, setSavingKey] = useState(null);
   const [successKey, setSuccessKey] = useState(null);
+  
+  const initialCapacity = settings.find(s => s.key === 'monthly_capacity')?.value || '30';
+  const [monthlyCapacity, setMonthlyCapacity] = useState(initialCapacity);
 
   const handleUpdate = async (key, value) => {
     setSavingKey(key);
@@ -20,6 +23,10 @@ export default function SettingsView({ settings }) {
       setSavingKey(null);
     }
   };
+
+  const saveCapacity = () => handleUpdate('monthly_capacity', monthlyCapacity);
+
+  const mainSettings = settings.filter(s => s.key !== 'monthly_capacity');
 
   return (
     <div className="pb-32 max-w-[800px]">
@@ -36,7 +43,7 @@ export default function SettingsView({ settings }) {
       <div className="mt-8 border-b-2 border-border mb-10"></div>
 
       <div className="space-y-6">
-        {settings.map((setting) => (
+        {mainSettings.map((setting) => (
           <div 
             key={setting.key} 
             className="bg-white border border-[#EBEBEB] rounded-xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all hover:border-primary-light"
@@ -74,6 +81,65 @@ export default function SettingsView({ settings }) {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Production Settings Section */}
+      <div style={{ marginTop: '32px' }}>
+        <h2 style={{
+          fontFamily: 'DM Serif Display, serif',
+          fontSize: '20px',
+          color: '#1B4332',
+          marginBottom: '4px',
+        }}>Production</h2>
+        <p style={{
+          fontFamily: 'Plus Jakarta Sans, sans-serif',
+          fontSize: '14px',
+          color: '#6B7280',
+          marginBottom: '20px',
+        }}>
+          Set your production limits to track capacity on the dashboard
+        </p>
+
+        <div style={{ maxWidth: '400px' }} className="bg-white border border-[#EBEBEB] rounded-xl p-6 shadow-sm">
+          <label style={{
+            fontFamily: 'Plus Jakarta Sans, sans-serif',
+            fontSize: '13px',
+            fontWeight: 600,
+            color: '#374151',
+            display: 'block',
+            marginBottom: '6px',
+          }}>
+            Monthly Production Capacity (soaps)
+          </label>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <input
+              type="number"
+              value={monthlyCapacity}
+              onChange={(e) => setMonthlyCapacity(e.target.value)}
+              min="1"
+              max="999"
+              className="w-[120px] px-3.5 py-2.5 border border-border rounded-lg text-sm font-semibold text-[#1A1A1A] outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-all font-sans bg-[#FAFAFA]"
+            />
+            <button 
+              onClick={saveCapacity}
+              disabled={savingKey === 'monthly_capacity'}
+              className="px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary-dark transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+              {savingKey === 'monthly_capacity' ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              Save
+            </button>
+            {successKey === 'monthly_capacity' && <CheckCircle2 size={18} className="text-[#10B981]" />}
+          </div>
+          <p style={{
+            fontFamily: 'Plus Jakarta Sans, sans-serif',
+            fontSize: '12px',
+            color: '#9CA3AF',
+            marginTop: '8px',
+          }}>
+            The dashboard shows a warning when monthly production approaches this number.
+            Update it when you hire help or buy more moulds.
+          </p>
+        </div>
       </div>
 
       {/* Helpful Info Section */}
