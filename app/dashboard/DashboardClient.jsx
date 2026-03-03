@@ -444,12 +444,20 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
             style={{ display: 'flex', gap: '24px', marginTop: '16px' }}
           >
             <div style={{ padding: '12px 16px', background: '#F9FAFB', borderRadius: '12px', border: '1px solid #E5E7EB', flex: 1 }}>
-              <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', marginBottom: '4px' }}>Actual Growth</div>
-              <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: '#1B4332' }}>{Math.round(projection.rawGrowthRate * 100)}%</div>
+              <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', marginBottom: '4px' }}>Current Run Rate</div>
+              <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: '#1B4332' }}>
+                ₹{fmt(projection.currentRunRate)} / month
+              </div>
+              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>Revenue in {projection.lastCompleteMonthName}</div>
             </div>
             <div style={{ padding: '12px 16px', background: '#F0FDF4', borderRadius: '12px', border: '1px solid #DCFCE7', flex: 1 }}>
-              <div style={{ fontSize: '11px', color: '#166534', textTransform: 'uppercase', marginBottom: '4px' }}>Projected Rate</div>
-              <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: '#1B4332' }}>{Math.round(projection.cappedGrowthRate * 100)}%</div>
+              <div style={{ fontSize: '11px', color: '#166534', textTransform: 'uppercase', marginBottom: '4px' }}>At Current Run Rate</div>
+              <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: '#1B4332' }}>
+                {projection.flatBreakEvenMonth}
+              </div>
+              <div style={{ fontSize: '11px', color: '#166534', marginTop: '2px' }}>
+                ₹{fmt(projection.monthlyContribution)}/mo surplus closing ₹{fmt(projection.gapToClose)} gap
+              </div>
             </div>
           </div>
         </ChartCard>
