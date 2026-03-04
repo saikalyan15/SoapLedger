@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   ShoppingBag, Check, Plus, Trash2, ChevronDown, 
-  Search, UserPlus, UserCheck, AlertCircle, Loader2, X, Clock
+  Search, UserPlus, UserCheck, AlertCircle, Loader2, X, Clock, Printer
 } from 'lucide-react';
 import { createOrderAction, updateOrderAction } from '@/lib/actions/orders';
 import { ORDER_STATUSES } from '@/lib/constants';
@@ -277,18 +277,52 @@ const OrderForm = ({ products, settings, initialData = null }) => {
 
   return (
     <div style={containerStyle} className="order-form-container">
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ 
-          fontFamily: 'DM Serif Display, serif', 
-          fontSize: isMobile ? '28px' : '32px', /* mobile only */
-          color: '#1B4332', 
-          margin: '0 0 8px 0' 
-        }}>
-          {isEdit ? 'Edit Order' : 'New Order'}
-        </h1>
-        <p style={{ color: '#6B7280', fontSize: '14px' }}>
-          {isEdit ? `Modifying order #${initialData.order.id.slice(0,8)}` : 'Fill in the details to create a new order'}
-        </p>
+      <div style={{ 
+        marginBottom: '32px', 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'flex-start' 
+      }}>
+        <div>
+          <h1 style={{ 
+            fontFamily: 'DM Serif Display, serif', 
+            fontSize: isMobile ? '28px' : '32px', /* mobile only */
+            color: '#1B4332', 
+            margin: '0 0 8px 0' 
+          }}>
+            {isEdit ? 'Edit Order' : 'New Order'}
+          </h1>
+          <p style={{ color: '#6B7280', fontSize: '14px' }}>
+            {isEdit ? `Modifying order #${initialData.order.id.slice(0,8)}` : 'Fill in the details to create a new order'}
+          </p>
+        </div>
+        
+        {isEdit && (
+          <a 
+            href={`/orders/${initialData.order.id}/labels`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '10px 18px',
+              border: '1px solid #1B4332',
+              borderRadius: '8px',
+              fontFamily: 'inherit',
+              fontSize: '14px',
+              fontWeight: 600,
+              color: '#1B4332',
+              textDecoration: 'none',
+              background: '#FFFFFF',
+              cursor: 'pointer',
+              marginTop: '4px'
+            }}
+          >
+            <Printer size={16} />
+            {!isMobile && 'Print Labels'}
+          </a>
+        )}
       </div>
 
       <form onSubmit={handleSubmit}>

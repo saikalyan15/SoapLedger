@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Pencil, ArrowLeft, ChevronDown, CheckCircle, UserCheck, AlertCircle } from 'lucide-react';
+import { Pencil, ArrowLeft, ChevronDown, CheckCircle, UserCheck, AlertCircle, Printer } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { updateOrderStatusAction } from '@/lib/actions/orders';
 import { ORDER_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
@@ -90,6 +90,29 @@ const OrderDetailsView = ({ order, items }) => {
               {!isMobile && 'Edit Order'}
             </Link>
           )}
+          <a 
+            href={`/orders/${order.id}/labels`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              border: '1px solid #1B4332',
+              borderRadius: '8px',
+              fontFamily: 'Plus Jakarta Sans, sans-serif',
+              fontSize: '13px',
+              fontWeight: 600,
+              color: '#1B4332',
+              textDecoration: 'none',
+              background: '#FFFFFF',
+              cursor: 'pointer',
+            }}
+          >
+            <Printer size={14} />
+            Print Labels
+          </a>
           <Link 
             href="/orders"
             style={{
@@ -107,48 +130,9 @@ const OrderDetailsView = ({ order, items }) => {
         </div>
       </div>
 
-      {/* Timeline Row (Top Summary) */}
-      <div 
-        className="order-timeline"
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '12px', 
-          marginBottom: '40px',
-          fontFamily: '"Plus Jakarta Sans", sans-serif',
-          fontSize: '12px',
-          color: '#6B7280'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
-          <span>Ordered {new Date(order.order_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-        </div>
-        
-        {order.dispatched_at && (
-          <>
-            <div className="timeline-connector" style={{ width: '40px', height: '1px', background: '#E5E7EB' }}></div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
-              <span>Dispatched {new Date(order.dispatched_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-            </div>
-          </>
-        )}
-
-        {order.delivered_at && (
-          <>
-            <div className="timeline-connector" style={{ width: '40px', height: '1px', background: '#E5E7EB' }}></div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#1B4332' }}></div>
-              <span>Delivered {new Date(order.delivered_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-            </div>
-          </>
-        )}
-      </div>
-
       <div 
         className="order-detail-grid"
-        style={{ display: isMobile ? 'flex' : 'grid', flexDirection: 'column', gridTemplateColumns: '1fr 340px', gap: '40px' }}
+        style={{ display: isMobile ? 'flex' : 'grid', flexDirection: 'column', gridTemplateColumns: '1fr 340px', gap: '40px', marginTop: '40px' }}
       >
         {/* Left Column */}
         <div>
@@ -341,55 +325,11 @@ const OrderDetailsView = ({ order, items }) => {
               </button>
             </div>
           </div>
-
-          <div style={{ ...cardStyle, background: '#F9FAFB' }}>
-            <div style={sectionLabelStyle}>Order Timeline</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <TimelineItem 
-                label="Order Placed" 
-                date={new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                active={true}
-              />
-              {order.dispatched_at && (
-                <TimelineItem 
-                  label="Dispatched" 
-                  date={new Date(order.dispatched_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  active={true}
-                />
-              )}
-              {order.delivered_at && (
-                <TimelineItem 
-                  label="Delivered" 
-                  date={new Date(order.delivered_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  active={true}
-                />
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </div>
   );
 };
-
-const TimelineItem = ({ label, date, active }) => (
-  <div style={{ display: 'flex', gap: '12px' }}>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <div style={{ 
-        width: '12px', 
-        height: '12px', 
-        borderRadius: '50%', 
-        background: active ? '#1B4332' : '#E5E7EB',
-        border: active ? '2px solid #D8F3DC' : 'none'
-      }}></div>
-      <div style={{ flex: 1, width: '2px', background: '#E5E7EB', marginTop: '4px' }}></div>
-    </div>
-    <div style={{ paddingBottom: '4px' }}>
-      <div style={{ fontSize: '13px', fontWeight: '700', color: active ? '#111827' : '#9CA3AF' }}>{label}</div>
-      <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>{date}</div>
-    </div>
-  </div>
-);
 
 const cardStyle = {
   background: '#FFFFFF',
