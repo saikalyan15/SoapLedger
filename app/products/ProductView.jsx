@@ -9,6 +9,13 @@ export default function ProductView({ products }) {
   const [editingProduct, setEditingProduct] = useState(null);
   const [isArchivedOpen, setIsArchivedOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false); /* mobile only */
+  const [formData, setFormData] = useState({
+    ingredients: ''
+  });
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   // Detect Mobile
   useEffect(() => {
@@ -30,6 +37,9 @@ export default function ProductView({ products }) {
 
   const handleEdit = (product) => {
     setEditingProduct(product);
+    setFormData({
+      ingredients: product.ingredients || ''
+    });
     setIsFormOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -37,6 +47,9 @@ export default function ProductView({ products }) {
   const handleCancel = () => {
     setIsFormOpen(false);
     setEditingProduct(null);
+    setFormData({
+      ingredients: ''
+    });
   };
 
   return (
@@ -99,6 +112,47 @@ export default function ProductView({ products }) {
                   className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
                   placeholder="e.g. Glycerine"
                 />
+              </div>
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{
+                  fontFamily: 'Plus Jakarta Sans, sans-serif',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#6B7280',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  display: 'block',
+                  marginBottom: '6px',
+                }}>
+                  INGREDIENTS
+                </label>
+                <textarea
+                  name="ingredients"
+                  value={formData.ingredients || ''}
+                  onChange={handleChange}
+                  rows={2}
+                  placeholder="e.g. Glycerine Soap Base, Neem Extract, Tulsi Extract, Essential Oils"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '8px',
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    fontSize: '14px',
+                    resize: 'vertical',
+                    lineHeight: 1.5,
+                  }}
+                />
+                <p style={{
+                  fontFamily: 'Plus Jakarta Sans, sans-serif',
+                  fontSize: '12px',
+                  color: '#9CA3AF',
+                  marginTop: '4px',
+                }}>
+                  Comma separated, in order of concentration. Used for printing soap labels.
+                  Use "Essential Oils" generically if your blend varies.
+                </p>
               </div>
 
               <div>
