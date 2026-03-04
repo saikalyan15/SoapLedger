@@ -1,8 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Plus, Pencil, Archive, ArchiveRestore, ChevronRight, ChevronDown, X } from 'lucide-react';
-import { createProductAction, updateProductAction, toggleArchiveAction } from '@/lib/actions/products';
+import {
+  createProductAction,
+  toggleArchiveAction,
+  updateProductAction,
+} from '@/lib/actions/products';
+import {
+  Archive,
+  ArchiveRestore,
+  ChevronRight,
+  Pencil,
+  Plus,
+  X,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export default function ProductView({ products }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -10,7 +21,7 @@ export default function ProductView({ products }) {
   const [isArchivedOpen, setIsArchivedOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false); /* mobile only */
   const [formData, setFormData] = useState({
-    ingredients: ''
+    ingredients: '',
   });
 
   const handleChange = (e) => {
@@ -25,8 +36,8 @@ export default function ProductView({ products }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const activeProducts = products.filter(p => p.is_active);
-  const archivedProducts = products.filter(p => !p.is_active);
+  const activeProducts = products.filter((p) => p.is_active);
+  const archivedProducts = products.filter((p) => !p.is_active);
 
   const groupedProducts = activeProducts.reduce((acc, product) => {
     const base = product.base_type || 'Other';
@@ -38,7 +49,7 @@ export default function ProductView({ products }) {
   const handleEdit = (product) => {
     setEditingProduct(product);
     setFormData({
-      ingredients: product.ingredients || ''
+      ingredients: product.ingredients || '',
     });
     setIsFormOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -48,7 +59,7 @@ export default function ProductView({ products }) {
     setIsFormOpen(false);
     setEditingProduct(null);
     setFormData({
-      ingredients: ''
+      ingredients: '',
     });
   };
 
@@ -64,12 +75,12 @@ export default function ProductView({ products }) {
             Manage your soap range
           </p>
         </div>
-        <button 
+        <button
           onClick={() => setIsFormOpen(!isFormOpen)}
           className="bg-[#1B4332] text-[#FFFFFF] font-sans text-[14px] font-semibold px-[16px] md:px-[24px] py-[10px] md:py-[12px] rounded-[10px] border-none cursor-pointer flex items-center gap-[8px] tracking-[0.01em] shadow-[0_2px_8px_rgba(27,67,50,0.25)] m-0"
         >
           {isFormOpen ? <X size={16} /> : <Plus size={16} />}
-          {isFormOpen ? 'Close' : (isMobile ? 'Add' : 'Add Product')}
+          {isFormOpen ? 'Close' : isMobile ? 'Add' : 'Add Product'}
         </button>
       </div>
 
@@ -81,7 +92,7 @@ export default function ProductView({ products }) {
           <h2 className="font-serif text-[20px] md:text-[22px] text-[#1B4332] mb-[20px] md:mb-[24px] mt-0">
             {editingProduct ? 'Edit Product' : 'Add New Product'}
           </h2>
-          <form 
+          <form
             action={async (formData) => {
               if (editingProduct) {
                 await updateProductAction(editingProduct.id, formData);
@@ -93,46 +104,52 @@ export default function ProductView({ products }) {
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px] md:gap-[20px]">
               <div>
-                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">Product Name</label>
-                <input 
-                  name="name" 
+                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
+                  Product Name
+                </label>
+                <input
+                  name="name"
                   defaultValue={editingProduct?.name}
-                  required 
+                  required
                   className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
                   placeholder="e.g. Lavender Bliss"
                 />
               </div>
 
               <div>
-                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">Base Type</label>
-                <input 
-                  name="base_type" 
+                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
+                  Base Type
+                </label>
+                <input
+                  name="base_type"
                   defaultValue={editingProduct?.base_type}
-                  required 
+                  required
                   className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
                   placeholder="e.g. Glycerine"
                 />
               </div>
 
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{
-                  fontFamily: 'Plus Jakarta Sans, sans-serif',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: '#6B7280',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  display: 'block',
-                  marginBottom: '6px',
-                }}>
-                  INGREDIENTS
+                <label
+                  style={{
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#6B7280',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    display: 'block',
+                    marginBottom: '6px',
+                  }}
+                >
+                  ADDITIONAL INGREDIENTS
                 </label>
                 <textarea
                   name="ingredients"
                   value={formData.ingredients || ''}
                   onChange={handleChange}
                   rows={2}
-                  placeholder="e.g. Glycerine Soap Base, Neem Extract, Tulsi Extract, Essential Oils"
+                  placeholder="e.g. Neem Extract, Tulsi Extract, Essential Oils"
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -144,21 +161,24 @@ export default function ProductView({ products }) {
                     lineHeight: 1.5,
                   }}
                 />
-                <p style={{
-                  fontFamily: 'Plus Jakarta Sans, sans-serif',
-                  fontSize: '12px',
-                  color: '#9CA3AF',
-                  marginTop: '4px',
-                }}>
-                  Comma separated, in order of concentration. Used for printing soap labels.
-                  Use "Essential Oils" generically if your blend varies.
+                <p
+                  style={{
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    fontSize: '12px',
+                    color: '#9CA3AF',
+                    marginTop: '4px',
+                  }}
+                >
+                  Do not include the soap base — it is added automatically from Base Type when printing labels.
                 </p>
               </div>
 
               <div>
-                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">Weight (g)</label>
-                <input 
-                  name="weight_grams" 
+                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
+                  Weight (g)
+                </label>
+                <input
+                  name="weight_grams"
                   type="number"
                   defaultValue={editingProduct?.weight_grams}
                   className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
@@ -167,38 +187,45 @@ export default function ProductView({ products }) {
               </div>
 
               <div>
-                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">Unit Price (₹)</label>
-                <input 
-                  name="unit_price" 
+                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
+                  Unit Price (₹)
+                </label>
+                <input
+                  name="unit_price"
                   type="number"
                   step="0.01"
                   defaultValue={editingProduct?.unit_price}
-                  required 
+                  required
                   className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
                   placeholder="250"
                 />
               </div>
 
               <div className="flex items-center gap-[10px] md:col-span-2">
-                <input 
+                <input
                   id="is_seasonal"
-                  name="is_seasonal" 
+                  name="is_seasonal"
                   type="checkbox"
                   defaultChecked={editingProduct?.is_seasonal}
                   className="w-[18px] h-[18px] accent-[#1B4332]"
                 />
-                <label htmlFor="is_seasonal" className="font-sans text-[14px] text-[#1A1A1A] m-0">Seasonal Product?</label>
+                <label
+                  htmlFor="is_seasonal"
+                  className="font-sans text-[14px] text-[#1A1A1A] m-0"
+                >
+                  Seasonal Product?
+                </label>
               </div>
             </div>
 
             <div className="mt-[24px] flex flex-col md:flex-row gap-[12px] md:justify-end">
-              <button 
+              <button
                 type="submit"
                 className="bg-[#1B4332] text-[#FFFFFF] font-sans text-[14px] font-semibold px-[24px] py-[12px] rounded-[10px] border-none cursor-pointer flex items-center gap-[8px] tracking-[0.01em] shadow-[0_2px_8px_rgba(27,67,50,0.25)] justify-center"
               >
                 {editingProduct ? 'Update Product' : 'Save Product'}
               </button>
-              <button 
+              <button
                 type="button"
                 onClick={handleCancel}
                 className="bg-transparent border border-[#E5E7EB] text-[#6B7280] font-sans text-[14px] font-semibold px-[24px] py-[12px] rounded-[10px] cursor-pointer hover:bg-[#F9FAFB] m-0 order-first md:order-none"
@@ -215,16 +242,18 @@ export default function ProductView({ products }) {
         {Object.entries(groupedProducts).map(([base, items]) => (
           <div key={base}>
             <div className="flex justify-between items-center mb-[12px]">
-              <h3 className="font-serif text-[18px] text-[#1B4332] font-normal m-0">{base}</h3>
+              <h3 className="font-serif text-[18px] text-[#1B4332] font-normal m-0">
+                {base}
+              </h3>
               <span className="font-sans text-[12px] text-[#6B7280] bg-[#F3F4F6] px-[10px] py-[3px] rounded-[20px] font-medium m-0">
                 {items.length} {items.length === 1 ? 'item' : 'items'}
               </span>
             </div>
             <div className="border-b-[1px] border-[#E5E7EB] mb-[16px]"></div>
-            
+
             <div className="space-y-[10px]">
               {items.map((product) => (
-                <div 
+                <div
                   key={product.id}
                   className="bg-[#FFFFFF] border border-[#EBEBEB] rounded-[12px] px-[16px] md:px-[24px] py-[14px] md:py-[18px] flex flex-col md:flex-row md:items-center justify-between transition-all duration-[180ms] hover:border-[#D8F3DC] product-card"
                 >
@@ -233,10 +262,11 @@ export default function ProductView({ products }) {
                       {product.name}
                     </div>
                     <div className="font-sans text-[13px] text-[#9CA3AF] mt-[4px] m-0">
-                      {product.weight_grams ? `${product.weight_grams}g` : '-'}  •  ₹{product.unit_price}
+                      {product.weight_grams ? `${product.weight_grams}g` : '-'}{' '}
+                      • ₹{product.unit_price}
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-col md:flex-row md:items-center gap-[12px]">
                     <div className="flex items-center gap-[8px]">
                       {product.is_seasonal && (
@@ -248,15 +278,15 @@ export default function ProductView({ products }) {
                         Active
                       </span>
                     </div>
-                    
+
                     <div className="flex items-center gap-[8px] product-actions">
-                      <button 
+                      <button
                         onClick={() => handleEdit(product)}
                         className="bg-transparent border border-[#1B4332] text-[#1B4332] font-sans text-[12px] font-semibold px-[16px] py-[8px] md:py-[6px] rounded-[8px] cursor-pointer flex items-center gap-[6px] flex-1 md:flex-none justify-center"
                       >
                         <Pencil size={13} /> Edit
                       </button>
-                      <button 
+                      <button
                         onClick={() => toggleArchiveAction(product.id)}
                         className="bg-transparent border border-[#E5E7EB] text-[#6B7280] font-sans text-[12px] font-semibold px-[16px] py-[8px] md:py-[6px] rounded-[8px] cursor-pointer flex items-center gap-[6px] flex-1 md:flex-none justify-center"
                       >
@@ -274,28 +304,34 @@ export default function ProductView({ products }) {
       {/* Archived Section */}
       {archivedProducts.length > 0 && (
         <div className="mt-[40px] md:mt-[48px]">
-          <div 
+          <div
             onClick={() => setIsArchivedOpen(!isArchivedOpen)}
             className="flex items-center gap-[10px] font-sans text-[13px] font-semibold text-[#6B7280] cursor-pointer py-[12px] border-t-[1px] border-[#E5E7EB]"
           >
-            <div className={`transition-transform duration-200 ${isArchivedOpen ? 'rotate-90' : ''}`}>
+            <div
+              className={`transition-transform duration-200 ${isArchivedOpen ? 'rotate-90' : ''}`}
+            >
               <ChevronRight size={16} />
             </div>
             Archived ({archivedProducts.length})
           </div>
-          
+
           {isArchivedOpen && (
             <div className="mt-[16px] space-y-[10px]">
               {archivedProducts.map((product) => (
-                <div 
+                <div
                   key={product.id}
                   className="bg-[#FAFAFA] border border-[#EBEBEB] rounded-[12px] px-[16px] md:px-[24px] py-[14px] md:py-[18px] flex flex-col md:flex-row md:items-center justify-between opacity-60"
                 >
                   <div className="mb-[10px] md:mb-0">
-                    <div className="font-sans text-[15px] font-semibold text-[#1A1A1A] m-0">{product.name}</div>
-                    <div className="font-sans text-[13px] text-[#9CA3AF] mt-[4px] m-0">{product.base_type}  •  ₹{product.unit_price}</div>
+                    <div className="font-sans text-[15px] font-semibold text-[#1A1A1A] m-0">
+                      {product.name}
+                    </div>
+                    <div className="font-sans text-[13px] text-[#9CA3AF] mt-[4px] m-0">
+                      {product.base_type} • ₹{product.unit_price}
+                    </div>
                   </div>
-                  <button 
+                  <button
                     onClick={() => toggleArchiveAction(product.id)}
                     className="bg-transparent border border-[#D8F3DC] text-[#1B4332] font-sans text-[12px] font-semibold px-[16px] py-[8px] md:py-[6px] rounded-[8px] cursor-pointer flex items-center gap-[6px] md:w-auto w-full justify-center"
                   >
