@@ -11,6 +11,27 @@ const BASE_LABELS = {
   'Travel':      '',
 };
 
+const WavyDivider = ({ color = '#1B4332', opacity = 0.4 }) => (
+  <svg
+    viewBox="0 0 200 8"
+    preserveAspectRatio="none"
+    style={{
+      width: '100%',
+      height: '6px',
+      display: 'block',
+      margin: '1.5mm 0',
+    }}
+  >
+    <path
+      d="M0,4 C12.5,0 12.5,8 25,4 C37.5,0 37.5,8 50,4 C62.5,0 62.5,8 75,4 C87.5,0 87.5,8 100,4 C112.5,0 112.5,8 125,4 C137.5,0 137.5,8 150,4 C162.5,0 162.5,8 175,4 C187.5,0 187.5,8 200,4"
+      fill="none"
+      stroke={color}
+      strokeWidth="1.5"
+      strokeOpacity={opacity}
+    />
+  </svg>
+);
+
 function getFullIngredients(baseType, additionalIngredients) {
   const base = BASE_LABELS[baseType];
   const baseText = base ? `${base} Soap Base` : 'Soap Base';
@@ -43,17 +64,21 @@ const LabelsClient = ({ labels, orderInfo }) => {
           padding: 8mm;
           min-height: 100vh;
           font-family: Arial, sans-serif;
+          width: 100%;
+          box-sizing: border-box;
+          overflow: hidden;
         }
 
         .labels-grid {
           display: grid;
-          grid-template-columns: repeat(2, 88mm);
+          grid-template-columns: repeat(2, 1fr);
           gap: 4mm;
-          padding: 8mm;
+          width: 100%;
+          box-sizing: border-box;
         }
 
         .label {
-          width: 88mm;
+          width: 100%;
           height: 60mm;
           box-sizing: border-box;
           overflow: hidden;
@@ -151,14 +176,13 @@ const LabelsClient = ({ labels, orderInfo }) => {
           
           return (
             <div key={index} className="label">
-              {/* Header — white bg, green bottom border accent */}
+              {/* Header — white bg */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '2.5mm',
-                paddingBottom: '1.5mm',
-                borderBottom: '0.8pt solid #1B4332',
-                marginBottom: '1.5mm',
+                paddingBottom: '0.5mm',
+                marginBottom: '0.5mm',
               }}>
                 <img
                   src="/HealingSoil-Formatted.png"
@@ -188,6 +212,8 @@ const LabelsClient = ({ labels, orderInfo }) => {
                 </div>
               </div>
 
+              <WavyDivider color="#1B4332" opacity={0.5} />
+
               {/* Body — white, no fill */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <div style={{
@@ -195,21 +221,25 @@ const LabelsClient = ({ labels, orderInfo }) => {
                   fontWeight: 700,
                   color: '#1B4332',
                   lineHeight: 1.2,
-                  fontFamily: 'Arial, sans-serif',
+                  fontFamily: 'Georgia, serif',
+                  textAlign: 'center',
                   marginBottom: '0.5mm',
-                }}>{label.product_name}</div>
+                }}>
+                  {label.product_name}
+                </div>
 
                 <div style={{
                   fontSize: '8pt',
                   color: '#8B5E3C',
-                  fontFamily: 'Arial, sans-serif',
+                  fontStyle: 'italic',
+                  fontFamily: 'Georgia, serif',
+                  textAlign: 'center',
                   marginBottom: '1mm',
-                }}>{label.base_type} Base</div>
+                }}>
+                  ~ {label.base_type} Base ~
+                </div>
 
-                <div style={{
-                  borderTop: '0.3pt solid #D4A017',
-                  marginBottom: '1.5mm',
-                }} />
+                <WavyDivider color="#D4A017" opacity={0.7} />
 
                 <div style={{
                   fontSize: '8pt',
@@ -227,13 +257,14 @@ const LabelsClient = ({ labels, orderInfo }) => {
                   flex: 1,
                 }}>{getFullIngredients(label.base_type, label.ingredients)}</div>
 
+                <WavyDivider color="#8B5E3C" opacity={0.4} />
+
                 <div style={{
                   fontSize: '7.5pt',
                   color: '#374151',
                   fontFamily: 'Arial, sans-serif',
-                  borderTop: '0.3pt solid #E5E7EB',
-                  paddingTop: '1mm',
-                  marginTop: '1mm',
+                  paddingTop: '0.5mm',
+                  marginTop: '0.5mm',
                 }}>
                   Net Wt: {label.weight_grams}g &nbsp;|&nbsp;
                   Mfd: {mfdDate} &nbsp;|&nbsp;
@@ -241,11 +272,12 @@ const LabelsClient = ({ labels, orderInfo }) => {
                 </div>
               </div>
 
-              {/* Footer — white bg, thin brown top border */}
+              <WavyDivider color="#8B5E3C" opacity={0.5} />
+
+              {/* Footer — white bg */}
               <div style={{
-                borderTop: '0.5pt solid #8B5E3C',
-                paddingTop: '1mm',
-                marginTop: '1mm',
+                paddingTop: '0.5mm',
+                marginTop: '0.5mm',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
