@@ -28,12 +28,6 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
     setCustomers(initialCustomers);
   }, [initialCustomers]);
 
-  const handleAddClick = () => {
-    setEditingCustomer(null);
-    setIsFormOpen(true);
-    setError(null);
-  };
-
   const formRef = useRef(null);
   const [savedAddresses, setSavedAddresses] = useState([]);
 
