@@ -72,7 +72,8 @@ const ShipmentCard = ({ shipment, items, isMobile, onStatusUpdate }) => {
                 border: '1px solid #E5E7EB',
                 fontSize: '13px',
                 appearance: 'none',
-                background: '#FFFFFF'
+                background: '#FFFFFF',
+                fontFamily: 'inherit'
               }}
             >
               {ORDER_STATUSES.map(s => (

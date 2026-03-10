@@ -1,5 +1,5 @@
 -- ============================================================
--- MIGRATION v3.0 — Shipments & Multi-Address Support (CLEAN SLATE)
+-- MIGRATION v3.0 — Shipments & Multi-Address Support (FINAL FIX)
 -- ============================================================
 
 -- 0. CLEANUP (In case of previous failed attempts)
@@ -58,12 +58,28 @@ CREATE VIEW order_summary AS
 SELECT
   o.id,
   o.order_date,
-  -- Overall status is now a summary of shipment statuses
+  -- Improved Status Logic for both single and multi-shipment orders
   CASE 
+    -- 1. If ALL shipments are Delivered -> Delivered
     WHEN NOT EXISTS (SELECT 1 FROM shipments s WHERE s.order_id = o.id AND s.status != 'Delivered') THEN 'Delivered'
-    WHEN EXISTS (SELECT 1 FROM shipments s WHERE s.order_id = o.id AND s.status = 'Delivered') THEN 'Partially Delivered'
-    WHEN EXISTS (SELECT 1 FROM shipments s WHERE s.order_id = o.id AND s.status = 'Dispatched') THEN 'Partially Dispatched'
-    ELSE o.status 
+    
+    -- 2. If some are Delivered but some are not -> Partially Delivered
+    WHEN EXISTS (SELECT 1 FROM shipments s WHERE s.order_id = o.id AND s.status = 'Delivered') 
+         AND EXISTS (SELECT 1 FROM shipments s WHERE s.order_id = o.id AND s.status != 'Delivered') THEN 'Partially Delivered'
+    
+    -- 3. If some are Dispatched but some are not -> Partially Dispatched
+    WHEN EXISTS (SELECT 1 FROM shipments s WHERE s.order_id = o.id AND s.status = 'Dispatched')
+         AND EXISTS (SELECT 1 FROM shipments s WHERE s.order_id = o.id AND s.status NOT IN ('Dispatched', 'Delivered')) THEN 'Partially Dispatched'
+    
+    -- 4. Otherwise, show the status of the most 'advanced' shipment
+    ELSE (SELECT status FROM shipments WHERE order_id = o.id ORDER BY 
+      CASE status 
+        WHEN 'Delivered' THEN 4 
+        WHEN 'Dispatched' THEN 3 
+        WHEN 'Ready to Dispatch' THEN 2 
+        WHEN 'In Manufacturing' THEN 1 
+        ELSE 0 
+      END DESC LIMIT 1)
   END AS status,
   o.notes,
   o.created_at,
