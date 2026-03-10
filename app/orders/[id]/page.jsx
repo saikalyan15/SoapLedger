@@ -1,13 +1,14 @@
-import { getOrderById, getOrderItems } from '@/lib/queries/orders';
+import { getOrderById, getOrderItems, getShipmentsByOrderId } from '@/lib/queries/orders';
 import OrderDetailsView from './OrderDetailsView';
 import Link from 'next/link';
 
 export default async function OrderDetailsPage({ params }) {
   const { id } = await params;
   
-  const [order, items] = await Promise.all([
+  const [order, items, shipments] = await Promise.all([
     getOrderById(id),
-    getOrderItems(id)
+    getOrderItems(id),
+    getShipmentsByOrderId(id)
   ]);
 
   if (!order) {
@@ -21,7 +22,7 @@ export default async function OrderDetailsPage({ params }) {
 
   return (
     <div style={{ padding: '40px' }}>
-      <OrderDetailsView order={order} items={items} />
+      <OrderDetailsView order={order} items={items} shipments={shipments} />
     </div>
   );
 }
