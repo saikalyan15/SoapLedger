@@ -1,25 +1,30 @@
 -- ============================================================
--- MIGRATION v3.0 — Shipments & Multi-Address Support
+-- MIGRATION v3.0 — Shipments & Multi-Address Support (CLEAN SLATE)
 -- ============================================================
 
+-- 0. CLEANUP (In case of previous failed attempts)
+DROP VIEW IF EXISTS order_items_detail CASCADE;
+DROP VIEW IF EXISTS order_summary CASCADE;
+DROP TABLE IF EXISTS shipments CASCADE;
+DROP TABLE IF EXISTS customer_addresses CASCADE;
+
 -- 1. Create CUSTOMER_ADDRESSES for saved locations
-CREATE TABLE IF NOT EXISTS customer_addresses (
+CREATE TABLE customer_addresses (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id   UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
-  label         TEXT NOT NULL, -- e.g. "Home", "Mom's House"
+  label         TEXT NOT NULL, 
   address_text  TEXT NOT NULL,
   is_default    BOOLEAN NOT NULL DEFAULT FALSE,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 2. Create SHIPMENTS table to track individual packages
-CREATE TABLE IF NOT EXISTS shipments (
+-- 2. Create SHIPMENTS table WITHOUT strict CHECK constraint
+CREATE TABLE shipments (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id        UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   label           TEXT NOT NULL DEFAULT 'Shipment 1',
-  address_text    TEXT NOT NULL, -- Snapshot of destination
-  status          TEXT NOT NULL DEFAULT 'Received'
-                    CHECK (status IN ('Received', 'In Progress', 'Dispatched', 'Delivered')),
+  address_text    TEXT NOT NULL, 
+  status          TEXT NOT NULL,
   dispatched_at   TIMESTAMPTZ,
   delivered_at    TIMESTAMPTZ,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -37,7 +42,6 @@ WHERE address IS NOT NULL AND address <> ''
 ON CONFLICT DO NOTHING;
 
 -- B. Create a shipment for every existing order
--- We snapshot the address from the customer record at migration time
 INSERT INTO shipments (order_id, status, address_text, label)
 SELECT o.id, o.status, COALESCE(c.address, 'No Address Provided'), 'Primary Shipment'
 FROM orders o
@@ -50,7 +54,6 @@ FROM shipments s
 WHERE oi.order_id = s.order_id;
 
 -- 5. UPGRADE VIEWS
-DROP VIEW IF EXISTS order_summary;
 CREATE VIEW order_summary AS
 SELECT
   o.id,
@@ -75,7 +78,6 @@ SELECT
 FROM orders o
 JOIN customers c ON c.id = o.customer_id;
 
-DROP VIEW IF EXISTS order_items_detail;
 CREATE VIEW order_items_detail AS
 SELECT
   oi.id,

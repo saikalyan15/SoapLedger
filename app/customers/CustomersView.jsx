@@ -34,15 +34,27 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
     setError(null);
   };
 
-  const handleEditClick = (customer) => {
+  const [savedAddresses, setSavedAddresses] = useState([]);
+
+  const handleEditClick = async (customer) => {
     setEditingCustomer(customer);
     setIsFormOpen(true);
     setError(null);
+    
+    // Fetch all saved addresses for this customer
+    try {
+      const res = await fetch(`/api/customers/${customer.id}/addresses`);
+      const data = await res.json();
+      setSavedAddresses(data.addresses || []);
+    } catch (err) {
+      console.error('Failed to fetch customer addresses:', err);
+    }
   };
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
     setEditingCustomer(null);
+    setSavedAddresses([]);
   };
 
   const handleDeleteClick = (id) => {
@@ -221,15 +233,29 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
             </div>
 
             <div style={{ marginBottom: '20px' }}>
-              <label style={labelStyle}>Delivery Address</label>
+              <label style={labelStyle}>Delivery Address (Primary)</label>
               <textarea 
                 name="address" 
-                rows={3} 
+                rows={2} 
                 defaultValue={editingCustomer?.address || ''} 
                 placeholder="Full delivery address"
                 style={inputStyle}
               />
             </div>
+
+            {savedAddresses.length > 1 && (
+              <div style={{ marginBottom: '20px', padding: '16px', background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '8px' }}>
+                <label style={{ ...labelStyle, marginBottom: '12px' }}>Other Saved Addresses</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {savedAddresses.filter(a => a.label !== 'Primary').map((addr, idx) => (
+                    <div key={idx} style={{ fontSize: '13px', color: '#4B5563', display: 'flex', gap: '8px' }}>
+                      <div style={{ fontWeight: '700', color: '#1B4332', minWidth: '80px' }}>{addr.label}:</div>
+                      <div style={{ flex: 1 }}>{addr.address_text}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div style={{ marginBottom: '24px' }}>
               <label style={labelStyle}>Notes</label>

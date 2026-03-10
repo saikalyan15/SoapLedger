@@ -128,8 +128,24 @@ const OrderForm = ({ products, settings, initialData = null }) => {
     }
   }, [customer.id]);
 
-  const handleSelectCustomer = (c) => {
+  const handleSelectCustomer = async (c) => {
     setCustomer({ id: c.id, name: c.name, phone: c.phone, address: c.address || '', isExisting: true });
+    
+    // Fetch saved addresses for this customer
+    try {
+      const res = await fetch(`/api/customers/${c.id}/addresses`);
+      const data = await res.json();
+      if (data.addresses && data.addresses.length > 0) {
+        setShipments([{ 
+          label: data.addresses[0].label || 'Primary Shipment', 
+          address_text: data.addresses[0].address_text, 
+          status: 'Order Placed' 
+        }]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch customer addresses:', err);
+    }
+    
     setSearchQuery('');
     setShowResults(false);
   };
