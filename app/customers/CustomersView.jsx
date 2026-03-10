@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 import { addCustomerAction, editCustomerAction, deleteCustomerAction } from '@/lib/actions/customers';
 import PageHeader from '@/components/PageHeader';
@@ -34,13 +34,30 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
     setError(null);
   };
 
+  const formRef = useRef(null);
   const [savedAddresses, setSavedAddresses] = useState([]);
+
+  const handleAddClick = () => {
+    setEditingCustomer(null);
+    setSavedAddresses([]);
+    setIsFormOpen(true);
+    setError(null);
+    // Scroll to form after a tiny delay to allow render
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
 
   const handleEditClick = async (customer) => {
     setEditingCustomer(customer);
     setIsFormOpen(true);
     setError(null);
     
+    // Scroll to form
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+
     // Fetch all saved addresses for this customer
     try {
       const res = await fetch(`/api/customers/${customer.id}/addresses`);
@@ -169,6 +186,7 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
       {/* Inline Form */}
       {isFormOpen && (
         <div 
+          ref={formRef}
           className="customer-form"
           style={{
             background: '#F9FAFB',
@@ -200,7 +218,7 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} key={editingCustomer ? editingCustomer.id : 'new'}>
             <div 
               className="form-row-2col"
               style={{ 
