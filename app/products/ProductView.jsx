@@ -12,6 +12,9 @@ import {
   Pencil,
   Plus,
   X,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  Tag,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -19,7 +22,7 @@ export default function ProductView({ products }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isArchivedOpen, setIsArchivedOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false); /* mobile only */
+  const [isMobile, setIsMobile] = useState(false);
   const [formData, setFormData] = useState({
     ingredients: '',
   });
@@ -28,7 +31,6 @@ export default function ProductView({ products }) {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Detect Mobile
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -65,7 +67,6 @@ export default function ProductView({ products }) {
 
   return (
     <div className="page-content" style={{ padding: isMobile ? '16px' : '0' }}>
-      {/* Page Header */}
       <div className="pt-[8px] flex justify-between items-start">
         <div>
           <h1 className="font-serif text-[28px] md:text-[36px] text-[#1B4332] font-normal leading-none m-0">
@@ -86,7 +87,6 @@ export default function ProductView({ products }) {
 
       <div className="mt-[24px] md:mt-[32px] border-b-[2px] border-[#E5E7EB] mb-[24px] md:mb-[32px]"></div>
 
-      {/* Inline Add/Edit Form */}
       {isFormOpen && (
         <div className="bg-[#FAFDF9] border border-[#D8F3DC] rounded-[14px] p-[20px] md:p-[32px] mb-[32px] shadow-[0_2px_12px_rgba(27,67,50,0.08)]">
           <h2 className="font-serif text-[20px] md:text-[22px] text-[#1B4332] mb-[20px] md:mb-[24px] mt-0">
@@ -103,6 +103,7 @@ export default function ProductView({ products }) {
             }}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px] md:gap-[20px]">
+              {/* Basic Info */}
               <div>
                 <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
                   Product Name
@@ -113,6 +114,18 @@ export default function ProductView({ products }) {
                   required
                   className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
                   placeholder="e.g. Lavender Bliss"
+                />
+              </div>
+
+              <div>
+                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
+                  Slug (URL)
+                </label>
+                <input
+                  name="slug"
+                  defaultValue={editingProduct?.slug}
+                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
+                  placeholder="lavender-bliss"
                 />
               </div>
 
@@ -129,63 +142,19 @@ export default function ProductView({ products }) {
                 />
               </div>
 
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label
-                  style={{
-                    fontFamily: 'Plus Jakarta Sans, sans-serif',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: '#6B7280',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    display: 'block',
-                    marginBottom: '6px',
-                  }}
-                >
-                  ADDITIONAL INGREDIENTS
-                </label>
-                <textarea
-                  name="ingredients"
-                  value={formData.ingredients || ''}
-                  onChange={handleChange}
-                  rows={2}
-                  placeholder="e.g. Neem Extract, Tulsi Extract, Essential Oils"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #E5E7EB',
-                    borderRadius: '8px',
-                    fontFamily: 'Plus Jakarta Sans, sans-serif',
-                    fontSize: '14px',
-                    resize: 'vertical',
-                    lineHeight: 1.5,
-                  }}
-                />
-                <p
-                  style={{
-                    fontFamily: 'Plus Jakarta Sans, sans-serif',
-                    fontSize: '12px',
-                    color: '#9CA3AF',
-                    marginTop: '4px',
-                  }}
-                >
-                  Do not include the soap base — it is added automatically from Base Type when printing labels.
-                </p>
-              </div>
-
               <div>
                 <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
-                  Weight (g)
+                  Website Category
                 </label>
                 <input
-                  name="weight_grams"
-                  type="number"
-                  defaultValue={editingProduct?.weight_grams}
+                  name="category"
+                  defaultValue={editingProduct?.category}
                   className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
-                  placeholder="100"
+                  placeholder="e.g. Floral Collection"
                 />
               </div>
 
+              {/* Pricing and Weight */}
               <div>
                 <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
                   Unit Price (₹)
@@ -201,20 +170,111 @@ export default function ProductView({ products }) {
                 />
               </div>
 
-              <div className="flex items-center gap-[10px] md:col-span-2">
-                <input
-                  id="is_seasonal"
-                  name="is_seasonal"
-                  type="checkbox"
-                  defaultChecked={editingProduct?.is_seasonal}
-                  className="w-[18px] h-[18px] accent-[#1B4332]"
-                />
-                <label
-                  htmlFor="is_seasonal"
-                  className="font-sans text-[14px] text-[#1A1A1A] m-0"
-                >
-                  Seasonal Product?
+              <div>
+                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
+                  Price Range (for variants)
                 </label>
+                <input
+                  name="price_range"
+                  defaultValue={editingProduct?.price_range}
+                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
+                  placeholder="e.g. ₹250 - ₹500"
+                />
+              </div>
+
+              {/* Descriptions & Images */}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
+                  Short Description
+                </label>
+                <textarea
+                  name="short_description"
+                  defaultValue={editingProduct?.short_description}
+                  rows={2}
+                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none resize-vertical"
+                  placeholder="Briefly describe this soap for the website catalogue..."
+                />
+              </div>
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
+                  ADDITIONAL INGREDIENTS
+                </label>
+                <textarea
+                  name="ingredients"
+                  value={formData.ingredients || ''}
+                  onChange={handleChange}
+                  rows={2}
+                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none resize-vertical"
+                  placeholder="e.g. Neem Extract, Tulsi Extract, Essential Oils"
+                />
+              </div>
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
+                  Image URL
+                </label>
+                <input
+                  name="image_url"
+                  defaultValue={editingProduct?.image_url}
+                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
+                  placeholder="https://healingsoil.in/images/products/lavender.jpg"
+                />
+              </div>
+
+              <div>
+                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
+                  Weight (g)
+                </label>
+                <input
+                  name="weight_grams"
+                  type="number"
+                  defaultValue={editingProduct?.weight_grams}
+                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
+                  placeholder="100"
+                />
+              </div>
+
+              {/* Status Toggles */}
+              <div className="flex flex-wrap gap-[20px] md:col-span-2 mt-[8px]">
+                <div className="flex items-center gap-[10px]">
+                  <input
+                    id="in_stock"
+                    name="in_stock"
+                    type="checkbox"
+                    defaultChecked={editingProduct ? editingProduct.in_stock : true}
+                    className="w-[18px] h-[18px] accent-[#1B4332]"
+                  />
+                  <label htmlFor="in_stock" className="font-sans text-[14px] text-[#1A1A1A]">
+                    In Stock
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-[10px]">
+                  <input
+                    id="is_featured"
+                    name="is_featured"
+                    type="checkbox"
+                    defaultChecked={editingProduct?.is_featured}
+                    className="w-[18px] h-[18px] accent-[#1B4332]"
+                  />
+                  <label htmlFor="is_featured" className="font-sans text-[14px] text-[#1A1A1A]">
+                    Featured on Website
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-[10px]">
+                  <input
+                    id="is_seasonal"
+                    name="is_seasonal"
+                    type="checkbox"
+                    defaultChecked={editingProduct?.is_seasonal}
+                    className="w-[18px] h-[18px] accent-[#1B4332]"
+                  />
+                  <label htmlFor="is_seasonal" className="font-sans text-[14px] text-[#1A1A1A]">
+                    Seasonal Product
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -237,7 +297,6 @@ export default function ProductView({ products }) {
         </div>
       )}
 
-      {/* Active Product Sections */}
       <div className="space-y-[32px] md:space-y-[40px]">
         {Object.entries(groupedProducts).map(([base, items]) => (
           <div key={base}>
@@ -258,12 +317,20 @@ export default function ProductView({ products }) {
                   className="bg-[#FFFFFF] border border-[#EBEBEB] rounded-[12px] px-[16px] md:px-[24px] py-[14px] md:py-[18px] flex flex-col md:flex-row md:items-center justify-between transition-all duration-[180ms] hover:border-[#D8F3DC] product-card"
                 >
                   <div className="mb-[12px] md:mb-0">
-                    <div className="font-sans text-[15px] font-semibold text-[#1A1A1A] m-0">
-                      {product.name}
+                    <div className="flex items-center gap-2">
+                      <div className="font-sans text-[15px] font-semibold text-[#1A1A1A] m-0">
+                        {product.name}
+                      </div>
+                      {product.is_featured && (
+                        <span className="bg-[#EEF2FF] text-[#4338CA] px-[6px] py-[1px] rounded text-[10px] font-bold uppercase">
+                          Featured
+                        </span>
+                      )}
                     </div>
                     <div className="font-sans text-[13px] text-[#9CA3AF] mt-[4px] m-0">
                       {product.weight_grams ? `${product.weight_grams}g` : '-'}{' '}
                       • ₹{product.unit_price}
+                      {product.slug && ` • /${product.slug}`}
                     </div>
                   </div>
 
@@ -274,9 +341,15 @@ export default function ProductView({ products }) {
                           Seasonal
                         </span>
                       )}
-                      <span className="bg-[#D8F3DC] text-[#1B4332] font-sans text-[10px] font-bold tracking-[0.06em] px-[10px] py-[3px] rounded-[20px] uppercase m-0">
-                        Active
-                      </span>
+                      {!product.in_stock ? (
+                        <span className="bg-[#FEE2E2] text-[#B91C1C] font-sans text-[10px] font-bold tracking-[0.06em] px-[10px] py-[3px] rounded-[20px] uppercase m-0">
+                          Out of Stock
+                        </span>
+                      ) : (
+                        <span className="bg-[#D8F3DC] text-[#1B4332] font-sans text-[10px] font-bold tracking-[0.06em] px-[10px] py-[3px] rounded-[20px] uppercase m-0">
+                          In Stock
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-[8px] product-actions">
@@ -301,7 +374,6 @@ export default function ProductView({ products }) {
         ))}
       </div>
 
-      {/* Archived Section */}
       {archivedProducts.length > 0 && (
         <div className="mt-[40px] md:mt-[48px]">
           <div

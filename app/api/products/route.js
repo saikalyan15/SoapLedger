@@ -26,23 +26,23 @@ export async function GET(request) {
   try {
     const products = await sql`
       SELECT * FROM products 
-      WHERE is_active = true
+      WHERE is_active = true OR in_stock = true
       ORDER BY name ASC
     `;
 
     const formattedProducts = products.map(p => ({
       id: p.id,
       name: p.name,
-      slug: p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      slug: p.slug || p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       base_type: p.base_type,
       price: p.unit_price,
-      price_range: null, // Hardcoded: variants not yet in schema
-      short_description: '', // Hardcoded: not in schema
+      price_range: p.price_range || null,
+      short_description: p.short_description || '',
       ingredients: p.ingredients ? p.ingredients.split(',').map(i => i.trim()) : [],
-      image_url: '', // Hardcoded: not in schema
-      in_stock: p.is_active,
-      is_featured: false, // Hardcoded: not in schema
-      category: p.base_type,
+      image_url: p.image_url || '',
+      in_stock: p.in_stock,
+      is_featured: p.is_featured,
+      category: p.category || p.base_type,
     }));
 
     return NextResponse.json(formattedProducts, {
