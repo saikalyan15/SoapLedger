@@ -173,7 +173,11 @@ export default function ExpensesView({ expenses, summary }) {
                 
                 <div className="flex items-center gap-[8px]">
                   <button 
-                    onClick={() => deleteExpenseAction(item.id)}
+                    onClick={() => {
+                      if (confirm('Are you sure you want to delete this expense?')) {
+                        deleteExpenseAction(item.id);
+                      }
+                    }}
                     className="bg-transparent border border-[#E5E7EB] text-[#6B7280] font-sans text-[12px] font-semibold px-[16px] py-[6px] rounded-[8px] cursor-pointer flex items-center gap-[6px] transition-all duration-[150ms] ease-in-out hover:bg-[#FEE2E2] hover:border-[#DC2626] hover:text-[#DC2626] m-0"
                   >
                     <Trash2 size={13} /> Delete

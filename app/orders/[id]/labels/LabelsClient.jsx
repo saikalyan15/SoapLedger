@@ -18,9 +18,9 @@ const WavyDivider = ({ color = '#1B4332', opacity = 0.4 }) => (
     preserveAspectRatio="none"
     style={{
       width: '100%',
-      height: '3px',
+      height: '2px',
       display: 'block',
-      margin: '0.3mm 0',
+      margin: '0.2mm 0',
     }}
   >
     <path
@@ -72,7 +72,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
       <style jsx global>{`
         @page {
           size: A4;
-          margin: 10mm;
+          margin: 5mm;
         }
 
         .labels-page {
@@ -87,32 +87,26 @@ const LabelsClient = ({ labels, orderInfo }) => {
         .labels-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 4mm;
+          gap: 2mm;
           width: 100%;
-          max-width: 180mm;
-          box-sizing: border-box;
+          max-width: 190mm;
+          margin: 0 auto;
         }
 
         .label-container {
           position: relative;
           cursor: pointer;
-          transition: all 0.2s ease;
         }
 
         .label-container.deselected {
-          opacity: 0.4;
-          filter: grayscale(0.5);
+          opacity: 0.3;
         }
 
         .selection-overlay {
           position: absolute;
-          top: 2mm;
-          right: 2mm;
+          top: 1mm;
+          right: 1mm;
           z-index: 10;
-          background: white;
-          border-radius: 4px;
-          padding: 2px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .label {
@@ -123,15 +117,14 @@ const LabelsClient = ({ labels, orderInfo }) => {
           display: flex;
           flex-direction: column;
           border: 1px dashed #CCCCCC;
-          padding: 2.5mm 3.5mm;
+          padding: 2mm 3mm;
           background: #FFFFFF;
-          page-break-inside: avoid;
         }
 
         @media print {
           @page {
             size: A4 portrait;
-            margin: 10mm;
+            margin: 5mm;
           }
 
           .no-print { display: none !important; }
@@ -140,18 +133,21 @@ const LabelsClient = ({ labels, orderInfo }) => {
 
           .labels-grid {
             display: grid;
-            grid-template-columns: repeat(2, 88mm);
-            gap: 4mm;
-            width: auto;
+            grid-template-columns: 85mm 85mm;
+            grid-auto-rows: 45mm;
+            gap: 2mm 5mm;
+            width: 100%;
             margin: 0;
             padding: 0;
           }
 
           .label {
-            border: 1px dashed #EEEEEE;
+            width: 85mm !important;
+            height: 45mm !important;
+            border: 0.1mm solid #EEEEEE;
             background: #FFFFFF !important;
+            page-break-inside: avoid;
             -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
           }
         }
       `}</style>
@@ -166,79 +162,30 @@ const LabelsClient = ({ labels, orderInfo }) => {
         marginBottom: '24px',
         borderRadius: '12px',
         width: '100%',
-        maxWidth: '180mm', 
-        boxSizing: 'border-box',
+        maxWidth: '190mm', 
+        margin: '0 auto',
         boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              Print Labels <span style={{ opacity: 0.5, fontWeight: 400 }}>| Order #{orderInfo.id.slice(0,8)}</span>
+            <div style={{ fontSize: '18px', fontWeight: 700 }}>
+              Order #{orderInfo.id.slice(0,8)} Labels
             </div>
-            <div style={{ fontSize: '13px', opacity: 0.8, marginTop: '4px' }}>
-              {selectedIds.size} of {labels.length} labels selected for {orderInfo.customer_name}
+            <div style={{ fontSize: '12px', opacity: 0.8 }}>
+              {selectedIds.size} of {labels.length} selected
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button onClick={() => window.print()} disabled={selectedIds.size === 0} style={{
-              background: '#FFFFFF',
-              color: '#1B4332',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '10px 20px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              opacity: selectedIds.size === 0 ? 0.5 : 1
-            }}>
-              <Printer size={18} /> Print {selectedIds.size} Labels
-            </button>
-            <a href={`/orders/${orderInfo.id}`} style={{
-              color: '#FFFFFF',
-              fontSize: '13px',
-              opacity: 0.8,
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              <ArrowLeft size={16} /> Back
-            </a>
-          </div>
+          <button onClick={() => window.print()} disabled={selectedIds.size === 0} style={{
+            background: '#FFFFFF', color: '#1B4332', border: 'none', borderRadius: '8px',
+            padding: '8px 16px', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '8px'
+          }}>
+            <Printer size={18} /> Print Now
+          </button>
         </div>
-
-        <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px' }}>
-          <button onClick={selectAll} style={{
-            background: 'rgba(255,255,255,0.1)',
-            border: 'none',
-            color: 'white',
-            padding: '6px 12px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
-            <CheckSquare size={14} /> Select All
-          </button>
-          <button onClick={clearAll} style={{
-            background: 'rgba(255,255,255,0.1)',
-            border: 'none',
-            color: 'white',
-            padding: '6px 12px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
-            <Square size={14} /> Clear All
-          </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={selectAll} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Select All</button>
+          <button onClick={clearAll} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Clear All</button>
         </div>
       </div>
 
@@ -249,140 +196,50 @@ const LabelsClient = ({ labels, orderInfo }) => {
           const bbeDate = formatBBE(label.order_date);
           
           return (
-            <div 
-              key={index} 
-              className={`label-container ${isSelected ? 'selected' : 'deselected'}`}
-              onClick={() => toggleLabel(index)}
-            >
+            <div key={index} className={`label-container ${isSelected ? '' : 'deselected'}`} onClick={() => toggleLabel(index)}>
               <div className="selection-overlay no-print">
-                {isSelected ? (
-                  <div style={{ color: '#1B4332' }}><CheckSquare size={20} fill="#1B4332" color="white" /></div>
-                ) : (
-                  <div style={{ color: '#9CA3AF' }}><Square size={20} /></div>
-                )}
+                {isSelected ? <CheckSquare size={18} fill="#1B4332" color="white" /> : <Square size={18} color="#9CA3AF" />}
               </div>
 
               <div className="label">
-                {/* Header */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '2mm',
-                  paddingBottom: '0.2mm',
-                }}>
-                  <img
-                    src="/HealingSoil-Formatted.png"
-                    alt="Logo"
-                    style={{
-                      width: '8mm',
-                      height: '8mm',
-                      objectFit: 'cover',
-                      borderRadius: '50%',
-                      flexShrink: 0,
-                    }}
-                  />
-                  <div>
-                    <div style={{
-                      fontSize: '8.5pt',
-                      fontWeight: 700,
-                      color: '#1B4332',
-                      letterSpacing: '0.06em',
-                      lineHeight: 1,
-                      fontFamily: 'Arial, sans-serif',
-                    }}>HEALING SOIL</div>
-                    <div style={{
-                      fontSize: '6pt',
-                      color: '#8B5E3C',
-                      fontFamily: 'Arial, sans-serif',
-                      marginTop: '1px'
-                    }}>healingsoil.in</div>
+                {/* Product Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5mm', marginBottom: '0.2mm' }}>
+                  <img src="/HealingSoil-Formatted.png" alt="" style={{ width: '7mm', height: '7mm', borderRadius: '50%' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '7.5pt', fontWeight: 800, color: '#1B4332', letterSpacing: '0.04em', lineHeight: 1 }}>HEALING SOIL</div>
+                    <div style={{ fontSize: '8pt', fontWeight: 700, color: '#1B4332', marginTop: '1px' }}>{label.product_name}</div>
                   </div>
                 </div>
 
-                <WavyDivider color="#1B4332" opacity={0.5} />
+                <WavyDivider color="#1B4332" opacity={0.3} />
 
-                {/* Body */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                  <div style={{
-                    fontSize: '9pt',
-                    fontWeight: 700,
-                    color: '#1B4332',
-                    lineHeight: 1.1,
-                    fontFamily: 'Georgia, serif',
-                    textAlign: 'center',
-                    marginBottom: '0.3mm',
-                  }}>
-                    {label.product_name}
+                {/* Ingredients & Dates */}
+                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ fontSize: '6pt', color: '#4B5563', lineHeight: 1.2, maxHeight: '8.5mm', overflow: 'hidden' }}>
+                    <strong>Ingredients:</strong> {getFullIngredients(label.base_type, label.ingredients)}
                   </div>
-
-                  <div style={{
-                    fontSize: '7pt',
-                    color: '#8B5E3C',
-                    fontStyle: 'italic',
-                    fontFamily: 'Georgia, serif',
-                    textAlign: 'center',
-                    marginBottom: '0.5mm',
-                  }}>
-                    ~ {label.base_type} Base ~
-                  </div>
-
-                  <WavyDivider color="#D4A017" opacity={0.7} />
-
-                  <div style={{
-                    fontSize: '6.5pt',
-                    fontWeight: 700,
-                    color: '#374151',
-                    fontFamily: 'Arial, sans-serif',
-                    marginBottom: '0.1mm',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.02em'
-                  }}>Ingredients:</div>
-
-                  <div style={{
-                    fontSize: '6.5pt',
-                    color: '#4B5563',
-                    lineHeight: 1.2,
-                    fontFamily: 'Arial, sans-serif',
-                    flex: 1,
-                    overflow: 'hidden',
-                  }}>{getFullIngredients(label.base_type, label.ingredients)}</div>
-
-                  <WavyDivider color="#8B5E3C" opacity={0.4} />
-
-                  <div style={{
-                    fontSize: '6.5pt',
-                    color: '#374151',
-                    fontFamily: 'Arial, sans-serif',
-                    paddingTop: '0.1mm',
-                    textAlign: 'center',
-                    fontWeight: 500
-                  }}>
-                    Net Wt: {label.weight_grams}g &nbsp;|&nbsp;
-                    Mfd: {mfdDate} &nbsp;|&nbsp;
-                    Exp: {bbeDate}
+                  
+                  <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', fontSize: '5.5pt', color: '#374151', padding: '0.5mm 0' }}>
+                    <span>Wt: {label.weight_grams}g</span>
+                    <span>Mfd: {mfdDate}</span>
+                    <span>Exp: {bbeDate}</span>
                   </div>
                 </div>
 
-                <WavyDivider color="#8B5E3C" opacity={0.5} />
+                <div style={{ borderTop: '0.1mm solid #E5E7EB', margin: '0.5mm 0' }}></div>
 
-                {/* Footer */}
-                <div style={{
-                  paddingTop: '0.5mm',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}>
-                  <div style={{
-                    fontSize: '5.5pt',
-                    color: '#8B5E3C',
-                    fontFamily: 'Arial, sans-serif',
-                  }}>UDYAM-KR-03-0666485</div>
-                  <div style={{
-                    fontSize: '5.5pt',
-                    color: '#9CA3AF',
-                    fontStyle: 'italic',
-                    fontFamily: 'Arial, sans-serif',
-                  }}>External use only</div>
+                {/* Shipping Info - Bottom Section */}
+                <div style={{ background: '#F9FAFB', padding: '1mm', borderRadius: '1mm', display: 'flex', flexDirection: 'column', gap: '0.2mm' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '5pt', color: '#6B7280', fontWeight: 600 }}>
+                    <span>FROM: Healing Soil</span>
+                    <span>TO: {orderInfo.customer_name}</span>
+                  </div>
+                  <div style={{ fontSize: '5pt', color: '#1F2937', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {orderInfo.customer_address} | {orderInfo.customer_phone}
+                  </div>
+                  <div style={{ fontSize: '4.5pt', color: '#9CA3AF', textAlign: 'center', fontStyle: 'italic' }}>
+                    UDYAM-KR-03-0666485 | healingsoil.in
+                  </div>
                 </div>
               </div>
             </div>
