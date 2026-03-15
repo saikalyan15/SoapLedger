@@ -207,14 +207,29 @@ const OrdersView = ({ orders }) => {
                       fontSize: '16px',
                       color: '#1B4332',
                     }}>₹{Math.round(Number(order.revenue || 0)).toLocaleString('en-IN')}</div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <Link href={`/orders/${order.id}`}>
-                        <Eye size={16} color="#1B4332" />
+                        <Eye size={18} color="#1B4332" />
                       </Link>
                       {EDITABLE_STATUSES.includes(order.status) && (
-                        <Link href={`/orders/${order.id}/edit`}>
-                          <Pencil size={16} color="#6B7280" />
-                        </Link>
+                        <>
+                          <Link href={`/orders/${order.id}/edit`}>
+                            <Pencil size={18} color="#6B7280" />
+                          </Link>
+                          <button 
+                            onClick={() => handleDelete(order.id)}
+                            style={{ 
+                              background: 'none', 
+                              border: 'none', 
+                              padding: 0, 
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <Trash2 size={18} color="#DC2626" />
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>

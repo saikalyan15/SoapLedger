@@ -4,6 +4,7 @@ import {
   createProductAction,
   toggleArchiveAction,
   updateProductAction,
+  deleteProductAction,
 } from '@/lib/actions/products';
 import {
   Archive,
@@ -15,6 +16,7 @@ import {
   Link as LinkIcon,
   Image as ImageIcon,
   Tag,
+  Trash2,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -365,6 +367,18 @@ export default function ProductView({ products }) {
                       >
                         <Archive size={13} /> Archive
                       </button>
+                      {product.order_count === 0 && (
+                        <button
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this product?')) {
+                              deleteProductAction(product.id);
+                            }
+                          }}
+                          className="bg-transparent border border-[#FEE2E2] text-[#B91C1C] font-sans text-[12px] font-semibold px-[16px] py-[8px] md:py-[6px] rounded-[8px] cursor-pointer flex items-center gap-[6px] flex-1 md:flex-none justify-center hover:bg-[#FEF2F2]"
+                        >
+                          <Trash2 size={13} /> Delete
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -403,12 +417,26 @@ export default function ProductView({ products }) {
                       {product.base_type} • ₹{product.unit_price}
                     </div>
                   </div>
-                  <button
-                    onClick={() => toggleArchiveAction(product.id)}
-                    className="bg-transparent border border-[#D8F3DC] text-[#1B4332] font-sans text-[12px] font-semibold px-[16px] py-[8px] md:py-[6px] rounded-[8px] cursor-pointer flex items-center gap-[6px] md:w-auto w-full justify-center"
-                  >
-                    <ArchiveRestore size={13} /> Restore
-                  </button>
+                  <div className="flex items-center gap-[8px]">
+                    <button
+                      onClick={() => toggleArchiveAction(product.id)}
+                      className="bg-transparent border border-[#D8F3DC] text-[#1B4332] font-sans text-[12px] font-semibold px-[16px] py-[8px] md:py-[6px] rounded-[8px] cursor-pointer flex items-center gap-[6px] md:w-auto w-full justify-center"
+                    >
+                      <ArchiveRestore size={13} /> Restore
+                    </button>
+                    {product.order_count === 0 && (
+                      <button
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this product?')) {
+                            deleteProductAction(product.id);
+                          }
+                        }}
+                        className="bg-transparent border border-[#FEE2E2] text-[#B91C1C] font-sans text-[12px] font-semibold px-[16px] py-[8px] md:py-[6px] rounded-[8px] cursor-pointer flex items-center gap-[6px] md:w-auto w-full justify-center hover:bg-[#FEF2F2]"
+                      >
+                        <Trash2 size={13} /> Delete
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
