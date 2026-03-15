@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, X, Printer, ArrowLeft, Square, CheckSquare } from 'lucide-react';
+import { Check, X, Printer, ArrowLeft, Square, CheckSquare, Truck, Tag } from 'lucide-react';
 
 const BASE_LABELS = {
   'Glycerine':   'Glycerine',
@@ -16,18 +16,13 @@ const WavyDivider = ({ color = '#1B4332', opacity = 0.4 }) => (
   <svg
     viewBox="0 0 200 8"
     preserveAspectRatio="none"
-    style={{
-      width: '100%',
-      height: '2px',
-      display: 'block',
-      margin: '0.2mm 0',
-    }}
+    style={{ width: '100%', height: '3px', display: 'block', margin: '0.5mm 0' }}
   >
     <path
       d="M0,4 C12.5,0 12.5,8 25,4 C37.5,0 37.5,8 50,4 C62.5,0 62.5,8 75,4 C87.5,0 87.5,8 100,4 C112.5,0 112.5,8 125,4 C137.5,0 137.5,8 150,4 C162.5,0 162.5,8 175,4 C187.5,0 187.5,8 200,4"
       fill="none"
       stroke={color}
-      strokeWidth="1.5"
+      strokeWidth="2"
       strokeOpacity={opacity}
     />
   </svg>
@@ -41,7 +36,8 @@ function getFullIngredients(baseType, additionalIngredients) {
 }
 
 const LabelsClient = ({ labels, orderInfo }) => {
-  const [selectedIds, setSelectedIds] = useState(new Set(labels.map((_, i) => i)));
+  // We add +1 to the selected IDs to account for the shipping label (index -1)
+  const [selectedIds, setSelectedIds] = useState(new Set([...labels.map((_, i) => i), -1]));
 
   const formatDate = (dateStr) => {
     const d = new Date(dateStr);
@@ -54,197 +50,131 @@ const LabelsClient = ({ labels, orderInfo }) => {
     return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
   };
 
-  const toggleLabel = (index) => {
+  const toggleLabel = (id) => {
     const newSelected = new Set(selectedIds);
-    if (newSelected.has(index)) {
-      newSelected.delete(index);
-    } else {
-      newSelected.add(index);
-    }
+    if (newSelected.has(id)) newSelected.delete(id);
+    else newSelected.add(id);
     setSelectedIds(newSelected);
   };
-
-  const selectAll = () => setSelectedIds(new Set(labels.map((_, i) => i)));
-  const clearAll = () => setSelectedIds(new Set());
 
   return (
     <div className="labels-page">
       <style jsx global>{`
-        @page {
-          size: A4;
-          margin: 5mm;
+        @page { size: A4; margin: 10mm; }
+        .labels-page { background: #F0EDE8; padding: 20px; min-height: 100vh; font-family: Arial, sans-serif; }
+        .section-header { font-family: 'DM Serif Display', serif; color: #1B4332; margin: 30px 0 15px 0; display: flex; alignItems: center; gap: 10px; }
+        
+        /* Product Label - Web View */
+        .product-label {
+          width: 60mm; height: 40mm; background: white; border: 1px dashed #CCC;
+          padding: 3mm; display: flex; flex-direction: column; position: relative;
+          cursor: pointer; transition: opacity 0.2s;
         }
-
-        .labels-page {
-          background: #F0EDE8;
-          padding: 8mm 8mm 40mm 8mm;
-          min-height: 100vh;
-          font-family: Arial, sans-serif;
-          width: 100%;
-          box-sizing: border-box;
-        }
-
-        .labels-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 2mm;
-          width: 100%;
-          max-width: 190mm;
-          margin: 0 auto;
-        }
-
-        .label-container {
+        
+        /* Shipping Label - Web View */
+        .shipping-label {
+          width: 100mm; min-height: 60mm; background: white; border: 2px solid #1B4332;
+          padding: 8mm; display: flex; flex-direction: column; cursor: pointer;
           position: relative;
-          cursor: pointer;
         }
 
-        .label-container.deselected {
-          opacity: 0.3;
-        }
-
-        .selection-overlay {
-          position: absolute;
-          top: 1mm;
-          right: 1mm;
-          z-index: 10;
-        }
-
-        .label {
-          width: 100%;
-          height: 45mm;
-          box-sizing: border-box;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          border: 1px dashed #CCCCCC;
-          padding: 2mm 3mm;
-          background: #FFFFFF;
-        }
+        .deselected { opacity: 0.3 !important; }
 
         @media print {
-          @page {
-            size: A4 portrait;
-            margin: 5mm;
-          }
-
           .no-print { display: none !important; }
-          .labels-page { background: white !important; padding: 0 !important; }
-          .label-container.deselected { display: none !important; }
-
-          .labels-grid {
+          .labels-page { background: white; padding: 0; }
+          .deselected { display: none !important; }
+          
+          .product-grid {
             display: grid;
-            grid-template-columns: 85mm 85mm;
-            grid-auto-rows: 45mm;
-            gap: 2mm 5mm;
-            width: 100%;
-            margin: 0;
-            padding: 0;
+            grid-template-columns: repeat(3, 60mm);
+            gap: 5mm;
+            page-break-after: always;
           }
 
-          .label {
-            width: 85mm !important;
-            height: 45mm !important;
-            border: 0.1mm solid #EEEEEE;
-            background: #FFFFFF !important;
-            page-break-inside: avoid;
-            -webkit-print-color-adjust: exact;
+          .product-label {
+            width: 60mm !important; height: 40mm !important;
+            border: 0.1mm solid #EEE; margin: 0;
           }
+
+          .shipping-container { page-break-before: always; padding-top: 20px; }
+          .shipping-label { width: 140mm !important; height: 90mm !important; border: 0.5mm solid black; }
         }
       `}</style>
 
-      <div className="no-print" style={{
-        padding: '16px 24px',
-        background: '#1B4332',
-        color: '#FFFFFF',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-        marginBottom: '24px',
-        borderRadius: '12px',
-        width: '100%',
-        maxWidth: '190mm', 
-        margin: '0 auto',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-      }}>
+      {/* Toolbar */}
+      <div className="no-print" style={{ background: '#1B4332', color: 'white', padding: '20px', borderRadius: '12px', marginBottom: '30px', maxWidth: '800px', margin: '0 auto 30px auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '18px', fontWeight: 700 }}>
-              Order #{orderInfo.id.slice(0,8)} Labels
-            </div>
-            <div style={{ fontSize: '12px', opacity: 0.8 }}>
-              {selectedIds.size} of {labels.length} selected
-            </div>
+            <h2 style={{ margin: 0 }}>Print Center</h2>
+            <p style={{ margin: '5px 0 0 0', opacity: 0.8, fontSize: '14px' }}>Order #{orderInfo.id.slice(0,8)} | {orderInfo.customer_name}</p>
           </div>
-          <button onClick={() => window.print()} disabled={selectedIds.size === 0} style={{
-            background: '#FFFFFF', color: '#1B4332', border: 'none', borderRadius: '8px',
-            padding: '8px 16px', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '8px'
-          }}>
-            <Printer size={18} /> Print Now
+          <button onClick={() => window.print()} style={{ background: 'white', color: '#1B4332', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Printer size={20} /> Print Selected ({selectedIds.size})
           </button>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={selectAll} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Select All</button>
-          <button onClick={clearAll} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer' }}>Clear All</button>
         </div>
       </div>
 
-      <div className="labels-grid">
-        {labels.map((label, index) => {
-          const isSelected = selectedIds.has(index);
-          const mfdDate = formatDate(label.order_date);
-          const bbeDate = formatBBE(label.order_date);
-          
-          return (
-            <div key={index} className={`label-container ${isSelected ? '' : 'deselected'}`} onClick={() => toggleLabel(index)}>
-              <div className="selection-overlay no-print">
-                {isSelected ? <CheckSquare size={18} fill="#1B4332" color="white" /> : <Square size={18} color="#9CA3AF" />}
+      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        <h3 className="section-header no-print"><Tag size={20} /> Product Labels (40mm x 60mm)</h3>
+        <div className="product-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
+          {labels.map((label, index) => (
+            <div key={index} className={`product-label ${selectedIds.has(index) ? '' : 'deselected'}`} onClick={() => toggleLabel(index)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', marginBottom: '1mm' }}>
+                <img src="/HealingSoil-Formatted.png" style={{ width: '6mm', height: '6mm', borderRadius: '50%' }} />
+                <div style={{ fontSize: '7pt', fontWeight: 800, color: '#1B4332' }}>HEALING SOIL</div>
+              </div>
+              
+              <div style={{ textAlign: 'center', fontSize: '10pt', fontWeight: 700, color: '#1B4332', lineHeight: 1.1, margin: '1mm 0' }}>
+                {label.product_name}
               </div>
 
-              <div className="label">
-                {/* Product Header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5mm', marginBottom: '0.2mm' }}>
-                  <img src="/HealingSoil-Formatted.png" alt="" style={{ width: '7mm', height: '7mm', borderRadius: '50%' }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '7.5pt', fontWeight: 800, color: '#1B4332', letterSpacing: '0.04em', lineHeight: 1 }}>HEALING SOIL</div>
-                    <div style={{ fontSize: '8pt', fontWeight: 700, color: '#1B4332', marginTop: '1px' }}>{label.product_name}</div>
-                  </div>
-                </div>
+              <WavyDivider opacity={0.3} />
 
-                <WavyDivider color="#1B4332" opacity={0.3} />
+              <div style={{ fontSize: '6.5pt', color: '#4B5563', lineHeight: 1.2, flex: 1, overflow: 'hidden' }}>
+                <strong>Ingredients:</strong> {getFullIngredients(label.base_type, label.ingredients)}
+              </div>
 
-                {/* Ingredients & Dates */}
-                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: '6pt', color: '#4B5563', lineHeight: 1.2, maxHeight: '8.5mm', overflow: 'hidden' }}>
-                    <strong>Ingredients:</strong> {getFullIngredients(label.base_type, label.ingredients)}
-                  </div>
-                  
-                  <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', fontSize: '5.5pt', color: '#374151', padding: '0.5mm 0' }}>
-                    <span>Wt: {label.weight_grams}g</span>
-                    <span>Mfd: {mfdDate}</span>
-                    <span>Exp: {bbeDate}</span>
-                  </div>
-                </div>
-
-                <div style={{ borderTop: '0.1mm solid #E5E7EB', margin: '0.5mm 0' }}></div>
-
-                {/* Shipping Info - Bottom Section */}
-                <div style={{ background: '#F9FAFB', padding: '1mm', borderRadius: '1mm', display: 'flex', flexDirection: 'column', gap: '0.2mm' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '5pt', color: '#6B7280', fontWeight: 600 }}>
-                    <span>FROM: Healing Soil</span>
-                    <span>TO: {orderInfo.customer_name}</span>
-                  </div>
-                  <div style={{ fontSize: '5pt', color: '#1F2937', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {orderInfo.customer_address} | {orderInfo.customer_phone}
-                  </div>
-                  <div style={{ fontSize: '4.5pt', color: '#9CA3AF', textAlign: 'center', fontStyle: 'italic' }}>
-                    UDYAM-KR-03-0666485 | healingsoil.in
-                  </div>
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '6pt', color: '#374151', borderTop: '0.1mm solid #EEE', paddingTop: '1mm', marginTop: '1mm' }}>
+                <span>Wt: {label.weight_grams}g</span>
+                <span>Exp: {formatBBE(label.order_date)}</span>
               </div>
             </div>
-          );
-        })}
+          ))}
+        </div>
+
+        <h3 className="section-header no-print"><Truck size={20} /> Shipping Label</h3>
+        <div className="shipping-container">
+          <div className={`shipping-label ${selectedIds.has(-1) ? '' : 'deselected'}`} onClick={() => toggleLabel(-1)}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid black', paddingBottom: '10px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 800, color: '#1B4332' }}>HEALING SOIL</div>
+              <div style={{ fontSize: '12px', fontWeight: 600 }}>Standard Courier</div>
+            </div>
+
+            <div style={{ marginBottom: '30px' }}>
+              <div style={{ fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Ship To:</div>
+              <div style={{ fontSize: '22px', fontWeight: 800, color: 'black', marginBottom: '10px' }}>{orderInfo.customer_name}</div>
+              <div style={{ fontSize: '16px', lineHeight: 1.4, color: '#1F2937', maxWidth: '80%' }}>
+                {orderInfo.customer_address}
+              </div>
+              <div style={{ fontSize: '18px', fontWeight: 700, marginTop: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                Phone: {orderInfo.customer_phone}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px dashed #CCC', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <div style={{ fontSize: '11px', color: '#6B7280' }}>
+                <strong>Return Address:</strong><br />
+                Healing Soil, Bangalore, Karnataka<br />
+                Ph: +91 9900655322
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '10px', color: '#9CA3AF' }}>Order ID:</div>
+                <div style={{ fontSize: '12px', fontWeight: 600 }}>#{orderInfo.id.slice(0,12).toUpperCase()}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
