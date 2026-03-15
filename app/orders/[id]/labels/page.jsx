@@ -9,14 +9,16 @@ export default async function LabelsPage({ params }) {
     SELECT 
       o.id,
       o.order_date,
-      c.name as customer_name,
+      s.customer_name,
+      s.customer_phone,
+      s.customer_address,
       oi.quantity,
       p.name as product_name,
       p.base_type,
       p.weight_grams,
       p.ingredients
     FROM orders o
-    JOIN customers c ON c.id = o.customer_id
+    JOIN order_summary s ON s.id = o.id
     JOIN order_items oi ON oi.order_id = o.id
     JOIN products p ON p.id = oi.product_id
     WHERE o.id = ${id}
@@ -42,6 +44,8 @@ export default async function LabelsPage({ params }) {
   const orderInfo = {
     id: data[0].id,
     customer_name: data[0].customer_name,
+    customer_phone: data[0].customer_phone,
+    customer_address: data[0].customer_address,
     total_labels: labels.length
   };
 
