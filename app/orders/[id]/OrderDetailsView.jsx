@@ -8,62 +8,6 @@ import StatusBadge from '@/components/StatusBadge';
 import { updateShipmentStatusAction, updateOrderStatusAction } from '@/lib/actions/orders';
 import { ORDER_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
 
-const OrderStatusBar = ({ order, onStatusUpdate }) => {
-  const [newStatus, setNewStatus] = useState(order.status);
-  const [isUpdating, setIsUpdating] = useState(false);
-
-  const handleUpdate = async (val) => {
-    setNewStatus(val);
-    setIsUpdating(true);
-    const result = await onStatusUpdate(order.id, val);
-    setIsUpdating(false);
-    if (!result.success) alert(result.error);
-  };
-
-  return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      background: '#F9FAFB',
-      padding: '12px 20px',
-      borderRadius: '12px',
-      border: '1px solid #E5E7EB',
-      marginBottom: '32px'
-    }}>
-      <div style={{ fontSize: '13px', fontWeight: '700', color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-        Update Order Status:
-      </div>
-      <div style={{ position: 'relative', flex: 1, maxWidth: '240px' }}>
-        <select 
-          value={newStatus}
-          onChange={(e) => handleUpdate(e.target.value)}
-          disabled={isUpdating}
-          style={{
-            width: '100%',
-            padding: '10px 16px',
-            borderRadius: '8px',
-            border: '1px solid #D1D5DB',
-            fontSize: '14px',
-            fontWeight: '600',
-            appearance: 'none',
-            background: '#FFFFFF',
-            color: '#111827',
-            cursor: isUpdating ? 'wait' : 'pointer',
-            outline: 'none'
-          }}
-        >
-          {ORDER_STATUSES.map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        <ChevronDown size={16} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#6B7280', pointerEvents: 'none' }} />
-      </div>
-      {isUpdating && <div style={{ fontSize: '12px', color: '#1B4332', fontWeight: '600' }}>Updating...</div>}
-    </div>
-  );
-};
-
 const ShipmentCard = ({ shipment, items, isMobile, onStatusUpdate }) => {
   const [newStatus, setNewStatus] = useState(shipment.status);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -163,6 +107,7 @@ const ShipmentCard = ({ shipment, items, isMobile, onStatusUpdate }) => {
 const OrderDetailsView = ({ order, items, shipments = [] }) => {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -185,43 +130,84 @@ const OrderDetailsView = ({ order, items, shipments = [] }) => {
     return result;
   };
 
-  const handleUpdateOrderStatus = async (orderId, status) => {
-    const result = await updateOrderStatusAction(orderId, status);
+  const handleUpdateOrderStatus = async (status) => {
+    setIsUpdatingStatus(true);
+    const result = await updateOrderStatusAction(order.id, status);
+    setIsUpdatingStatus(false);
     if (result.success) {
       router.refresh();
+    } else {
+      alert(result.error);
     }
-    return result;
   };
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
       {/* Header Row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: isMobile ? 'column' : 'row',
+        justifyContent: 'space-between', 
+        alignItems: isMobile ? 'flex-start' : 'center', 
+        gap: '20px',
+        marginBottom: '40px' 
+      }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
           <Link href="/orders" style={{ color: '#6B7280' }}><ArrowLeft size={24} /></Link>
           <h1 style={{ fontFamily: 'DM Serif Display, serif', fontSize: isMobile ? '24px' : '28px', color: '#1B4332', margin: 0 }}>
             Order #{order.id.slice(0, 8)}
           </h1>
-          <StatusBadge status={order.status} />
+          
+          <div style={{ position: 'relative' }}>
+            <select
+              value={order.status}
+              onChange={(e) => handleUpdateOrderStatus(e.target.value)}
+              disabled={isUpdatingStatus}
+              style={{
+                padding: '6px 32px 6px 12px',
+                borderRadius: '20px',
+                fontSize: '11px',
+                fontWeight: '700',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                background: '#F3F4F6',
+                border: '1px solid #E5E7EB',
+                color: '#374151',
+                cursor: isUpdatingStatus ? 'wait' : 'pointer',
+                appearance: 'none',
+                fontFamily: '"Plus Jakarta Sans", sans-serif'
+              }}
+            >
+              {ORDER_STATUSES.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <ChevronDown size={12} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+          </div>
+          {isUpdatingStatus && <span style={{ fontSize: '10px', color: '#1B4332', fontWeight: 700 }}>Updating...</span>}
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+
+        <div style={{ display: 'flex', gap: '12px', width: isMobile ? '100%' : 'auto' }}>
           {isEditable && (
             <Link 
               href={`/orders/${order.id}/edit`}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', color: '#374151', border: '1px solid #E5E7EB', padding: '8px 16px', borderRadius: '8px', fontWeight: '600', textDecoration: 'none', fontFamily: 'Plus Jakarta Sans, sans-serif' }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#FFFFFF', color: '#374151', border: '1px solid #E5E7EB', padding: '10px 16px', borderRadius: '8px', fontWeight: '600', textDecoration: 'none', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '14px' }}
             >
               <Pencil size={18} />
-              {!isMobile && 'Edit Order'}
+              Edit
             </Link>
           )}
-          <a href={`/orders/${order.id}/labels`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', border: '1px solid #1B4332', borderRadius: '8px', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '13px', fontWeight: 600, color: '#1B4332', textDecoration: 'none', background: '#FFFFFF', cursor: 'pointer' }}>
-            <Printer size={14} />
-            Print Labels
+          <a 
+            href={`/orders/${order.id}/labels`} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 16px', border: '1px solid #1B4332', borderRadius: '8px', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '14px', fontWeight: 600, color: '#1B4332', textDecoration: 'none', background: '#FFFFFF', cursor: 'pointer' }}
+          >
+            <Printer size={18} />
+            Labels
           </a>
         </div>
       </div>
-
-      <OrderStatusBar order={order} onStatusUpdate={handleUpdateOrderStatus} />
 
       <div style={{ display: isMobile ? 'flex' : 'grid', flexDirection: 'column', gridTemplateColumns: '1fr 360px', gap: '40px' }}>
         {/* Left: Shipments and Customer Info */}
