@@ -1,8 +1,11 @@
-import sql from '@/lib/db';
 import { validateApiKey, ALLOWED_ORIGINS } from '@/lib/auth';
 import { NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
+import { Pool } from '@neondatabase/serverless';
+
+// Initialize Neon Pool for transactions
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Initialize Upstash Redis & Ratelimit
 const redis = new Redis({
@@ -35,6 +38,8 @@ export async function POST(request) {
     });
   }
 
+  const client = await pool.connect();
+
   try {
     const body = await request.json();
     const { customer, items, shipping, source, notes: customNotes } = body;
@@ -43,118 +48,104 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid order data' }, { status: 400 });
     }
 
-    // Process everything in a single transaction for data integrity
-    const result = await sql.transaction(async (tx) => {
-      
-      // 1. Find or Create Customer
-      let [dbCustomer] = await tx`SELECT id FROM customers WHERE phone = ${customer.phone}`;
-      let customerId;
+    await client.query('BEGIN');
 
-      if (!dbCustomer) {
-        const [newCustomer] = await tx`
-          INSERT INTO customers (name, phone, address)
-          VALUES (${customer.name}, ${customer.phone}, ${customer.address})
-          RETURNING id
-        `;
-        customerId = newCustomer.id;
+    // 1. Find or Create Customer
+    const custName = customer.name || 'Unknown';
+    const custPhone = String(customer.phone);
+    const custAddress = customer.address || 'No address provided';
+
+    let customerId;
+    const custResult = await client.query('SELECT id FROM customers WHERE phone = $1', [custPhone]);
+    
+    if (custResult.rows.length === 0) {
+      const insertCust = await client.query(
+        'INSERT INTO customers (name, phone, address) VALUES ($1, $2, $3) RETURNING id',
+        [custName, custPhone, custAddress]
+      );
+      customerId = insertCust.rows[0].id;
+    } else {
+      customerId = custResult.rows[0].id;
+      await client.query(
+        'UPDATE customers SET name = $1, address = $2 WHERE id = $3',
+        [custName, custAddress, customerId]
+      );
+    }
+
+    // 2. Ensure address record
+    await client.query(
+      'INSERT INTO customer_addresses (customer_id, label, address_text, is_default) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
+      [customerId, 'Primary', custAddress, true]
+    );
+
+    // 3. Resolve Product IDs
+    const resolvedItems = [];
+    let totalValue = 0;
+
+    for (const item of items) {
+      let product;
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(item.product_id);
+      
+      if (isUuid) {
+        const prodRes = await client.query('SELECT id, unit_price FROM products WHERE id = $1', [item.product_id]);
+        product = prodRes.rows[0];
       } else {
-        customerId = dbCustomer.id;
-        // Update customer name/address if provided
-        await tx`
-          UPDATE customers 
-          SET name = ${customer.name}, address = ${customer.address} 
-          WHERE id = ${customerId}
-        `;
+        const prodRes = await client.query('SELECT id, unit_price FROM products WHERE slug = $1', [String(item.product_id)]);
+        product = prodRes.rows[0];
       }
 
-      // 2. Ensure address record
-      await tx`
-        INSERT INTO customer_addresses (customer_id, label, address_text, is_default)
-        VALUES (${customerId}, 'Primary', ${customer.address}, TRUE)
-        ON CONFLICT DO NOTHING
-      `;
-
-      // 3. Resolve Product IDs
-      // The website might send slugs or IDs. We'll try to find the product.
-      const resolvedItems = [];
-      let totalValue = 0;
-
-      for (const item of items) {
-        // Try finding by UUID first, then by slug
-        let product;
-        
-        // Basic check if it's a UUID format
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(item.product_id);
-        
-        if (isUuid) {
-          [product] = await tx`SELECT id, unit_price FROM products WHERE id = ${item.product_id}`;
-        } else {
-          // If not UUID, treat it as a slug
-          [product] = await tx`SELECT id, unit_price FROM products WHERE slug = ${String(item.product_id)}`;
-        }
-
-        if (!product) {
-          throw new Error(`Product not found: ${item.product_id}`);
-        }
-
-        resolvedItems.push({
-          id: product.id,
-          qty: item.qty,
-          price: item.price || product.unit_price
-        });
-        
-        totalValue += (item.price || product.unit_price) * item.qty;
+      if (!product) {
+        throw new Error(`Product not found: ${item.product_id}`);
       }
 
-      // 4. Create Order - order_value should include shipping for correct financial summary
-      const finalRevenue = totalValue + (shipping || 0);
-      const combinedNotes = [
-        customNotes,
-        source ? `Source: ${source}` : null
-      ].filter(Boolean).join(' | ');
-      
-      const [newOrder] = await tx`
-        INSERT INTO orders (
-          customer_id, order_date, order_value, 
-          shipping_charge, status, notes
-        ) VALUES (
-          ${customerId}, CURRENT_DATE, ${finalRevenue}, 
-          ${shipping || 0}, 'Order Placed', ${combinedNotes}
-        )
-        RETURNING id, status
-      `;
+      const itemQty = parseInt(item.qty) || 1;
+      const itemPrice = parseFloat(item.price) || parseFloat(product.unit_price) || 0;
 
-      // 5. Create Shipment - Use customer name as label for better UI display
-      const [newShipment] = await tx`
-        INSERT INTO shipments (order_id, status, address_text, label)
-        VALUES (${newOrder.id}, 'Order Placed', ${customer.address}, ${customer.name})
-        RETURNING id
-      `;
+      resolvedItems.push({ id: product.id, qty: itemQty, price: itemPrice });
+      totalValue += (itemPrice * itemQty);
+    }
 
-      // 6. Insert Items
-      for (const item of resolvedItems) {
-        await tx`
-          INSERT INTO order_items (
-            order_id, product_id, quantity, unit_price, shipment_id
-          ) VALUES (
-            ${newOrder.id}, ${item.id}, ${item.qty}, ${item.price}, ${newShipment.id}
-          )
-        `;
-      }
+    // 4. Create Order
+    const shipCharge = parseFloat(shipping) || 0;
+    const finalRevenue = totalValue + shipCharge;
+    const combinedNotes = [customNotes, source ? `Source: ${source}` : null].filter(Boolean).join(' | ') || '';
+    
+    const orderRes = await client.query(
+      'INSERT INTO orders (customer_id, order_date, order_value, shipping_charge, status, notes) VALUES ($1, CURRENT_DATE, $2, $3, $4, $5) RETURNING id, status',
+      [customerId, finalRevenue, shipCharge, 'Order Placed', combinedNotes]
+    );
+    const newOrder = orderRes.rows[0];
 
-      return { order_id: newOrder.id, status: newOrder.status };
-    });
+    // 5. Create Shipment
+    const shipRes = await client.query(
+      'INSERT INTO shipments (order_id, status, address_text, label) VALUES ($1, $2, $3, $4) RETURNING id',
+      [newOrder.id, 'Order Placed', custAddress, custName]
+    );
+    const newShipment = shipRes.rows[0];
 
-    return NextResponse.json(result, {
+    // 6. Insert Items
+    for (const item of resolvedItems) {
+      await client.query(
+        'INSERT INTO order_items (order_id, product_id, quantity, unit_price, shipment_id) VALUES ($1, $2, $3, $4, $5)',
+        [newOrder.id, item.id, item.qty, item.price, newShipment.id]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    return NextResponse.json({ order_id: newOrder.id, status: newOrder.status }, {
       headers: { ...(origin && { 'Access-Control-Allow-Origin': origin }) }
     });
 
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error creating incoming order:', error);
     return NextResponse.json({ 
       error: 'Failed to create order', 
       message: error.message 
     }, { status: 500 });
+  } finally {
+    client.release();
   }
 }
 
