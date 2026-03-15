@@ -15,8 +15,8 @@ const BASE_LABELS = {
 
 const COLORS = {
   brand: '#1B4332',
-  text: '#1F2937',
-  muted: '#6B7280',
+  text: '#000000',
+  muted: '#4B5563',
 };
 
 const FONTS = {
@@ -73,12 +73,12 @@ const LabelsClient = ({ labels, orderInfo }) => {
         
         .product-label {
           width: 60mm; height: 40mm; background: white; border: 1px dashed #CCC;
-          padding: 3mm; display: flex; flex-direction: column; position: relative;
+          padding: 2.5mm 3.5mm; display: flex; flex-direction: column; position: relative;
           cursor: pointer; transition: opacity 0.2s; box-sizing: border-box;
         }
         
         .address-label {
-          background: white; border: 1px solid #000; padding: 5mm; 
+          background: white; border: 1px solid #000; padding: 8mm; 
           display: flex; flex-direction: column; cursor: pointer; position: relative; box-sizing: border-box;
         }
 
@@ -87,15 +87,19 @@ const LabelsClient = ({ labels, orderInfo }) => {
 
         @media print {
           .no-print { display: none !important; }
-          .labels-page { background: white; padding: 0; }
+          .labels-page { background: white !important; padding: 0 !important; }
           .deselected { display: none !important; }
           
-          .product-grid { display: grid; grid-template-columns: repeat(3, 60mm); gap: 4mm; margin-bottom: 8mm; }
-          .product-label { width: 60mm !important; height: 40mm !important; border: 0.1mm solid #EEE; page-break-inside: avoid; }
+          .product-grid { display: grid; grid-template-columns: repeat(3, 60mm); gap: 4mm; margin-bottom: 6mm; }
+          .product-label { width: 60mm !important; height: 40mm !important; border: 0.1mm solid #000 !important; page-break-inside: avoid !important; padding: 2.5mm 3.5mm !important; box-sizing: border-box !important; }
           
-          .shipping-section { display: flex; flex-wrap: wrap; gap: 5mm; border-top: 0.2mm solid #EEE; paddingTop: 5mm; page-break-inside: avoid; }
+          .shipping-section { display: flex; flex-wrap: wrap; gap: 5mm; border-top: 0.2mm solid #000; paddingTop: 6mm; page-break-inside: avoid; }
+          .address-label { border: 0.1mm solid #000 !important; box-sizing: border-box !important; padding: 8mm !important; }
           .to-label { width: 115mm !important; height: 75mm !important; }
           .from-label { width: 75mm !important; height: 50mm !important; }
+          
+          * { color: #000000 !important; border-color: #000000 !important; }
+          .address-label div, .product-label div { background: none !important; }
         }
       `}</style>
 
@@ -125,17 +129,17 @@ const LabelsClient = ({ labels, orderInfo }) => {
                 <div style={{ fontSize: '6.5pt', fontWeight: 800, color: COLORS.brand, letterSpacing: '0.05em' }}>{businessConfig.brand.name}</div>
               </div>
               
-              <div style={{ textAlign: 'center', fontSize: '10pt', fontWeight: 800, color: COLORS.brand, lineHeight: 1.1, margin: '0.5mm 0' }}>
+              <div style={{ textAlign: 'center', fontSize: '10.5pt', fontWeight: 800, color: COLORS.brand, lineHeight: 1.1, margin: '0.5mm 0' }}>
                 {label.product_name}
               </div>
 
               <WavyDivider opacity={0.3} />
 
-              <div style={{ fontSize: '7.2pt', color: COLORS.text, lineHeight: 1.2, flex: 1, overflow: 'hidden', padding: '0.5mm 0', fontWeight: 500 }}>
-                <span style={{ fontWeight: 700 }}>Ingredients:</span> {getFullIngredients(label.base_type, label.ingredients)}
+              <div style={{ fontSize: '8pt', color: COLORS.text, lineHeight: 1.25, flex: 1, overflow: 'hidden', padding: '0.2mm 0', fontWeight: 500 }}>
+                <span style={{ fontWeight: 800 }}>Ingredients:</span> {getFullIngredients(label.base_type, label.ingredients)}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '6pt', color: COLORS.muted, borderTop: '0.1mm solid #EEE', paddingTop: '1mm', marginTop: '0.5mm', fontWeight: 700 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '6.5pt', color: COLORS.text, borderTop: '0.1mm solid #CCC', paddingTop: '0.8mm', marginTop: '0.2mm', fontWeight: 700 }}>
                 <span>Wt: {label.weight_grams}g</span>
                 <span>Exp: {formatBBE(label.order_date)}</span>
               </div>
@@ -149,44 +153,46 @@ const LabelsClient = ({ labels, orderInfo }) => {
           
           {/* TO LABEL */}
           <div className={`address-label to-label ${selectedIds.has(-1) ? '' : 'deselected'}`} 
-               style={{ width: '115mm', height: '75mm' }}
+               style={{ width: '115mm', height: '75mm', padding: '8mm', boxSizing: 'border-box' }}
                onClick={() => toggleLabel(-1)}>
             <div className="selection-overlay no-print">
               {selectedIds.has(-1) ? <CheckSquare size={20} fill={COLORS.brand} color="white" /> : <Square size={20} color={COLORS.muted} />}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', borderBottom: '1.5px solid black', paddingBottom: '6px', marginBottom: '12px' }}>
-              <img src="/HealingSoil-Formatted.png" style={{ width: '8mm', height: '8mm', borderRadius: '50%' }} />
+              <img src="/HealingSoil-Formatted.png" style={{ width: '10mm', height: '10mm', borderRadius: '50%' }} />
               <div style={{ fontSize: '14px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name} — TO</div>
             </div>
-            <div style={{ fontSize: '12px', color: COLORS.muted, textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>Ship To:</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: 'black', marginBottom: '8px', lineHeight: 1 }}>{orderInfo.customer_name}</div>
-            <div style={{ fontSize: '16px', lineHeight: 1.4, color: 'black', fontWeight: 500, flex: 1, overflow: 'hidden' }}>
-              {orderInfo.customer_address}
-            </div>
-            <div style={{ fontSize: '20px', fontWeight: 800, marginTop: '8px', background: '#F3F4F6', padding: '8px 15px', borderRadius: '6px', color: 'black' }}>
-              PH: {orderInfo.customer_phone}
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+              <div style={{ fontSize: '13px', color: COLORS.text, textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>Ship To:</div>
+              <div style={{ fontSize: '28px', fontWeight: 800, color: 'black', marginBottom: '10px', lineHeight: 1 }}>{orderInfo.customer_name}</div>
+              <div style={{ fontSize: '18px', lineHeight: 1.4, color: 'black', fontWeight: 500, flex: 1, overflow: 'hidden', marginBottom: '10px' }}>
+                {orderInfo.customer_address}
+              </div>
+              <div style={{ fontSize: '22px', fontWeight: 800, color: 'black', marginTop: 'auto' }}>
+                PH: {orderInfo.customer_phone}
+              </div>
             </div>
           </div>
 
           {/* FROM LABEL */}
           <div className={`address-label from-label ${selectedIds.has(-2) ? '' : 'deselected'}`} 
-               style={{ width: '75mm', height: '50mm' }}
+               style={{ width: '75mm', height: '50mm', padding: '5mm', boxSizing: 'border-box' }}
                onClick={() => toggleLabel(-2)}>
             <div className="selection-overlay no-print">
-              {selectedIds.has(-2) ? <CheckSquare size={18} fill={COLORS.brand} color="white" /> : <Square size={18} color={COLORS.muted} />}
+              {selectedIds.has(-2) ? <CheckSquare size={18} fill={COLORS.brand} color="white" /> : <Square size size={18} color={COLORS.muted} />}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', borderBottom: '1px solid #CCC', paddingBottom: '4px', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', borderBottom: '1.5px solid #CCC', paddingBottom: '4px', marginBottom: '8px' }}>
               <img src="/HealingSoil-Formatted.png" style={{ width: '6mm', height: '6mm', borderRadius: '50%' }} />
-              <div style={{ fontSize: '10px', fontWeight: 800, color: COLORS.muted }}>{businessConfig.brand.name} — FROM</div>
+              <div style={{ fontSize: '10px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name} — FROM</div>
             </div>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: 'black' }}>{businessConfig.returnAddress.name}</div>
-            <div style={{ fontSize: '11px', lineHeight: 1.3, color: 'black', marginTop: '2px', fontWeight: 500 }}>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: 'black', lineHeight: 1.1 }}>{businessConfig.returnAddress.name}</div>
+            <div style={{ fontSize: '13px', lineHeight: 1.3, color: 'black', marginTop: '4px', fontWeight: 500 }}>
               {businessConfig.returnAddress.line1}<br />
               {businessConfig.returnAddress.line2}<br />
               {businessConfig.returnAddress.line3}<br />
               {businessConfig.returnAddress.cityStateZip}
             </div>
-            <div style={{ fontSize: '13px', fontWeight: 800, marginTop: 'auto', color: 'black' }}>
+            <div style={{ fontSize: '15px', fontWeight: 800, marginTop: 'auto', color: 'black' }}>
               M: {businessConfig.returnAddress.phone}
             </div>
           </div>
