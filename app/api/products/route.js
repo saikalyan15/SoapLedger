@@ -27,7 +27,7 @@ export async function GET(request) {
     const products = await sql`
       SELECT * FROM products 
       WHERE is_active = true OR in_stock = true
-      ORDER BY name ASC
+      ORDER BY display_order ASC, name ASC
     `;
 
     const formattedProducts = products.map(p => ({
@@ -43,6 +43,7 @@ export async function GET(request) {
       in_stock: p.in_stock,
       is_featured: p.is_featured,
       category: p.category || p.base_type,
+      display_order: p.display_order || 0,
     }));
 
     return NextResponse.json(formattedProducts, {
