@@ -16,10 +16,10 @@ if (!dbUrl) {
 const sql = neon(dbUrl);
 
 async function runMigration() {
-  const migrationPath = path.join(process.cwd(), 'db-schema', 'migration_v5.sql');
+  const migrationPath = path.join(process.cwd(), 'db-schema', 'migration_v6.sql');
   const migrationSql = fs.readFileSync(migrationPath, 'utf8');
 
-  console.log('Running migration v5.0...');
+  console.log('Running migration v6.0...');
   
   try {
     // Better splitting that respects simple cases but ignores comments

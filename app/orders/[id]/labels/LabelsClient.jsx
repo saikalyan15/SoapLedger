@@ -13,12 +13,10 @@ const BASE_LABELS = {
   'Travel':      '',
 };
 
-// Standardized Colors and Weights
 const COLORS = {
-  brand: '#1B4332',    // Deep Green
-  text: '#1F2937',     // Dark Charcoal
-  muted: '#6B7280',    // Grey
-  border: '#E5E7EB',
+  brand: '#1B4332',
+  text: '#1F2937',
+  muted: '#6B7280',
 };
 
 const FONTS = {
@@ -69,9 +67,9 @@ const LabelsClient = ({ labels, orderInfo }) => {
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         
-        @page { size: A4; margin: 10mm; }
+        @page { size: A4; margin: 8mm; }
         .labels-page { background: #F0EDE8; padding: 20px; min-height: 100vh; font-family: ${FONTS.sans}; }
-        .section-header { color: ${COLORS.brand}; margin: 30px 0 15px 0; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+        .section-header { color: ${COLORS.brand}; margin: 20px 0 10px 0; display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; }
         
         .product-label {
           width: 60mm; height: 40mm; background: white; border: 1px dashed #CCC;
@@ -80,66 +78,64 @@ const LabelsClient = ({ labels, orderInfo }) => {
         }
         
         .address-label {
-          background: white; border: 2px solid ${COLORS.brand}; padding: 8mm; 
+          background: white; border: 1px solid #000; padding: 5mm; 
           display: flex; flex-direction: column; cursor: pointer; position: relative; box-sizing: border-box;
         }
 
         .selection-overlay { position: absolute; top: 2px; right: 2px; z-index: 10; background: white; border-radius: 4px; }
-        .deselected { opacity: 0.3 !important; }
+        .deselected { opacity: 0.2 !important; }
 
         @media print {
           .no-print { display: none !important; }
           .labels-page { background: white; padding: 0; }
           .deselected { display: none !important; }
           
-          .product-grid { display: grid; grid-template-columns: repeat(3, 60mm); gap: 5mm; page-break-after: always; }
-          .product-label { width: 60mm !important; height: 40mm !important; border: 0.1mm solid #EEE; }
-          .shipping-section { page-break-before: always; padding-top: 20px; display: flex; flex-direction: column; gap: 10mm; }
-          .address-label { border: 0.5mm solid black; }
-          .to-label { width: 140mm !important; height: 90mm !important; }
-          .from-label { width: 100mm !important; height: 60mm !important; }
+          .product-grid { display: grid; grid-template-columns: repeat(3, 60mm); gap: 4mm; margin-bottom: 8mm; }
+          .product-label { width: 60mm !important; height: 40mm !important; border: 0.1mm solid #EEE; page-break-inside: avoid; }
+          
+          .shipping-section { display: flex; flex-wrap: wrap; gap: 5mm; border-top: 0.2mm solid #EEE; paddingTop: 5mm; page-break-inside: avoid; }
+          .to-label { width: 115mm !important; height: 75mm !important; }
+          .from-label { width: 75mm !important; height: 50mm !important; }
         }
       `}</style>
 
       {/* Toolbar */}
-      <div className="no-print" style={{ background: COLORS.brand, color: 'white', padding: '20px', borderRadius: '12px', marginBottom: '30px', maxWidth: '800px', margin: '0 auto 30px auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h2 style={{ margin: 0, fontWeight: 800 }}>Print Center</h2>
-            <p style={{ margin: '5px 0 0 0', opacity: 0.8, fontSize: '14px' }}>Order #{orderInfo.id.slice(0,8)} | {orderInfo.customer_name}</p>
-          </div>
-          <button onClick={() => window.print()} style={{ background: 'white', color: COLORS.brand, border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Printer size={20} /> Print Selected ({selectedIds.size})
-          </button>
+      <div className="no-print" style={{ background: COLORS.brand, color: 'white', padding: '16px', borderRadius: '12px', marginBottom: '20px', maxWidth: '800px', margin: '0 auto 20px auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Print Center</h2>
+          <p style={{ margin: '2px 0 0 0', opacity: 0.8, fontSize: '12px' }}>Order #{orderInfo.id.slice(0,8)}</p>
         </div>
+        <button onClick={() => window.print()} style={{ background: 'white', color: COLORS.brand, border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+          <Printer size={18} /> Print Now ({selectedIds.size})
+        </button>
       </div>
 
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
         {/* Product Labels Section */}
-        <h3 className="section-header no-print"><Tag size={20} /> Product Labels (40mm x 60mm)</h3>
-        <div className="product-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
+        <h3 className="section-header no-print"><Tag size={18} /> Product Labels</h3>
+        <div className="product-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
           {labels.map((label, index) => (
             <div key={index} className={`product-label ${selectedIds.has(index) ? '' : 'deselected'}`} onClick={() => toggleLabel(index)}>
               <div className="selection-overlay no-print">
-                {selectedIds.has(index) ? <CheckSquare size={18} fill={COLORS.brand} color="white" /> : <Square size={18} color={COLORS.muted} />}
+                {selectedIds.has(index) ? <CheckSquare size={16} fill={COLORS.brand} color="white" /> : <Square size={16} color={COLORS.muted} />}
               </div>
               
-              <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', marginBottom: '1mm' }}>
-                <img src="/HealingSoil-Formatted.png" style={{ width: '6mm', height: '6mm', borderRadius: '50%' }} />
-                <div style={{ fontSize: '7pt', fontWeight: 800, color: COLORS.brand, letterSpacing: '0.05em' }}>{businessConfig.brand.name}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5mm', marginBottom: '0.5mm' }}>
+                <img src="/HealingSoil-Formatted.png" style={{ width: '5mm', height: '5mm', borderRadius: '50%' }} />
+                <div style={{ fontSize: '6.5pt', fontWeight: 800, color: COLORS.brand, letterSpacing: '0.05em' }}>{businessConfig.brand.name}</div>
               </div>
               
-              <div style={{ textAlign: 'center', fontSize: '11pt', fontWeight: 800, color: COLORS.brand, lineHeight: 1.1, margin: '1mm 0' }}>
+              <div style={{ textAlign: 'center', fontSize: '10pt', fontWeight: 800, color: COLORS.brand, lineHeight: 1.1, margin: '0.5mm 0' }}>
                 {label.product_name}
               </div>
 
               <WavyDivider opacity={0.3} />
 
-              <div style={{ fontSize: '7.5pt', color: COLORS.text, lineHeight: 1.3, flex: 1, overflow: 'hidden', padding: '0.5mm 0', fontWeight: 500 }}>
+              <div style={{ fontSize: '7.2pt', color: COLORS.text, lineHeight: 1.2, flex: 1, overflow: 'hidden', padding: '0.5mm 0', fontWeight: 500 }}>
                 <span style={{ fontWeight: 700 }}>Ingredients:</span> {getFullIngredients(label.base_type, label.ingredients)}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '6.5pt', color: COLORS.muted, borderTop: '0.1mm solid #EEE', paddingTop: '1.5mm', marginTop: '1mm', fontWeight: 700 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '6pt', color: COLORS.muted, borderTop: '0.1mm solid #EEE', paddingTop: '1mm', marginTop: '0.5mm', fontWeight: 700 }}>
                 <span>Wt: {label.weight_grams}g</span>
                 <span>Exp: {formatBBE(label.order_date)}</span>
               </div>
@@ -148,49 +144,49 @@ const LabelsClient = ({ labels, orderInfo }) => {
         </div>
 
         {/* Shipping Section */}
-        <h3 className="section-header no-print"><Truck size={20} /> Shipping Labels</h3>
-        <div className="shipping-section" style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+        <h3 className="section-header no-print"><Truck size={18} /> Shipping Labels</h3>
+        <div className="shipping-section" style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-start' }}>
           
           {/* TO LABEL */}
           <div className={`address-label to-label ${selectedIds.has(-1) ? '' : 'deselected'}`} 
-               style={{ width: '140mm', minHeight: '90mm' }}
+               style={{ width: '115mm', height: '75mm' }}
                onClick={() => toggleLabel(-1)}>
             <div className="selection-overlay no-print">
-              {selectedIds.has(-1) ? <CheckSquare size={24} fill={COLORS.brand} color="white" /> : <Square size={24} color={COLORS.muted} />}
+              {selectedIds.has(-1) ? <CheckSquare size={20} fill={COLORS.brand} color="white" /> : <Square size={20} color={COLORS.muted} />}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4mm', borderBottom: '2px solid black', paddingBottom: '8px', marginBottom: '20px' }}>
-              <img src="/HealingSoil-Formatted.png" style={{ width: '10mm', height: '10mm', borderRadius: '50%' }} />
-              <div style={{ fontSize: '16px', fontWeight: 800, color: COLORS.brand, letterSpacing: '0.05em' }}>{businessConfig.brand.name} — TO</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', borderBottom: '1.5px solid black', paddingBottom: '6px', marginBottom: '12px' }}>
+              <img src="/HealingSoil-Formatted.png" style={{ width: '8mm', height: '8mm', borderRadius: '50%' }} />
+              <div style={{ fontSize: '14px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name} — TO</div>
             </div>
-            <div style={{ fontSize: '14px', color: COLORS.muted, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '5px' }}>Ship To:</div>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: 'black', marginBottom: '15px' }}>{orderInfo.customer_name}</div>
-            <div style={{ fontSize: '20px', lineHeight: 1.5, color: 'black', fontWeight: 500, maxWidth: '90%' }}>
+            <div style={{ fontSize: '12px', color: COLORS.muted, textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>Ship To:</div>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: 'black', marginBottom: '8px', lineHeight: 1 }}>{orderInfo.customer_name}</div>
+            <div style={{ fontSize: '16px', lineHeight: 1.4, color: 'black', fontWeight: 500, flex: 1, overflow: 'hidden' }}>
               {orderInfo.customer_address}
             </div>
-            <div style={{ fontSize: '24px', fontWeight: 800, marginTop: 'auto', background: '#F3F4F6', padding: '12px 20px', borderRadius: '8px', alignSelf: 'flex-start', color: 'black' }}>
-              PHONE: {orderInfo.customer_phone}
+            <div style={{ fontSize: '20px', fontWeight: 800, marginTop: '8px', background: '#F3F4F6', padding: '8px 15px', borderRadius: '6px', color: 'black' }}>
+              PH: {orderInfo.customer_phone}
             </div>
           </div>
 
           {/* FROM LABEL */}
           <div className={`address-label from-label ${selectedIds.has(-2) ? '' : 'deselected'}`} 
-               style={{ width: '100mm', minHeight: '60mm' }}
+               style={{ width: '75mm', height: '50mm' }}
                onClick={() => toggleLabel(-2)}>
             <div className="selection-overlay no-print">
-              {selectedIds.has(-2) ? <CheckSquare size={20} fill={COLORS.brand} color="white" /> : <Square size={20} color={COLORS.muted} />}
+              {selectedIds.has(-2) ? <CheckSquare size={18} fill={COLORS.brand} color="white" /> : <Square size={18} color={COLORS.muted} />}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', borderBottom: '1px solid #CCC', paddingBottom: '5px', marginBottom: '15px' }}>
-              <img src="/HealingSoil-Formatted.png" style={{ width: '8mm', height: '8mm', borderRadius: '50%' }} />
-              <div style={{ fontSize: '12px', fontWeight: 800, color: COLORS.muted, letterSpacing: '0.05em' }}>{businessConfig.brand.name} — FROM</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', borderBottom: '1px solid #CCC', paddingBottom: '4px', marginBottom: '10px' }}>
+              <img src="/HealingSoil-Formatted.png" style={{ width: '6mm', height: '6mm', borderRadius: '50%' }} />
+              <div style={{ fontSize: '10px', fontWeight: 800, color: COLORS.muted }}>{businessConfig.brand.name} — FROM</div>
             </div>
-            <div style={{ fontSize: '18px', fontWeight: 800, color: 'black' }}>{businessConfig.returnAddress.name}</div>
-            <div style={{ fontSize: '14px', lineHeight: 1.5, color: 'black', marginTop: '5px', fontWeight: 500 }}>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: 'black' }}>{businessConfig.returnAddress.name}</div>
+            <div style={{ fontSize: '11px', lineHeight: 1.3, color: 'black', marginTop: '2px', fontWeight: 500 }}>
               {businessConfig.returnAddress.line1}<br />
               {businessConfig.returnAddress.line2}<br />
               {businessConfig.returnAddress.line3}<br />
               {businessConfig.returnAddress.cityStateZip}
             </div>
-            <div style={{ fontSize: '16px', fontWeight: 800, marginTop: '10px', color: 'black' }}>
+            <div style={{ fontSize: '13px', fontWeight: 800, marginTop: 'auto', color: 'black' }}>
               M: {businessConfig.returnAddress.phone}
             </div>
           </div>
