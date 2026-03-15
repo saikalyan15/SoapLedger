@@ -37,7 +37,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { customer, items, shipping, source } = body;
+    const { customer, items, shipping, source, notes: customNotes } = body;
 
     if (!customer || !customer.phone || !items || !items.length) {
       return NextResponse.json({ error: 'Invalid order data' }, { status: 400 });
@@ -106,22 +106,28 @@ export async function POST(request) {
         totalValue += (item.price || product.unit_price) * item.qty;
       }
 
-      // 4. Create Order
+      // 4. Create Order - order_value should include shipping for correct financial summary
+      const finalRevenue = totalValue + (shipping || 0);
+      const combinedNotes = [
+        customNotes,
+        source ? `Source: ${source}` : null
+      ].filter(Boolean).join(' | ');
+      
       const [newOrder] = await tx`
         INSERT INTO orders (
           customer_id, order_date, order_value, 
           shipping_charge, status, notes
         ) VALUES (
-          ${customerId}, CURRENT_DATE, ${totalValue}, 
-          ${shipping || 0}, 'Order Placed', ${source ? `Source: ${source}` : ''}
+          ${customerId}, CURRENT_DATE, ${finalRevenue}, 
+          ${shipping || 0}, 'Order Placed', ${combinedNotes}
         )
         RETURNING id, status
       `;
 
-      // 5. Create Shipment
+      // 5. Create Shipment - Use customer name as label for better UI display
       const [newShipment] = await tx`
         INSERT INTO shipments (order_id, status, address_text, label)
-        VALUES (${newOrder.id}, 'Order Placed', ${customer.address}, 'Website Order')
+        VALUES (${newOrder.id}, 'Order Placed', ${customer.address}, ${customer.name})
         RETURNING id
       `;
 
