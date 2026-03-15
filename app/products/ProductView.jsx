@@ -6,6 +6,7 @@ import {
   updateProductAction,
   deleteProductAction,
   updateProductSequenceAction,
+  revalidateProductsAction,
 } from '@/lib/actions/products';
 import {
   Archive,
@@ -21,6 +22,8 @@ import {
   GripVertical,
   Save,
   ArrowUpDown,
+  RefreshCcw,
+  Check,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -30,10 +33,24 @@ export default function ProductView({ products }) {
   const [isArchivedOpen, setIsArchivedOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isSortMode, setIsSortMode] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
   const [sortList, setSortList] = useState([]);
   const [formData, setFormData] = useState({
     ingredients: '',
   });
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    const result = await revalidateProductsAction();
+    setIsRefreshing(false);
+    if (result.success) {
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+    } else {
+      alert(`Error refreshing products: ${result.error}`);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -115,6 +132,14 @@ export default function ProductView({ products }) {
           </p>
         </div>
         <div className="flex gap-[8px] md:gap-[12px]">
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className={`font-sans text-[14px] font-semibold px-[16px] py-[10px] md:py-[12px] rounded-[10px] cursor-pointer flex items-center gap-[8px] tracking-[0.01em] shadow-[0_2px_8px_rgba(0,0,0,0.05)] bg-white text-[#4B5563] border border-[#E5E7EB] hover:bg-[#F9FAFB] disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            <RefreshCcw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+            {isRefreshing ? 'Refreshing...' : isMobile ? 'Refresh' : 'Refresh Products'}
+          </button>
           <button
             onClick={() => setIsSortMode(!isSortMode)}
             className={`font-sans text-[14px] font-semibold px-[16px] py-[10px] md:py-[12px] rounded-[10px] cursor-pointer flex items-center gap-[8px] tracking-[0.01em] shadow-[0_2px_8px_rgba(0,0,0,0.05)] ${isSortMode ? 'bg-[#111827] text-white border-none' : 'bg-white text-[#4B5563] border border-[#E5E7EB]'}`}
@@ -556,6 +581,18 @@ export default function ProductView({ products }) {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Success Notification */}
+      {showNotification && (
+        <div className="fixed bottom-[24px] left-1/2 -translate-x-1/2 z-[1000] animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-[#1B4332] text-white px-[24px] py-[12px] rounded-[12px] shadow-[0_4px_20px_rgba(27,67,50,0.3)] flex items-center gap-[10px]">
+            <div className="bg-white/20 p-[4px] rounded-full text-white">
+              <Check size={16} strokeWidth={3} />
+            </div>
+            <span className="font-sans text-[14px] font-semibold">Product Refresh was successful</span>
+          </div>
         </div>
       )}
     </div>
