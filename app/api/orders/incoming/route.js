@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Pool } from '@neondatabase/serverless';
+import { revalidatePath } from 'next/cache';
 
 // Initialize Neon Pool for transactions
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -132,6 +133,10 @@ export async function POST(request) {
     }
 
     await client.query('COMMIT');
+
+    // Clear caches so the dashboard shows new data immediately
+    revalidatePath('/orders');
+    revalidatePath('/customers');
 
     return NextResponse.json({ order_id: newOrder.id, status: newOrder.status }, {
       headers: { ...(origin && { 'Access-Control-Allow-Origin': origin }) }

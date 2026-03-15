@@ -1,6 +1,8 @@
 import { getAllCustomers } from '@/lib/queries/customers';
 import CustomersView from './CustomersView';
 
+export const dynamic = 'force-dynamic';
+
 export default async function CustomersPage() {
   const customers = await getAllCustomers();
 
