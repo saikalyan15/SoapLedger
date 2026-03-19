@@ -356,15 +356,26 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
                   ...production.actualData, 
                   ...(() => {
                     if (!production.actualData || production.actualData.length === 0) return [];
+                    const currentMonthKey = new Date().toISOString().slice(0, 7);
                     const lastActual = production.actualData[production.actualData.length - 1];
-                    const lastSoaps = lastActual?.soaps || 0;
+                    
+                    // If current month is incomplete, extrapolate based on days elapsed
+                    let baselineSoaps;
+                    if (lastActual.month_key === currentMonthKey) {
+                      const dayOfMonth = new Date().getDate();
+                      const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+                      baselineSoaps = Math.round(lastActual.soaps * (daysInMonth / dayOfMonth));
+                    } else {
+                      baselineSoaps = lastActual.soaps;
+                    }
+
                     const months = [];
                     let d = new Date(lastActual.month_key + '-01');
                     for(let i=1; i<=6; i++) {
                       d.setMonth(d.getMonth() + 1);
                       months.push({
                         month: d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
-                        projected: lastSoaps
+                        projected: baselineSoaps
                       });
                     }
                     return months;
@@ -600,7 +611,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
               <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: '#1B4332' }}>
                 {fmtCurrency(projection.currentRunRate)} / month
               </div>
-              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>Revenue in {projection.lastCompleteMonthName}</div>
+              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>{projection.runRateNote}</div>
             </div>
             <div style={{ padding: '12px 16px', background: '#F0FDF4', borderRadius: '12px', border: '1px solid #DCFCE7', flex: 1 }}>
               <div style={{ fontSize: '11px', color: '#166534', textTransform: 'uppercase', marginBottom: '4px' }}>At Current Run Rate</div>
