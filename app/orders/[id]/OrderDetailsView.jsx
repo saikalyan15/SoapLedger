@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Pencil, ArrowLeft, ChevronDown, CheckCircle, UserCheck, AlertCircle, Printer, Package, MapPin } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { updateShipmentStatusAction, updateOrderStatusAction } from '@/lib/actions/orders';
-import { ORDER_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
+import { SETTABLE_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
 
 const ShipmentCard = ({ shipment, items, isMobile, onStatusUpdate }) => {
   const [newStatus, setNewStatus] = useState(shipment.status);
@@ -76,7 +76,7 @@ const ShipmentCard = ({ shipment, items, isMobile, onStatusUpdate }) => {
                 fontFamily: 'inherit'
               }}
             >
-              {ORDER_STATUSES.map(s => (
+              {SETTABLE_STATUSES.map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -178,7 +178,7 @@ const OrderDetailsView = ({ order, items, shipments = [] }) => {
                 fontFamily: '"Plus Jakarta Sans", sans-serif'
               }}
             >
-              {ORDER_STATUSES.map(s => (
+              {SETTABLE_STATUSES.map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>

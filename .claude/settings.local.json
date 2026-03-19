@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find E:/Projects/SoapLedger -maxdepth 3 -name *.sql -o -name schema*)"
+    ]
+  }
+}
