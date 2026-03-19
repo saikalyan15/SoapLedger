@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { Eye, Pencil, Trash2, Check, X, Search, Plus } from 'lucide-react';
+import { Eye, Pencil, Trash2, Check, X, Search, Plus, LayoutList, Calendar } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import StatusBadge from '@/components/StatusBadge';
 import { deleteOrderAction } from '@/lib/actions/orders';
@@ -12,6 +12,7 @@ const OrdersView = ({ orders }) => {
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [isMobile, setIsMobile] = useState(false);
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'monthly'
 
   // Detect Mobile — React State approach
   useEffect(() => {
@@ -30,12 +31,31 @@ const OrdersView = ({ orders }) => {
 
   const filteredOrders = orders.filter(order => {
     const matchesFilter = filter === 'All' || order.status === filter;
-    const matchesSearch = 
+    const matchesSearch =
       order.customer_name.toLowerCase().includes(search.toLowerCase()) ||
       order.id.toLowerCase().includes(search.toLowerCase()) ||
       (order.customer_phone && order.customer_phone.includes(search));
     return matchesFilter && matchesSearch;
   });
+
+  const groupedByMonth = useMemo(() => {
+    const map = {};
+    filteredOrders.forEach(order => {
+      const key = new Date(order.order_date).toISOString().slice(0, 7); // "YYYY-MM"
+      if (!map[key]) map[key] = [];
+      map[key].push(order);
+    });
+    return Object.keys(map)
+      .sort((a, b) => b.localeCompare(a))
+      .map(key => ({
+        key,
+        label: new Date(key + '-15').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }),
+        orders: map[key],
+        totalRevenue: map[key]
+          .filter(o => o.status !== 'Cancelled')
+          .reduce((sum, o) => sum + Math.round(Number(o.revenue || 0)), 0),
+      }));
+  }, [filteredOrders]);
 
   return (
     <div className="page-content" style={{ padding: isMobile ? '16px' : '0' }}>
@@ -71,7 +91,20 @@ const OrdersView = ({ orders }) => {
         marginBottom: '24px',
         padding: '20px'
       }}>
-        <div 
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', background: '#F3F4F6', padding: '4px', borderRadius: '10px', alignSelf: 'flex-start' }}>
+          {[['list', LayoutList, 'List'], ['monthly', Calendar, 'Monthly']].map(([mode, Icon, label]) => (
+            <button key={mode} onClick={() => setViewMode(mode)} style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '7px 16px', borderRadius: '7px', border: 'none',
+              background: viewMode === mode ? '#1B4332' : 'transparent',
+              color: viewMode === mode ? '#FFFFFF' : '#6B7280',
+              fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 600, fontSize: '13px', cursor: 'pointer'
+            }}>
+              <Icon size={15} /> {label}
+            </button>
+          ))}
+        </div>
+        <div
           className="orders-filter-row"
           style={{ 
             display: 'flex', 
@@ -137,203 +170,350 @@ const OrdersView = ({ orders }) => {
         </div>
       </div>
 
-      {/* Conditional Rendering: Only ONE layout is rendered */}
-      {isMobile ? (
-        /* Mobile Card List View */
-        <div className="orders-card-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {filteredOrders.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280', background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
-              No orders found
-            </div>
-          ) : (
-            filteredOrders.map((order) => {
-              const dateObj = new Date(order.order_date);
-              const formattedDate = dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-              
-              const productsList = order.products?.split(', ') || [];
-              const firstProduct = productsList[0] || 'No items';
-              const additionalCount = productsList.length - 1;
+      {viewMode === 'list' ? (
+        /* LIST VIEW */
+        isMobile ? (
+          /* Mobile Card List View */
+          <div className="orders-card-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {filteredOrders.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280', background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
+                No orders found
+              </div>
+            ) : (
+              filteredOrders.map((order) => {
+                const dateObj = new Date(order.order_date);
+                const formattedDate = dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
-              return (
-                <div key={order.id} style={{
-                  background: '#FFFFFF',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '12px',
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '10px',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{
-                        fontFamily: 'Plus Jakarta Sans, sans-serif',
-                        fontSize: '15px',
-                        fontWeight: 600,
-                        color: '#1A1A1A',
-                      }}>{order.customer_name}</div>
+                const productsList = order.products?.split(', ') || [];
+                const firstProduct = productsList[0] || 'No items';
+                const additionalCount = productsList.length - 1;
+
+                return (
+                  <div key={order.id} style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <div style={{
+                          fontFamily: 'Plus Jakarta Sans, sans-serif',
+                          fontSize: '15px',
+                          fontWeight: 600,
+                          color: '#1A1A1A',
+                        }}>{order.customer_name}</div>
+                        <div style={{
+                          fontFamily: 'Plus Jakarta Sans, sans-serif',
+                          fontSize: '12px',
+                          color: '#6B7280',
+                          marginTop: '2px',
+                        }}>{order.customer_phone}</div>
+                      </div>
+                      <StatusBadge status={order.status} />
+                    </div>
+
+                    <div style={{
+                      fontFamily: 'Plus Jakarta Sans, sans-serif',
+                      fontSize: '13px',
+                      color: '#4B5563',
+                    }}>
+                      {firstProduct}{additionalCount > 0 ? ` +${additionalCount} more` : ''}
+                    </div>
+
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingTop: '8px',
+                      borderTop: '1px solid #F3F4F6',
+                    }}>
                       <div style={{
                         fontFamily: 'Plus Jakarta Sans, sans-serif',
                         fontSize: '12px',
-                        color: '#6B7280',
-                        marginTop: '2px',
-                      }}>{order.customer_phone}</div>
-                    </div>
-                    <StatusBadge status={order.status} />
-                  </div>
-
-                  <div style={{
-                    fontFamily: 'Plus Jakarta Sans, sans-serif',
-                    fontSize: '13px',
-                    color: '#4B5563',
-                  }}>
-                    {firstProduct}{additionalCount > 0 ? ` +${additionalCount} more` : ''}
-                  </div>
-
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    paddingTop: '8px',
-                    borderTop: '1px solid #F3F4F6',
-                  }}>
-                    <div style={{
-                      fontFamily: 'Plus Jakarta Sans, sans-serif',
-                      fontSize: '12px',
-                      color: '#9CA3AF',
-                    }}>{formattedDate}</div>
-                    <div style={{
-                      fontFamily: 'DM Serif Display, serif',
-                      fontSize: '16px',
-                      color: '#1B4332',
-                    }}>₹{Math.round(Number(order.revenue || 0)).toLocaleString('en-IN')}</div>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <Link href={`/orders/${order.id}`}>
-                        <Eye size={18} color="#1B4332" />
-                      </Link>
-                      {EDITABLE_STATUSES.includes(order.status) && (
-                        <>
-                          <Link href={`/orders/${order.id}/edit`}>
-                            <Pencil size={18} color="#6B7280" />
-                          </Link>
-                          <button 
-                            onClick={() => handleDelete(order.id)}
-                            style={{ 
-                              background: 'none', 
-                              border: 'none', 
-                              padding: 0, 
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center'
-                            }}
-                          >
-                            <Trash2 size={18} color="#DC2626" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      ) : (
-        /* Desktop Table View — scrollable container */
-        <div 
-          className="orders-table-container"
-          style={{ 
-            background: '#FFFFFF', 
-            borderRadius: '12px', 
-            border: '1px solid #E5E7EB', 
-            overflowX: 'auto',
-            WebkitOverflowScrolling: 'touch'
-          }}
-        >
-          <table 
-            className="orders-table"
-            style={{ 
-              width: '100%', 
-              borderCollapse: 'collapse',
-              minWidth: '860px',
-              tableLayout: 'fixed'
-            }}
-          >
-            <thead>
-              <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
-                <th style={{ ...thStyle, width: '100px' }}>Order ID</th>
-                <th style={{ ...thStyle, width: '100px' }}>Date</th>
-                <th style={{ ...thStyle, width: '180px' }}>Customer</th>
-                <th style={{ ...thStyle }}>Items</th>
-                <th style={{ ...thStyle, width: '100px' }}>Total</th>
-                <th style={{ ...thStyle, width: '120px' }}>Status</th>
-                <th style={{ ...thStyle, width: '120px', textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOrders.length === 0 ? (
-                <tr>
-                  <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>
-                    No orders found
-                  </td>
-                </tr>
-              ) : (
-                filteredOrders.map((order) => (
-                  <tr key={order.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
-                    <td style={tdStyle}>
-                      <span style={{ fontWeight: '700', color: '#1B4332' }}>#{order.id.slice(0, 8)}</span>
-                    </td>
-                    <td style={tdStyle}>
-                      {new Date(order.order_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                    </td>
-                    <td style={tdStyle}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ fontWeight: '600', color: '#111827' }}>{order.customer_name}</div>
-                        <span style={{ 
-                          fontSize: '9px', 
-                          fontWeight: '800', 
-                          padding: '1px 6px', 
-                          borderRadius: '4px',
-                          textTransform: 'uppercase',
-                          background: order.customer_type === 'Returning' ? '#D8F3DC' : '#FEF3C7',
-                          color: order.customer_type === 'Returning' ? '#1B4332' : '#92400E'
-                        }}>
-                          {order.customer_type}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#6B7280' }}>{order.customer_phone}</div>
-                    </td>
-                    <td style={{ ...tdStyle, maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {order.products}
-                    </td>
-                    <td style={{ ...tdStyle, fontWeight: '700', color: '#111827' }}>
-                      ₹{Math.round(Number(order.revenue || 0)).toLocaleString('en-IN')}
-                    </td>
-                    <td style={{ ...tdStyle, minWidth: '100px' }}>
-                      <StatusBadge status={order.status} short />
-                    </td>
-                    <td style={{ ...tdStyle, width: '80px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <Link href={`/orders/${order.id}`} style={actionButtonStyle} title="View Details">
-                          <Eye size={18} />
+                        color: '#9CA3AF',
+                      }}>{formattedDate}</div>
+                      <div style={{
+                        fontFamily: 'DM Serif Display, serif',
+                        fontSize: '16px',
+                        color: '#1B4332',
+                      }}>₹{Math.round(Number(order.revenue || 0)).toLocaleString('en-IN')}</div>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <Link href={`/orders/${order.id}`}>
+                          <Eye size={18} color="#1B4332" />
                         </Link>
                         {EDITABLE_STATUSES.includes(order.status) && (
                           <>
-                            <Link href={`/orders/${order.id}/edit`} style={actionButtonStyle} title="Edit Order">
-                              <Pencil size={18} />
+                            <Link href={`/orders/${order.id}/edit`}>
+                              <Pencil size={18} color="#6B7280" />
                             </Link>
-                            <button onClick={() => handleDelete(order.id)} style={{ ...actionButtonStyle, color: '#DC2626' }} title="Delete Order">
-                              <Trash2 size={18} />
+                            <button
+                              onClick={() => handleDelete(order.id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                padding: 0,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <Trash2 size={18} color="#DC2626" />
                             </button>
                           </>
                         )}
                       </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        ) : (
+          /* Desktop Table View — scrollable container */
+          <div
+            className="orders-table-container"
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '12px',
+              border: '1px solid #E5E7EB',
+              overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
+            <table
+              className="orders-table"
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                minWidth: '860px',
+                tableLayout: 'fixed'
+              }}
+            >
+              <thead>
+                <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+                  <th style={{ ...thStyle, width: '100px' }}>Order ID</th>
+                  <th style={{ ...thStyle, width: '100px' }}>Date</th>
+                  <th style={{ ...thStyle, width: '180px' }}>Customer</th>
+                  <th style={{ ...thStyle }}>Items</th>
+                  <th style={{ ...thStyle, width: '100px' }}>Total</th>
+                  <th style={{ ...thStyle, width: '120px' }}>Status</th>
+                  <th style={{ ...thStyle, width: '120px', textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>
+                      No orders found
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filteredOrders.map((order) => (
+                    <tr key={order.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
+                      <td style={tdStyle}>
+                        <span style={{ fontWeight: '700', color: '#1B4332' }}>#{order.id.slice(0, 8)}</span>
+                      </td>
+                      <td style={tdStyle}>
+                        {new Date(order.order_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      </td>
+                      <td style={tdStyle}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ fontWeight: '600', color: '#111827' }}>{order.customer_name}</div>
+                          <span style={{
+                            fontSize: '9px',
+                            fontWeight: '800',
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            textTransform: 'uppercase',
+                            background: order.customer_type === 'Returning' ? '#D8F3DC' : '#FEF3C7',
+                            color: order.customer_type === 'Returning' ? '#1B4332' : '#92400E'
+                          }}>
+                            {order.customer_type}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6B7280' }}>{order.customer_phone}</div>
+                      </td>
+                      <td style={{ ...tdStyle, maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {order.products}
+                      </td>
+                      <td style={{ ...tdStyle, fontWeight: '700', color: '#111827' }}>
+                        ₹{Math.round(Number(order.revenue || 0)).toLocaleString('en-IN')}
+                      </td>
+                      <td style={{ ...tdStyle, minWidth: '100px' }}>
+                        <StatusBadge status={order.status} short />
+                      </td>
+                      <td style={{ ...tdStyle, width: '80px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <Link href={`/orders/${order.id}`} style={actionButtonStyle} title="View Details">
+                            <Eye size={18} />
+                          </Link>
+                          {EDITABLE_STATUSES.includes(order.status) && (
+                            <>
+                              <Link href={`/orders/${order.id}/edit`} style={actionButtonStyle} title="Edit Order">
+                                <Pencil size={18} />
+                              </Link>
+                              <button onClick={() => handleDelete(order.id)} style={{ ...actionButtonStyle, color: '#DC2626' }} title="Delete Order">
+                                <Trash2 size={18} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )
+      ) : (
+        /* MONTHLY VIEW */
+        <div>
+          {groupedByMonth.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280', background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
+              No orders found
+            </div>
+          ) : (
+            groupedByMonth.map(({ key, label, orders: monthOrders, totalRevenue }) => (
+              <div key={key} style={{ marginBottom: '24px' }}>
+                {/* Month header */}
+                <div style={{
+                  background: '#F9FAFB',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '12px 12px 0 0',
+                  padding: '14px 20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  borderLeft: '4px solid #1B4332',
+                }}>
+                  <span style={{ fontFamily: 'DM Serif Display, serif', fontSize: '18px', color: '#1B4332', flex: 1 }}>
+                    {label}
+                  </span>
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    background: '#E5E7EB',
+                    color: '#374151',
+                    padding: '3px 10px',
+                    borderRadius: '20px',
+                  }}>
+                    {monthOrders.length} {monthOrders.length === 1 ? 'order' : 'orders'}
+                  </span>
+                  <span style={{ fontFamily: 'DM Serif Display, serif', fontSize: '18px', color: '#1B4332' }}>
+                    ₹{totalRevenue.toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                {/* Orders container */}
+                <div style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #E5E7EB',
+                  borderTop: 'none',
+                  borderRadius: '0 0 12px 12px',
+                }}>
+                  {isMobile ? (
+                    /* Mobile monthly cards */
+                    monthOrders.map((order, idx) => {
+                      const productsList = order.products?.split(', ') || [];
+                      const firstProduct = productsList[0] || 'No items';
+                      const additionalCount = productsList.length - 1;
+                      const formattedDate = new Date(order.order_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                      return (
+                        <Link key={order.id} href={`/orders/${order.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                          <div style={{
+                            padding: '14px 16px',
+                            borderBottom: idx < monthOrders.length - 1 ? '1px solid #F3F4F6' : 'none',
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 600, fontSize: '14px', color: '#1A1A1A' }}>
+                                {order.customer_name}
+                              </span>
+                              <StatusBadge status={order.status} />
+                            </div>
+                            <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '13px', color: '#4B5563', marginBottom: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {firstProduct}{additionalCount > 0 ? ` +${additionalCount} more` : ''}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid #F3F4F6' }}>
+                              <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '12px', color: '#9CA3AF' }}>{formattedDate}</span>
+                              <span style={{ fontFamily: 'DM Serif Display, serif', fontSize: '16px', color: '#1B4332' }}>
+                                ₹{Math.round(Number(order.revenue || 0)).toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })
+                  ) : (
+                    /* Desktop monthly rows */
+                    monthOrders.map((order, idx) => {
+                      const productsList = order.products?.split(', ') || [];
+                      const firstProduct = productsList[0] || 'No items';
+                      const additionalCount = productsList.length - 1;
+                      return (
+                        <div
+                          key={order.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '14px 20px',
+                            borderBottom: idx < monthOrders.length - 1 ? '1px solid #F3F4F6' : 'none',
+                            gap: '16px',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#F9FAFB'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          {/* Customer */}
+                          <div style={{ flex: '2', minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 600, fontSize: '14px', color: '#111827' }}>
+                                {order.customer_name}
+                              </span>
+                              <span style={{
+                                fontSize: '9px',
+                                fontWeight: '800',
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                textTransform: 'uppercase',
+                                background: order.customer_type === 'Returning' ? '#D8F3DC' : '#FEF3C7',
+                                color: order.customer_type === 'Returning' ? '#1B4332' : '#92400E',
+                                whiteSpace: 'nowrap',
+                              }}>
+                                {order.customer_type}
+                              </span>
+                            </div>
+                          </div>
+                          {/* Products */}
+                          <div style={{ flex: '3', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '13px', color: '#4B5563', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {firstProduct}{additionalCount > 0 ? ` +${additionalCount} more` : ''}
+                          </div>
+                          {/* Status */}
+                          <div style={{ flex: '1', minWidth: '100px' }}>
+                            <StatusBadge status={order.status} short />
+                          </div>
+                          {/* Revenue */}
+                          <div style={{ flex: '1', textAlign: 'right', fontFamily: 'DM Serif Display, serif', fontSize: '16px', color: '#1B4332' }}>
+                            ₹{Math.round(Number(order.revenue || 0)).toLocaleString('en-IN')}
+                          </div>
+                          {/* Link */}
+                          <div>
+                            <Link href={`/orders/${order.id}`} style={actionButtonStyle} title="View Details">
+                              <Eye size={18} />
+                            </Link>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>
