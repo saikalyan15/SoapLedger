@@ -54,6 +54,9 @@ const OrdersView = ({ orders }) => {
         totalRevenue: map[key]
           .filter(o => o.status !== 'Cancelled')
           .reduce((sum, o) => sum + Math.round(Number(o.revenue || 0)), 0),
+        totalSoaps: map[key]
+          .filter(o => o.status !== 'Cancelled')
+          .reduce((sum, o) => sum + Number(o.total_soaps || 0), 0),
       }));
   }, [filteredOrders]);
 
@@ -378,7 +381,7 @@ const OrdersView = ({ orders }) => {
               No orders found
             </div>
           ) : (
-            groupedByMonth.map(({ key, label, orders: monthOrders, totalRevenue }) => (
+            groupedByMonth.map(({ key, label, orders: monthOrders, totalRevenue, totalSoaps }) => (
               <div key={key} style={{ marginBottom: '24px' }}>
                 {/* Month header */}
                 <div style={{
@@ -404,6 +407,17 @@ const OrdersView = ({ orders }) => {
                     borderRadius: '20px',
                   }}>
                     {monthOrders.length} {monthOrders.length === 1 ? 'order' : 'orders'}
+                  </span>
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    background: '#D1FAE5',
+                    color: '#065F46',
+                    padding: '3px 10px',
+                    borderRadius: '20px',
+                  }}>
+                    {totalSoaps} {totalSoaps === 1 ? 'soap' : 'soaps'}
                   </span>
                   <span style={{ fontFamily: 'DM Serif Display, serif', fontSize: '18px', color: '#1B4332' }}>
                     ₹{totalRevenue.toLocaleString('en-IN')}
