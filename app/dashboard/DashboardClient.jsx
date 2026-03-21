@@ -289,15 +289,17 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
         <ChartCard title="Monthly Profitability" subtitle="Surplus/Deficit Trend" loading={isPending} empty={profitability.length === 0} icon={DollarSign} isMobile={isMobile}>
           <div style={{ height: isMobile ? '280px' : '360px', width: '100%' }} className="recharts-responsive-container">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={profitability} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ComposedChart data={profitability} margin={{ top: 10, right: 40, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmtNum(Math.round(v/10)*10)}`} />
+                <YAxis yAxisId="money" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmtNum(Math.round(v/10)*10)}`} />
+                <YAxis yAxisId="soaps" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#74C69D' }} tickFormatter={(v) => `${v}`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                <Bar dataKey="revenue" name="Revenue" fill="#1B4332" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="recurring_costs" name="Costs" fill="#DC2626" radius={[4, 4, 0, 0]} />
-                <Line type="monotone" dataKey="surplus_deficit" name="Surplus/Deficit" stroke="#10B981" strokeWidth={3} dot={{ fill: '#10B981' }} />
+                <Bar yAxisId="money" dataKey="revenue" name="Revenue" fill="#1B4332" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="money" dataKey="recurring_costs" name="Costs" fill="#DC2626" radius={[4, 4, 0, 0]} />
+                <Line yAxisId="money" type="monotone" dataKey="surplus_deficit" name="Surplus/Deficit" stroke="#10B981" strokeWidth={3} dot={{ fill: '#10B981' }} />
+                <Line yAxisId="soaps" type="monotone" dataKey="soaps_shipped" name="Soaps Shipped" stroke="#74C69D" strokeWidth={2} strokeDasharray="4 3" dot={{ fill: '#74C69D', r: 3 }} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
