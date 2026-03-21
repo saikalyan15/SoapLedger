@@ -293,13 +293,13 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
                 <YAxis yAxisId="money" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmtNum(Math.round(v/10)*10)}`} />
-                <YAxis yAxisId="soaps" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#74C69D' }} tickFormatter={(v) => `${v}`} />
+                <YAxis yAxisId="soaps" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#3B82F6' }} tickFormatter={(v) => `${v}`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 <Bar yAxisId="money" dataKey="revenue" name="Revenue" fill="#1B4332" radius={[4, 4, 0, 0]} />
                 <Bar yAxisId="money" dataKey="recurring_costs" name="Costs" fill="#DC2626" radius={[4, 4, 0, 0]} />
                 <Line yAxisId="money" type="monotone" dataKey="surplus_deficit" name="Surplus/Deficit" stroke="#10B981" strokeWidth={3} dot={{ fill: '#10B981' }} />
-                <Line yAxisId="soaps" type="monotone" dataKey="soaps_shipped" name="Soaps Shipped" stroke="#74C69D" strokeWidth={2} strokeDasharray="4 3" dot={{ fill: '#74C69D', r: 3 }} />
+                <Line yAxisId="soaps" type="monotone" dataKey="soaps_shipped" name="Soaps Shipped" stroke="#3B82F6" strokeWidth={2} strokeDasharray="4 3" dot={{ fill: '#3B82F6', r: 3 }} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
