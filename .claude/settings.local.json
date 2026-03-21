@@ -7,7 +7,9 @@
       "Bash(node -e \"const p=require\\(''''./package.json''''\\); const deps={...p.dependencies,...p.devDependencies}; Object.entries\\(deps\\).filter\\(\\([k]\\)=>k.includes\\(''''neon''''\\)||k.includes\\(''''pg''''\\)||k.includes\\(''''next''''\\)||k.includes\\(''''postgres''''\\)\\).forEach\\(\\([k,v]\\)=>console.log\\(k,v\\)\\)\")",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(k,v\\) for k,v in {**d.get\\(''''dependencies'''',{}\\),**d.get\\(''''devDependencies'''',{}\\)}.items\\(\\) if any\\(x in k for x in [''''neon'''',''''pg'''',''''next'''',''''postgres'''']\\)]\")",
       "Bash(node -p \"const p=require\\(''./package.json''\\); JSON.stringify\\(p.dependencies\\)\")",
-      "Bash(grep -n \"order_summary\\\\|CREATE VIEW\\\\|total_soaps\\\\|soap_count\\\\|quantity\" /e/Projects/SoapLedger/db-schema/*.sql)"
+      "Bash(grep -n \"order_summary\\\\|CREATE VIEW\\\\|total_soaps\\\\|soap_count\\\\|quantity\" /e/Projects/SoapLedger/db-schema/*.sql)",
+      "WebSearch",
+      "WebFetch(domain:www.modernsoapmaking.com)"
     ]
   }
 }

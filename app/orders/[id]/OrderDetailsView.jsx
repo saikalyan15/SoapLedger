@@ -7,6 +7,7 @@ import { Pencil, ArrowLeft, ChevronDown, CheckCircle, UserCheck, AlertCircle, Pr
 import StatusBadge from '@/components/StatusBadge';
 import { updateShipmentStatusAction, updateOrderStatusAction } from '@/lib/actions/orders';
 import { SETTABLE_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
+import { formatPhoneForDisplay } from '@/lib/utils/phone';
 
 const ShipmentCard = ({ shipment, items, isMobile, onStatusUpdate }) => {
   const [newStatus, setNewStatus] = useState(shipment.status);
@@ -221,7 +222,7 @@ const OrderDetailsView = ({ order, items, shipments = [] }) => {
                 {order.customer_type}
               </div>
             </div>
-            <div style={{ color: '#4B5563' }}>{order.customer_phone}</div>
+            <div style={{ color: '#4B5563' }}>{formatPhoneForDisplay(order.customer_phone)}</div>
           </div>
 
           <div style={sectionLabelStyle}>Shipping & Delivery</div>

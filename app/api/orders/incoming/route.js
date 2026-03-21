@@ -4,6 +4,7 @@ import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Pool } from '@neondatabase/serverless';
 import { revalidatePath } from 'next/cache';
+import { normaliseToE164 } from '@/lib/utils/phone';
 
 // Initialize Neon Pool for transactions
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -53,7 +54,7 @@ export async function POST(request) {
 
     // 1. Find or Create Customer
     const custName = customer.name || 'Unknown';
-    const custPhone = String(customer.phone);
+    const custPhone = normaliseToE164(customer.phone);
     const custAddress = customer.address || 'No address provided';
 
     let customerId;

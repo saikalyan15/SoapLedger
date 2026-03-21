@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Printer, Truck, Tag, CheckSquare, Square } from 'lucide-react';
 import businessConfig from '@/lib/config/business.json';
+import { formatPhoneForDisplay } from '@/lib/utils/phone';
 
 const BASE_LABELS = {
   'Glycerine':   'Glycerine',
@@ -169,7 +170,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
                 {orderInfo.customer_address}
               </div>
               <div style={{ fontSize: '22px', fontWeight: 800, color: 'black', marginTop: 'auto' }}>
-                PH: {orderInfo.customer_phone}
+                PH: {formatPhoneForDisplay(orderInfo.customer_phone)}
               </div>
             </div>
           </div>
