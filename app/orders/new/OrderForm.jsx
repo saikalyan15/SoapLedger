@@ -82,6 +82,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   const [packaging, setPackaging] = useState(Number(initialData?.order?.packaging_cost) || (settings?.default_packaging_cost || 0));
   const [customization, setCustomization] = useState(Number(initialData?.order?.customization_amount) || 0);
   const [discount, setDiscount] = useState(0);
+  const [notes, setNotes] = useState(initialData?.order?.notes || '');
 
   // Initial discount calculation for edit mode
   useEffect(() => {
@@ -230,6 +231,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
       packaging_cost: parseFloat(packaging || 0),
       customization_amount: parseFloat(customization || 0),
       order_value: parseFloat(orderValue || 0),
+      notes,
       shipments: shipments // Pass shipments to action
     };
 
@@ -366,6 +368,18 @@ const OrderForm = ({ products, settings, initialData = null }) => {
               <button type="button" onClick={() => removeItem(index)} disabled={items.length === 1} style={{ padding: '12px', color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={18} /></button>
             </div>
           ))}
+        </div>
+
+        {/* Notes */}
+        <div style={cardStyle}>
+          <div style={sectionTitleStyle}>Notes</div>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Special instructions, packaging preferences, etc..."
+            rows={3}
+            style={{ ...inputBaseStyle, resize: 'vertical' }}
+          />
         </div>
 
         {/* Pricing Summary */}
