@@ -121,7 +121,8 @@ const OrderDetailsView = ({ order, items, shipments = [] }) => {
   const subtotal = items.reduce((sum, item) => sum + (Number(item.line_total) || 0), 0);
   const revenue = Number(order.revenue) || 0;
   const shipping = Number(order.shipping_charge) || 0;
-  const discount = Math.max(0, subtotal + shipping - revenue);
+  const customization = Number(order.customization_amount) || 0;
+  const discount = Math.max(0, subtotal + shipping + customization - revenue);
 
   const handleUpdateShipmentStatus = async (shipmentId, status) => {
     const result = await updateShipmentStatusAction(shipmentId, status);
@@ -248,6 +249,12 @@ const OrderDetailsView = ({ order, items, shipments = [] }) => {
                 <span>Shipping & Packaging</span>
                 <span style={{ fontWeight: '600' }}>₹{(shipping + Number(order.packaging_cost)).toLocaleString()}</span>
               </div>
+              {customization > 0 && (
+                <div style={summaryLineStyle}>
+                  <span>Customization</span>
+                  <span style={{ fontWeight: '600', color: '#1B4332' }}>+₹{customization.toLocaleString()}</span>
+                </div>
+              )}
               {discount > 0 && (
                 <div style={summaryLineStyle}>
                   <span>Discount Applied</span>

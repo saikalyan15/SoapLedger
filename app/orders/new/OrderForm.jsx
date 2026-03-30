@@ -80,6 +80,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   const [status, setStatus] = useState(initialData?.order?.status || 'Order Placed');
   const [shipping, setShipping] = useState(Number(initialData?.order?.shipping_charge) || 0);
   const [packaging, setPackaging] = useState(Number(initialData?.order?.packaging_cost) || (settings?.default_packaging_cost || 0));
+  const [customization, setCustomization] = useState(Number(initialData?.order?.customization_amount) || 0);
   const [discount, setDiscount] = useState(0);
 
   // Initial discount calculation for edit mode
@@ -87,7 +88,8 @@ const OrderForm = ({ products, settings, initialData = null }) => {
     if (isEdit) {
       const initialSubtotal = items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
       const initialRevenue = Number(initialData?.order?.revenue || 0);
-      setDiscount(Math.max(0, initialSubtotal + shipping - initialRevenue));
+      const initialCustomization = Number(initialData?.order?.customization_amount) || 0;
+      setDiscount(Math.max(0, initialSubtotal + shipping + initialCustomization - initialRevenue));
     }
   }, []);
 
@@ -204,7 +206,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   };
 
   const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
-  const orderValue = Math.max(0, subtotal - parseFloat(discount || 0) + parseFloat(shipping || 0));
+  const orderValue = Math.max(0, subtotal - parseFloat(discount || 0) + parseFloat(shipping || 0) + parseFloat(customization || 0));
 
   useEffect(() => {
     if (!isEdit) {
@@ -226,6 +228,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
       status,
       shipping_charge: parseFloat(shipping || 0),
       packaging_cost: parseFloat(packaging || 0),
+      customization_amount: parseFloat(customization || 0),
       order_value: parseFloat(orderValue || 0),
       shipments: shipments // Pass shipments to action
     };
@@ -367,8 +370,9 @@ const OrderForm = ({ products, settings, initialData = null }) => {
 
         {/* Pricing Summary */}
         <div style={{ ...cardStyle, background: '#1B4332', color: '#FFFFFF' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: '20px' }}>
             <div><label style={{ ...labelStyle, color: '#FFFFFF' }}>Shipping (₹)</label><input type="number" value={shipping} onChange={(e) => setShipping(e.target.value)} style={{ ...inputBaseStyle, background: 'rgba(255,255,255,0.1)', color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.2)' }} /></div>
+            <div><label style={{ ...labelStyle, color: '#FFFFFF' }}>Customization (₹)</label><input type="number" value={customization} onChange={(e) => setCustomization(e.target.value)} style={{ ...inputBaseStyle, background: 'rgba(255,255,255,0.1)', color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.2)' }} /></div>
             <div><label style={{ ...labelStyle, color: '#FFFFFF' }}>Discount (₹)</label><input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} style={{ ...inputBaseStyle, background: 'rgba(255,255,255,0.1)', color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.2)' }} /></div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '14px', opacity: 0.8 }}>Total Order Value</div>
