@@ -75,7 +75,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
         .product-label {
           width: 60mm; height: 40mm; background: white; border: 1px dashed #CCC;
           padding: 2.5mm 3.5mm; display: flex; flex-direction: column; position: relative;
-          cursor: pointer; transition: opacity 0.2s; box-sizing: border-box;
+          cursor: pointer; transition: opacity 0.2s; box-sizing: border-box; overflow: hidden;
         }
         
         .address-label {
@@ -92,7 +92,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
           .deselected { display: none !important; }
           
           .product-grid { display: grid; grid-template-columns: repeat(3, 60mm); gap: 4mm; margin-bottom: 6mm; }
-          .product-label { width: 60mm !important; height: 40mm !important; border: 0.1mm solid #000 !important; page-break-inside: avoid !important; padding: 2.5mm 3.5mm !important; box-sizing: border-box !important; }
+          .product-label { width: 60mm !important; height: 40mm !important; border: 0.1mm solid #000 !important; page-break-inside: avoid !important; padding: 2.5mm 3.5mm !important; box-sizing: border-box !important; overflow: hidden !important; }
           
           .shipping-section { display: flex; flex-wrap: wrap; gap: 5mm; border-top: 0.2mm solid #000; paddingTop: 6mm; page-break-inside: avoid; }
           .address-label { border: 0.1mm solid #000 !important; box-sizing: border-box !important; padding: 8mm !important; }
