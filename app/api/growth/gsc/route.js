@@ -56,7 +56,10 @@ export async function POST() {
         requestBody: { startDate, endDate, dimensions: ['page'], rowLimit: 20 },
       }),
       getOrdersBySource(60),
-      fetch('https://healingsoil.in/api/blog-list').then(r => r.json()).catch(() => []),
+      fetch('https://healingsoil.in/api/blog-list').then(r => r.json()).catch(err => {
+        console.warn('blog-list fetch failed, continuing without it:', err.message);
+        return [];
+      }),
     ]);
 
     const saved = await purgeAndInsertGscData({

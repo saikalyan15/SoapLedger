@@ -14,4 +14,4 @@ CREATE TABLE IF NOT EXISTS growth_gsc_data (
 -- Track which AI provider generated each insight, and which GSC snapshot it was based on
 ALTER TABLE growth_insights
   ADD COLUMN IF NOT EXISTS provider    TEXT DEFAULT 'gemini',
-  ADD COLUMN IF NOT EXISTS gsc_data_id INTEGER REFERENCES growth_gsc_data(id);
+  ADD COLUMN IF NOT EXISTS gsc_data_id INTEGER REFERENCES growth_gsc_data(id) ON DELETE CASCADE;

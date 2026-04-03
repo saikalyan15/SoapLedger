@@ -55,13 +55,13 @@ Return ONLY valid JSON with no markdown, no code fences, no explanation outside 
 }`;
 }
 
-async function callGemini(userPrompt) {
+async function callGemini(userPrompt, model = 'gemini-2.0-flash') {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+  const geminiModel = genAI.getGenerativeModel({
+    model,
     systemInstruction: SYSTEM_PROMPT,
   });
-  const result = await model.generateContent(userPrompt);
+  const result = await geminiModel.generateContent(userPrompt);
   return result.response.text();
 }
 
@@ -81,7 +81,15 @@ async function callOpenAI(userPrompt) {
 export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const provider = body.provider === 'openai' ? 'openai' : 'gemini';
+    const VALID_PROVIDERS = ['gemini', 'gemini-1.5-flash', 'openai'];
+    const provider = VALID_PROVIDERS.includes(body.provider) ? body.provider : 'openai';
+
+    if (provider !== 'openai' && !process.env.GEMINI_API_KEY) {
+      return NextResponse.json({ error: 'GEMINI_API_KEY is not configured.' }, { status: 500 });
+    }
+    if (provider === 'openai' && !process.env.OPENAI_API_KEY) {
+      return NextResponse.json({ error: 'OPENAI_API_KEY is not configured.' }, { status: 500 });
+    }
 
     const gscData = await getLatestGscData();
     if (!gscData) {
@@ -93,9 +101,23 @@ export async function POST(request) {
 
     const userPrompt = buildUserPrompt(gscData);
 
-    const rawText = provider === 'openai'
-      ? await callOpenAI(userPrompt)
-      : await callGemini(userPrompt);
+    let rawText;
+    try {
+      rawText = provider === 'openai'
+        ? await callOpenAI(userPrompt)
+        : await callGemini(userPrompt, provider === 'gemini-1.5-flash' ? 'gemini-1.5-flash' : 'gemini-2.0-flash');
+    } catch (aiError) {
+      const msg = aiError.message || '';
+      if (msg.includes('429') || msg.includes('quota') || msg.includes('Too Many Requests')) {
+        const retryMatch = msg.match(/retry in ([\d.]+)s/i);
+        const retryMsg = retryMatch ? ` Retry in ${Math.ceil(parseFloat(retryMatch[1]))}s.` : '';
+        return NextResponse.json(
+          { error: `Gemini quota exceeded — billing may not be enabled on your Google AI Studio project.${retryMsg} Switch to OpenAI or enable billing at ai.google.dev.` },
+          { status: 429 }
+        );
+      }
+      throw aiError;
+    }
 
     // Strip markdown code fences that Gemini sometimes wraps around JSON
     const cleaned = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/, '').trim();

@@ -29,7 +29,7 @@ export default function GrowthClient() {
   const [insight, setInsight] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [insightError, setInsightError] = useState(null);
-  const [provider, setProvider] = useState('gemini');
+  const [provider, setProvider] = useState('openai');
 
   // UI state
   const [expandedAction, setExpandedAction] = useState(null);
@@ -277,7 +277,7 @@ export default function GrowthClient() {
               <h2 className="font-semibold text-slate-900 text-sm">AI Analysis</h2>
               {insight ? (
                 <p className="text-xs text-slate-500">
-                  {insight.provider === 'openai' ? 'OpenAI GPT-4o mini' : 'Gemini 2.0 Flash'}
+                  {insight.provider === 'openai' ? 'OpenAI GPT-4o mini' : insight.provider === 'gemini-1.5-flash' ? 'Gemini 1.5 Flash' : 'Gemini 2.0 Flash'}
                   {' · '}generated {new Date(insight.generated_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 </p>
               ) : (
@@ -300,8 +300,9 @@ export default function GrowthClient() {
               onChange={e => setProvider(e.target.value)}
               className="px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
             >
-              <option value="gemini">Gemini 2.0 Flash</option>
               <option value="openai">OpenAI GPT-4o mini</option>
+              <option value="gemini">Gemini 2.0 Flash</option>
+              <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
             </select>
             <button
               onClick={handleAnalyze}
