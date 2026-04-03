@@ -1,12 +1,12 @@
 import { google } from 'googleapis';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import sql from '@/lib/db';
 import { getOrdersBySource } from '@/lib/queries/orders';
 import { NextResponse } from 'next/server';
 
 export async function POST() {
   try {
-    // 1. Fetch Data - GSC
+    // 1. DATA COLLECTION PHASE (GSC + DB)
     const rawKey = process.env.GOOGLE_PRIVATE_KEY;
     const privateKey = rawKey
       .replace(/^"(.*)"$/, '$1')
@@ -26,7 +26,8 @@ export async function POST() {
     const startDate = new Date(today.setDate(today.getDate() - 28)).toISOString().split('T')[0];
     const siteUrl = process.env.GSC_SITE_URL;
 
-    const [queryResponse, pageResponse] = await Promise.all([
+    // Fetch everything concurrently before AI starts
+    const [queryResponse, pageResponse, orders] = await Promise.all([
       searchconsole.searchanalytics.query({
         siteUrl,
         requestBody: { startDate, endDate, dimensions: ['query'], rowLimit: 50 },
@@ -34,11 +35,9 @@ export async function POST() {
       searchconsole.searchanalytics.query({
         siteUrl,
         requestBody: { startDate, endDate, dimensions: ['page'], rowLimit: 20 },
-      })
+      }),
+      getOrdersBySource(60)
     ]);
-
-    // 2. Fetch Data - Orders
-    const orders = await getOrdersBySource(60);
 
     const rawInput = {
       gsc: {
@@ -48,42 +47,32 @@ export async function POST() {
       orders
     };
 
-    // 3. Call AI (Gemini)
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-      generationConfig: { responseMimeType: "application/json" }
+    // 2. AI ANALYSIS PHASE (OpenAI)
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
     });
 
-    const prompt = `
-      BUSINESS CONTEXT
-      Brand: Healing Soil (healingsoil.in)
-      Description: Small-batch handcrafted natural soap, Goa, India. Founded 2023.
-      Products: Goat Milk, Shea Butter, Glycerine, Loofah, Travel soaps.
-      Market: India, D2C. Primary social channel: Instagram Reels.
+    const systemPrompt = `
+      You are the Growth Strategy Lead for Healing Soil (healingsoil.in), a small-batch handcrafted natural soap brand in Goa, India.
+      Your goal is to analyze Google Search Console data and order source data to provide 3-5 high-leverage marketing actions.
+      
+      SITE CONTEXT:
+      - Next.js App Router, TypeScript, Tailwind, MDX blog.
+      - Blog files: /content/blog/[slug].mdx (title, date, slug, excerpt, category, author).
+      - Discovery channel is Instagram Reels. Purchase often happens via WhatsApp.
+      
+      EXISTING BLOG POSTS:
+      1. Glycerin vs Goat Milk Soap, 2. Goat Milk Soap for Sensitive Skin, 3. Natural Soap for Eczema & Dry Skin, 4. Neem Tulsi Soap Benefits, 5. Shea Butter Soap Benefits, 6. What Makes Soap Chemical-Free, 7. Why Handmade Soap Lasts Longer, 8. Why We Make Soap in Small Batches.
+    `;
 
-      SITE STRUCTURE (Next.js App Router, TypeScript, Tailwind, MDX blog)
-      Live pages: /, /shop, /blog, /blog/[slug], /our-story, /contact, /order, /cart, /faq, /eco-picks, /reviews, /returns
-      SEO metadata: Next.js Metadata API in each page's layout/page.tsx
-      Blog files: /content/blog/[slug].mdx with YAML frontmatter (title, date, slug, excerpt, category, author)
-
-      EXISTING BLOG POSTS (do not suggest duplicates):
-      1. Glycerin vs Goat Milk Soap
-      2. Goat Milk Soap for Sensitive Skin
-      3. Natural Soap for Eczema & Dry Skin
-      4. Neem Tulsi Soap Benefits
-      5. Shea Butter Soap Benefits
-      6. What Makes Soap Chemical-Free
-      7. Why Handmade Soap Lasts Longer
-      8. Why We Make Soap in Small Batches
-
-      DATA INPUTS
+    const userPrompt = `
+      DATA INPUTS:
       Search Console Queries (Last 28 days): ${JSON.stringify(rawInput.gsc.queries)}
       Order Sources (Last 60 days): ${JSON.stringify(rawInput.orders)}
 
-      TASK
-      Analyze the data and identify the 3-5 highest-leverage growth actions. 
-      Weight recommendations toward channels that are already converting (from Order Sources).
+      TASK:
+      Identify 3-5 highest-leverage actions. 
+      Weight recommendations toward channels that are already converting (Instagram/WhatsApp).
 
       Return JSON in this EXACT format:
       {
@@ -94,17 +83,25 @@ export async function POST() {
             "type": "seo|blog|reel|whatsapp",
             "title": "Action title",
             "signal": "What specific data point triggered this?",
-            "rationale": "Detailed explanation of WHY this is a priority and what it will achieve.",
-            "prompt": "The full, self-contained prompt for the user to paste into an LLM to execute this. No placeholders. Bake in all healingsoil.in context."
+            "rationale": "Detailed explanation of WHY this is a priority.",
+            "prompt": "The full, self-contained prompt for the user to paste into ChatGPT/Claude to execute this. Bake in all healingsoil.in context."
           }
         ]
       }
     `;
 
-    const result = await model.generateContent(prompt);
-    const response = JSON.parse(result.response.text());
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      response_format: { type: "json_object" }
+    });
 
-    // 4. Save to DB
+    const response = JSON.parse(completion.choices[0].message.content);
+
+    // 3. STORAGE PHASE
     const [savedInsight] = await sql`
       INSERT INTO growth_insights (
         data_from, data_to, analysis, observations, actions, raw_input
