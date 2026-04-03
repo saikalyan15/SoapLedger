@@ -7,7 +7,7 @@ import {
   Search, UserPlus, UserCheck, AlertCircle, Loader2, X, Clock, Printer, Package, MapPin
 } from 'lucide-react';
 import { createOrderAction, updateOrderAction } from '@/lib/actions/orders';
-import { ORDER_STATUSES } from '@/lib/constants';
+import { ORDER_STATUSES, ORDER_SOURCES } from '@/lib/constants';
 
 const OrderForm = ({ products, settings, initialData = null }) => {
   const router = useRouter();
@@ -83,6 +83,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   const [customization, setCustomization] = useState(Number(initialData?.order?.customization_amount) || 0);
   const [discount, setDiscount] = useState(0);
   const [notes, setNotes] = useState(initialData?.order?.notes || '');
+  const [source, setSource] = useState(initialData?.order?.source || '');
 
   // Initial discount calculation for edit mode
   useEffect(() => {
@@ -231,6 +232,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
       packaging_cost: parseFloat(packaging || 0),
       customization_amount: parseFloat(customization || 0),
       order_value: parseFloat(orderValue || 0),
+      source: source || null,
       notes,
       shipments: shipments // Pass shipments to action
     };
@@ -370,16 +372,30 @@ const OrderForm = ({ products, settings, initialData = null }) => {
           ))}
         </div>
 
-        {/* Notes */}
+        {/* Source & Notes */}
         <div style={cardStyle}>
-          <div style={sectionTitleStyle}>Notes</div>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Special instructions, packaging preferences, etc..."
-            rows={3}
-            style={{ ...inputBaseStyle, resize: 'vertical' }}
-          />
+          <div style={sectionTitleStyle}>Order Details</div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={labelStyle}>Order Source</label>
+            <select
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              style={inputBaseStyle}
+            >
+              <option value="">Select source...</option>
+              {ORDER_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Special instructions, packaging preferences, etc..."
+              rows={3}
+              style={{ ...inputBaseStyle, resize: 'vertical' }}
+            />
+          </div>
         </div>
 
         {/* Pricing Summary */}

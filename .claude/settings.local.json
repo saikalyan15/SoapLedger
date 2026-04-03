@@ -9,7 +9,10 @@
       "Bash(node -p \"const p=require\\(''./package.json''\\); JSON.stringify\\(p.dependencies\\)\")",
       "Bash(grep -n \"order_summary\\\\|CREATE VIEW\\\\|total_soaps\\\\|soap_count\\\\|quantity\" /e/Projects/SoapLedger/db-schema/*.sql)",
       "WebSearch",
-      "WebFetch(domain:www.modernsoapmaking.com)"
+      "WebFetch(domain:www.modernsoapmaking.com)",
+      "Bash(wc -l /e/Projects/SoapLedger/app/**/*.jsx /e/Projects/SoapLedger/lib/**/*.js)",
+      "Bash(xargs ls:*)",
+      "Bash(xargs wc:*)"
     ]
   }
 }

@@ -110,11 +110,11 @@ export async function POST(request) {
     // 4. Create Order
     const shipCharge = parseFloat(shipping) || 0;
     const finalRevenue = totalValue + shipCharge;
-    const combinedNotes = [customNotes, source ? `Source: ${source}` : null].filter(Boolean).join(' | ') || '';
-    
+    const combinedNotes = customNotes || null;
+
     const orderRes = await client.query(
-      'INSERT INTO orders (customer_id, order_date, order_value, shipping_charge, status, notes) VALUES ($1, CURRENT_DATE, $2, $3, $4, $5) RETURNING id, status',
-      [customerId, finalRevenue, shipCharge, 'Order Placed', combinedNotes]
+      'INSERT INTO orders (customer_id, order_date, order_value, shipping_charge, status, source, notes) VALUES ($1, CURRENT_DATE, $2, $3, $4, $5, $6) RETURNING id, status',
+      [customerId, finalRevenue, shipCharge, 'Order Placed', source || null, combinedNotes]
     );
     const newOrder = orderRes.rows[0];
 
