@@ -8,11 +8,10 @@ export async function GET() {
       throw new Error('GOOGLE_PRIVATE_KEY is missing');
     }
 
-    // More robust key parsing for Vercel/Node environment variables
+    // Robust key parsing for Vercel/Node environment variables
     const privateKey = rawKey
-      .replace(/^"(.*)"$/, '$1') // Remove surrounding double quotes
-      .replace(/^'(.*)'$/, '$1') // Remove surrounding single quotes
-      .replace(/\\n/g, '\n');    // Replace literal \n with real newlines
+      .replace(/^"(.*)"$/, '$1') // Remove surrounding quotes
+      .replace(/\\n/g, '\n');    // Handle literal \n if they exist
 
     const auth = new google.auth.GoogleAuth({
       credentials: {
