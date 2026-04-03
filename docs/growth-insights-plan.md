@@ -1,202 +1,398 @@
 # Growth Insights Feature — Plan for healingsoil.in
 
-**Date:** 2026-04-03  
-**Goal:** Add a `/growth` page to SoapLedger that pulls data from Google Search Console and Google Analytics 4, feeds it to Claude AI, and generates actionable recommendations to increase traffic and conversions for healingsoil.in.
+**Date:** 2026-04-03
+
+**Core problem:** Data is visible in GSC but not actionable. The gap is not more charts — it is having someone look at the data and produce a concrete instruction you can act on immediately.
+
+**What this feature actually is:** An AI that reads your GSC data and your actual order data, identifies specific problems or opportunities, and generates ready-to-use Claude prompts — one per action — that you paste directly into Claude Code or Claude.ai to fix a page on healingsoil.in or create content.
 
 ---
 
-## Honest Assessment: Should You Build This?
+## What the output looks like
 
-Before committing, understand the trade-off.
+No charts. No raw data tables. Just a list of prompts, each scoped to one action.
 
-**The no-code alternative:**  
-Google Looker Studio (free) connects directly to GSC and GA4 with zero code. It gives you tables, charts, and date filters in ~2 hours. It cannot generate AI recommendations — that part is genuinely custom and only achievable by building.
+```
+GENERATED: April 3, 2026
 
-| Approach | Time to value | Maintenance | AI recommendations |
-|---|---|---|---|
-| Looker Studio | 2–3 hours | Near zero | No |
-| Build this feature | 3–5 days | Moderate | Yes |
+── READY TO USE ────────────────────────────────────────
 
-**Verdict:** If the AI layer (blog ideas, reel ideas, SEO fixes, ad copy grounded in your actual data) is the primary reason — build it. If you only want to see charts and numbers, use Looker Studio and skip the build entirely.
+[1] SEO FIX — Goat Milk Soap page is losing 850 searches/month
+    Signal: 890 impressions, position 14, 4.7% CTR
+    ┌─ CLAUDE PROMPT ────────────────────────────────────
+    │  You are improving the SEO of healingsoil.in, a
+    │  natural handcrafted soap brand in India (Goa).
+    │  The /products/goat-milk-soap page gets 890 monthly
+    │  impressions for "goat milk soap" but ranks position
+    │  14 with only 42 clicks. The site is Next.js.
+    │
+    │  Rewrite the page's <title>, meta description, and H1
+    │  to target "goat milk soap benefits india". Keep the
+    │  brand voice warm and natural. Current H1: [paste it].
+    └────────────────────────────────────────────────────
+    [Copy Prompt]
+
+[2] CONTENT — Blog post that could rank for a near-miss keyword
+    Signal: "benefits of goat milk for skin" — 1,200 impressions,
+    position 11, you have no blog post targeting this
+    ┌─ CLAUDE PROMPT ────────────────────────────────────
+    │  Write a 700-word blog post for healingsoil.in.
+    │  Target keyword: "benefits of goat milk for skin"
+    │  Brand: small-batch natural soap maker in Goa, India.
+    │  H1: "5 Benefits of Goat Milk for Skin (And Why We
+    │  Use It in Every Bar)"
+    │  Tone: warm, knowledgeable, not clinical.
+    │  End with a soft CTA linking to the product page.
+    └────────────────────────────────────────────────────
+    [Copy Prompt]
+
+[3] REEL SCRIPT — High-search topic with no social content
+    Signal: "handmade soap india" — 320 impressions, no reel
+    exists covering this search intent
+    ┌─ CLAUDE PROMPT ────────────────────────────────────
+    │  Write a 30-second Instagram Reel script for
+    │  Healing Soil (healingsoil.in), handcrafted soap from
+    │  Goa. Hook must land in the first 3 seconds.
+    │  Topic: why handmade soap is different from commercial.
+    │  Hook idea: "This took 6 weeks to make. Yours took
+    │  30 seconds on a machine."
+    │  Tone: calm confidence, not salesy. End on the product.
+    └────────────────────────────────────────────────────
+    [Copy Prompt]
+
+── FROM YOUR ORDERS (last 60 days) ─────────────────────
+Instagram: 7 orders   Website: 2 orders   WhatsApp: 4 orders
+→ Instagram converts best. Prompts above are weighted toward
+  Instagram content.
+```
 
 ---
 
-## Context
+## Why this works better than charts
 
-- **Website:** healingsoil.in — custom built, not Shopify/WordPress
-- **GSC + GA4:** Already set up and collecting data
-- **App:** SoapLedger (Next.js 16, React 19, PostgreSQL/Neon, Tailwind CSS, Recharts)
-- **Usage:** On-demand, single user (Sai)
-- **Output location:** New `/growth` page inside SoapLedger
+GSC already shows you position 14. That doesn't tell you what to do.
 
----
+This feature:
+1. Reads the GSC data
+2. Reads your actual SoapLedger orders by source (which channel converts)
+3. Identifies the highest-leverage action (near-miss keyword, thin page, gap in content)
+4. Writes the Claude prompt scoped to healingsoil.in's exact context so you don't have to
 
-## Authentication Decision: Service Account (Not OAuth2)
-
-**Use a Google Service Account. Do not use OAuth2.**
-
-OAuth2 requires a redirect URI, consent screen, and refresh token rotation — 1–2 extra days of work with zero benefit for a single-user app.
-
-A service account downloads as a JSON key file. You extract two env vars and you're done. It never expires unless manually revoked.
-
-**One non-obvious step:** GSC does not accept service accounts via its normal "add account" flow. You must go to GSC → Property Settings → Users and Permissions → Add the service account email as a "Full" user. This trips up most people the first time. It does work — just not obvious.
+You open the page, copy a prompt, paste it into ChatGPT or Gemini, and get something you can act on immediately — a complete MDX file to push, a rewritten metadata export to paste, a reel script to record, or a WhatsApp message to send. That's the full loop.
 
 ---
 
-## Phase 1 — Google Cloud Setup
+## Four types of prompts generated
 
-**What:** Create GCP project, enable APIs, create service account, grant permissions.
+All prompts are fully self-contained — all context baked in. Copy and paste directly into ChatGPT or Gemini. No setup, no follow-up needed.
 
-**Steps:**
-1. Create a Google Cloud project
-2. Enable: "Google Search Console API" and "Google Analytics Data API"
-3. Create a Service Account, download the JSON key
-4. Store `client_email` and `private_key` in env vars
-5. In GSC: grant service account email as "Full" user
-6. In GA4: grant service account email as "Viewer"
+### 1. SEO fix prompts
+For pages with weak titles, bad meta descriptions, or thin content.
+Paste into: **ChatGPT or Gemini**
 
-**New packages:** `googleapis`, `google-auth-library`
+Signals that trigger this:
+- High impressions + low CTR → title or meta description problem
+- Position 11–20 with decent impressions → on-page copy needs work
 
-**New env vars:**
+Output references the **actual file path** in healing-soil repo. Example:
+> *"You are improving SEO for healingsoil.in. The shop page (`/src/app/shop/page.tsx`) ranks position 14 for 'natural handmade soap india' (890 impressions, 4.7% CTR). The site uses Next.js App Router with the Metadata API. Rewrite the `metadata` export — title, description, and OpenGraph fields — to improve CTR. Brand tone: warm, natural, small-batch. Keep under 60 chars for title, 155 for description."*
+
+### 2. Blog post prompts
+For new posts targeting near-miss keywords. Output is a complete MDX file ready to drop into `/content/blog/[slug].mdx` and push to GitHub. Vercel deploys automatically.
+Paste into: **ChatGPT or Gemini**
+
+Signals that trigger this:
+- Keywords with impressions but no existing post targeting them
+- Position 8–15 where one focused post could push to page 1
+
+Output format the prompt asks for:
+```
+---
+title: "..."
+date: "YYYY-MM-DD"
+slug: "..."
+excerpt: "..."
+category: "..."
+author: "Healing Soil"
+---
+
+[full post body in MDX]
+```
+
+The AI is told the 8 existing post titles upfront so it never suggests duplicate content:
+1. Glycerin vs Goat Milk Soap
+2. Goat Milk Soap for Sensitive Skin
+3. Natural Soap for Eczema & Dry Skin
+4. Neem Tulsi Soap Benefits
+5. Shea Butter Soap Benefits
+6. What Makes Soap Chemical-Free
+7. Why Handmade Soap Lasts Longer
+8. Why We Make Soap in Small Batches
+
+### 3. Reel / social prompts
+For Instagram Reels scripts targeting search topics with existing demand.
+Paste into: **ChatGPT or Gemini**
+
+Signals that trigger this:
+- High-search queries with no Reel covering the topic
+- Instagram is consistently the top converting channel → more content justified
+
+### 4. WhatsApp broadcast prompts
+WhatsApp drives direct orders and is a first-class channel on healingsoil.in (it has a built-in WhatsApp deep-link checkout flow). A broadcast to existing customers is often the fastest path to a sale.
+Paste into: **ChatGPT or Gemini**
+
+Signals that trigger this:
+- WhatsApp is a top order source in the last 60 days
+- New batch ready / seasonal moment / low recent order volume
+
+Output: a short WhatsApp message (under 200 words) with a product focus, a reason to act now, and a soft CTA. No hard sell — the brand tone is warm and conversational.
+
+---
+
+## Data inputs
+
+### GSC (API — primary input)
+- Top 50 queries: clicks, impressions, CTR, position
+- Top 20 pages: same
+- Date range: last 28 days
+
+What Claude looks for:
+- Position 8-20 with decent impressions = near-miss, high priority
+- High impressions + low CTR = title/meta fix
+- Impressions but zero clicks = page doesn't exist yet
+
+**GSC errors — known gap:**
+The GSC API does not expose bulk error data (coverage issues, Core Web Vitals failures, mobile usability, 404s). The crawl errors API was removed by Google in 2019. The only programmatic option is inspecting URLs one by one — too slow to be practical.
+
+The tool handles this by including a fixed reminder in every output:
+```
+⚠ ALSO CHECK MANUALLY
+GSC Coverage report: https://search.google.com/search-console/index?resource_id=https%3A%2F%2Fhealingsoil.in%2F
+GSC Core Web Vitals: https://search.google.com/search-console/core-web-vitals?resource_id=https%3A%2F%2Fhealingsoil.in%2F
+Fixing errors here has high SEO impact and is not visible in this tool.
+```
+
+This link is hardcoded per site from the `growth_sites` config — no API call needed.
+
+### SoapLedger orders by source (DB — free, already built)
+```sql
+SELECT source, COUNT(*) as orders, SUM(order_value) as revenue
+FROM orders
+WHERE order_date >= NOW() - INTERVAL '60 days'
+  AND source IS NOT NULL
+GROUP BY source ORDER BY orders DESC
+```
+This tells Claude which channel to weight recommendations toward.
+
+### GA4 (optional — v2)
+Adds session duration per page. Useful for identifying pages where traffic arrives but people leave immediately. Add after MVP is validated.
+
+---
+
+## What the AI receives in the prompt
+
+```
+BUSINESS CONTEXT
+Brand: Healing Soil (healingsoil.in)
+Description: Small-batch handcrafted natural soap, Goa, India. Founded 2023.
+Products: Goat Milk, Shea Butter, Glycerine, Loofah, Travel soaps.
+Market: India, D2C. Primary social channel: Instagram Reels.
+Instagram posts are automatically cross-posted to Facebook. Facebook
+is NOT a separate content strategy — do not suggest Facebook-specific
+tactics. Create for Instagram; Facebook gets it as a passive benefit.
+Discovery channel is Instagram. Purchase channel is often WhatsApp
+(customer sees a reel, DMs on Instagram or WhatsApps directly).
+These are two steps in the same journey, not two separate channels.
+
+SITE STRUCTURE (Next.js App Router, TypeScript, Tailwind, MDX blog)
+Live pages: /, /shop, /blog, /blog/[slug], /our-story, /contact,
+            /order, /cart, /faq, /eco-picks, /reviews, /returns
+SEO metadata: Next.js Metadata API in each page's layout/page.tsx
+Blog files: /content/blog/[slug].mdx with YAML frontmatter
+            (fields: title, date, slug, excerpt, category, author)
+
+EXISTING BLOG POSTS (do not suggest duplicates):
+1. Glycerin vs Goat Milk Soap
+2. Goat Milk Soap for Sensitive Skin
+3. Natural Soap for Eczema & Dry Skin
+4. Neem Tulsi Soap Benefits
+5. Shea Butter Soap Benefits
+6. What Makes Soap Chemical-Free
+7. Why Handmade Soap Lasts Longer
+8. Why We Make Soap in Small Batches
+
+RECENT ORDER SOURCES (last 60 days):
+Instagram: 7 orders | WhatsApp: 4 orders | Website: 2 orders
+
+GOOGLE SEARCH CONSOLE — TOP QUERIES (last 28 days):
+[query] | [clicks] | [impressions] | [CTR] | [position]
+goat milk soap | 42 | 890 | 4.7% | 14.2
+natural soap india | 18 | 640 | 2.8% | 19.1
+...
+
+GSC TOP LANDING PAGES:
+[page] | [clicks] | [impressions] | [CTR] | [position]
+/shop | 38 | 720 | 5.3% | 12.1
+...
+
+TASK
+Identify the 3-5 highest-leverage actions based on the data above.
+For each action produce a fully self-contained prompt the user can
+paste directly into ChatGPT or Gemini to execute it. No placeholders
+— bake all context into the prompt itself.
+
+Prompt types allowed:
+- seo: rewrite metadata for a specific page. Reference the actual
+  file path (e.g. /src/app/shop/page.tsx) and the Metadata API pattern.
+- blog: output a complete MDX file with frontmatter ready to save
+  as /content/blog/[slug].mdx. Must not duplicate existing posts above.
+- reel: Instagram Reel script with hook (first 3s), body, close.
+- whatsapp: short broadcast message (<200 words) for existing customers.
+
+Return JSON:
+{
+  "actions": [
+    {
+      "type": "seo|blog|reel|whatsapp",
+      "signal": "one sentence: what data triggered this",
+      "title": "short label shown on the card",
+      "prompt": "the full ready-to-paste prompt"
+    }
+  ]
+}
+```
+
+---
+
+## Authentication: Service Account (not OAuth2)
+
+Use a Google Service Account. OAuth2 requires redirect URIs, consent screens, and refresh token rotation — unnecessary for a single-user app.
+
+Service account = one JSON key file, two env vars, never expires.
+
+**Non-obvious step:** GSC doesn't surface service accounts in its UI. You must manually add the service account email:
+GSC → Property Settings → Users and Permissions → Add user → paste email → Full
+
+**Critical gotcha:** `.env` stores `GOOGLE_PRIVATE_KEY` with literal `\n`. In code:
+```js
+process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
+```
+Missing this causes a silent `invalid_grant` error.
+
+---
+
+## Phases
+
+### Phase 1 — GCP Setup (45 min, difficulty 2/5)
+1. Create Google Cloud project
+2. Enable: "Google Search Console API"
+3. Create Service Account, download JSON key
+4. Extract `client_email` + `private_key` → env vars
+5. In GSC: add service account email as "Full" user
+
+New env vars:
 ```
 GOOGLE_SERVICE_ACCOUNT_EMAIL=...
 GOOGLE_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n..."
 GSC_SITE_URL=https://healingsoil.in/
-GA4_PROPERTY_ID=123456789
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-**Critical gotcha:** `GOOGLE_PRIVATE_KEY` stored in `.env` has literal `\n` characters. When using it in code you must do:
+New packages: `googleapis`, `google-auth-library`, `@anthropic-ai/sdk`
+
+### Phase 2 — GSC API Route (2 hrs, difficulty 2/5)
+`app/api/growth/gsc/route.ts`
+
+Fetches top 50 queries and top 20 pages. End date = today minus 3 days (GSC lag). `siteUrl` must exactly match GSC registration including trailing slash.
+
+### Phase 3 — Orders by Source Route (15 min, difficulty 1/5)
+`app/api/growth/orders/route.ts`
+
+Single SQL query against existing DB. Returns source breakdown for last 60 days. No new dependencies.
+
+### Phase 3b — Insights Storage (30 min, difficulty 1/5)
+
+Store generated insights in Neon so the page loads instantly on every visit. Only call the AI when you explicitly trigger a regeneration. Purge at will.
+
+**Migration** — add to `db-schema/migration_v9.sql`:
+```sql
+CREATE TABLE growth_insights (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  data_from    DATE NOT NULL,   -- GSC start date used
+  data_to      DATE NOT NULL,   -- GSC end date used
+  actions      JSONB NOT NULL,  -- array of action cards from AI
+  raw_input    JSONB            -- GSC + orders data fed in (for debugging)
+);
+```
+
+One row = one generation run. The page always reads the latest row. Old rows are kept until you delete them — useful for comparing what changed between runs.
+
+**Two API routes replace the single analyze route:**
+
+`GET /api/growth/insights` — reads latest row from `growth_insights`. Returns the stored actions instantly, no AI call. If table is empty, returns `{ actions: null }` so the page shows the "Run Analysis" button.
+
+`POST /api/growth/insights` — triggers a fresh generation: fetch GSC + orders → call AI → insert new row → return new actions. This is the expensive call. Only happens when you click "Regenerate".
+
+`DELETE /api/growth/insights` — deletes all rows (purge). Or scope to a specific `id` to delete one run.
+
+**Page behaviour:**
+```
+On load    → GET /api/growth/insights
+             → has data: show stored cards instantly
+                         header shows "Generated: 3 Apr 2026, 2:14 PM"
+                         + "Regenerate" button
+             → empty:    show "No analysis yet" + "Run Analysis" button
+
+Click "Run Analysis" / "Regenerate"
+           → POST /api/growth/insights (may take 10-15 seconds)
+           → replace displayed cards + update the generated timestamp
+```
+
+The `generated_at` timestamp is stored in the DB row and displayed prominently so you always know how fresh the data is. The GSC date range used (`data_from` / `data_to`) is also stored, so you can see exactly what window the analysis covers — e.g. "Based on data: 6 Mar – 31 Mar 2026".
+
+No wasted tokens on page refresh. The AI is only invoked when you explicitly ask for it.
+
+### Phase 4 — AI Prompt Generator (3 hrs, difficulty 3/5)
+`app/api/growth/analyze/route.ts`
+
+Receives GSC + orders data, calls the configured AI model, returns array of action objects each containing a ready-to-use prompt string.
+
+**Model choice:** Do not use Claude API for this. The reason is not cost per token — it is rate limits. Claude has hourly and weekly usage windows, and since Claude Code is already being used heavily for development on this project, adding Claude API calls for the growth feature compounds the problem and causes disruptions at the worst times.
+
+Use Gemini or OpenAI instead. They have independent rate limits with no overlap.
+
+| Model | Cost per run | Rate limits | Recommendation |
+|---|---|---|---|
+| Gemini 1.5 Flash | ~$0 (free tier) | Generous free quota | **Default — start here** |
+| Gemini 1.5 Pro | ~$0.004 | Paid, high limits | Upgrade if Flash output is too shallow |
+| GPT-4o-mini | ~$0.002 | High limits | Good alternative |
+| GPT-4o | ~$0.03 | High limits | If you want best quality |
+
+Add to env:
+```
+AI_PROVIDER=gemini          # gemini | openai (not anthropic)
+GEMINI_API_KEY=...
+# OPENAI_API_KEY=...        # alternative
+```
+
+The route checks `AI_PROVIDER` and calls the appropriate SDK. Switching later = change one env var.
+
+Difficulty is in prompt iteration — getting the model to write specific, usable prompts rather than generic advice. Plan for 1-2 rounds of refinement regardless of model.
+
+### Phase 5 — /growth Page (4 hrs, difficulty 3/5)
+`app/growth/page.jsx` + `app/growth/GrowthClient.jsx`
+
+UI:
+- Single "Run Analysis" button
+- List of action cards, each showing: type badge (CODE / CONTENT / REEL), signal summary, full prompt in a code block with a Copy button
+- No charts
+- Small collapsible section at the bottom showing the raw GSC numbers used
+
+Sidebar: add to `components/Sidebar.jsx`:
 ```js
-process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
+{ label: 'Growth', href: '/growth', icon: TrendingUp }
 ```
-Forgetting this causes a cryptic "invalid_grant" error.
-
-**Difficulty: 2/5**  
-**Skippable:** No — everything depends on this.  
-**Time:** ~45 minutes
-
----
-
-## Phase 2 — GSC API Route
-
-**What:** `app/api/growth/gsc/route.ts`
-
-**Data to fetch** (last 28 days):
-- Top 25 search queries: clicks, impressions, CTR, position
-- Top 10 pages: clicks, impressions, CTR, position
-
-**Critical gotcha:** The `siteUrl` parameter must exactly match how the property is registered in GSC — including the trailing slash. If GSC shows `https://healingsoil.in/` use that exact string. If it's a domain property (`sc-domain:healingsoil.in`), the API call format differs.
-
-**Note:** GSC has a 2–3 day data lag. Always set end date to `today - 3 days` to avoid incomplete data.
-
-**Difficulty: 2/5**  
-**Skippable:** Deferrable to v2, but GSC queries are the most valuable input for the AI prompt.  
-**Time:** ~2 hours
-
----
-
-## Phase 3 — GA4 Data API Route
-
-**What:** `app/api/growth/ga4/route.ts`
-
-**Data to fetch** (last 28 days):
-- Sessions by traffic channel (Organic, Direct, Social, etc.)
-- Bounce rate, average session duration per channel
-- Top 10 pages by views
-
-**Critical gotchas:**
-- GA4's API returns dimensions and metrics as parallel arrays — you must zip them together manually; the SDK doesn't do this for you
-- GA4 changed bounce rate in 2023: it now means "sessions that were NOT engaged." An 80% GA4 bounce rate is alarming; the same number in old Universal Analytics was normal
-- `averageSessionDuration` is in seconds — divide by 60 before displaying
-
-**Difficulty: 3/5**  
-**Skippable:** Yes — defer to v2. GSC + Claude gives 80% of the value. Add GA4 once the pipeline is validated.  
-**Time:** ~3 hours
-
----
-
-## Phase 4 — Claude AI Integration
-
-**What:** `app/api/growth/analyze/route.ts`
-
-**New package:** `@anthropic-ai/sdk`
-
-**Recommended model:** `claude-opus-4-6` for depth of analysis. For an on-demand feature used a few times a week, the quality difference over Sonnet is worth the cost (~$0.02–0.05 per analysis run — negligible).
-
-**Prompt structure:**
-The prompt should include business context (product types, market, platforms) + the GSC/GA4 data, and request a **JSON response** with these sections:
-- `summary` — 2–3 sentence diagnosis of what the data is saying
-- `seoFixes` — priority-tagged actions with reasoning
-- `blogIdeas` — titles with target keyword + rationale from the data
-- `reelIdeas` — concept + hook (first 3 seconds) + rationale
-- `adCopy` — by platform (Google, Instagram, Meta)
-- `quickWins` — things to do this week
-
-Forcing a JSON response with `rationale` fields makes Claude ground recommendations in the actual data rather than giving generic advice.
-
-**UX recommendation:** Use streaming so the analysis appears word-by-word rather than making the user wait 10–15 seconds for a blank screen to suddenly fill. If streaming is deferred, add a clear progress message ("Analyzing your data with Claude...").
-
-**Critical:** Never put `ANTHROPIC_API_KEY` in a client component. All Claude calls must go through the server-side API route.
-
-**Difficulty: 3/5**  
-**Skippable:** No — this is the entire point of building instead of using Looker Studio.  
-**Time:** ~3 hours (including prompt iteration)
-
----
-
-## Phase 5 — `/growth` Page
-
-**What:** `app/growth/page.jsx` + `app/growth/GrowthClient.jsx`
-
-**Page layout:**
-```
-Header: "Growth Insights" — healingsoil.in — last 28 days
-
-[Run Analysis] button
-
-Section 1: Raw Stats (appears after fetch)
-├── KPI row: Clicks | Impressions | Avg Position | Avg CTR
-├── KPI row: Sessions | New Users | Top Channel
-├── Bar chart: Top 10 search queries by clicks
-└── Pie/bar chart: Traffic by channel
-
-Section 2: AI Strategy (streams in after stats)
-├── Summary — paragraph card
-├── Quick Wins — bulleted list, gold accent border
-├── SEO Fixes — priority-badged list (high / medium / low)
-├── Blog Ideas — cards with title + target keyword
-├── Reel Ideas — cards with concept + hook line
-└── Ad Copy — tabbed by platform
-```
-
-**State flow:**
-```
-idle → loading_data → data_loaded → loading_ai → complete | error
-```
-
-GSC and GA4 fetches run in parallel (`Promise.all`), then the combined data is sent to the Claude route.
-
-**Sidebar update:** Add one entry to `navItems` in `components/Sidebar.jsx`:
-```js
-{ label: 'Growth Insights', href: '/growth', icon: TrendingUp }
-```
-
-**Difficulty: 3/5**  
-**Skippable:** No — it's the page itself. Streaming can be deferred.  
-**Time:** ~4 hours
-
----
-
-## Minimum Viable Version (3 days, not 5)
-
-Skip GA4 entirely in v1. Build:
-- Phase 1 (GCP setup)
-- Phase 2 (GSC only)
-- Phase 4 (Claude AI)
-- Phase 5 (page with GSC data + AI output)
-
-This delivers the AI recommendation layer with real search query data. GA4 behavioral data is additive — add it in v2 once you've validated the output is actually useful.
 
 ---
 
@@ -204,53 +400,41 @@ This delivers the AI recommendation layer with real search query data. GA4 behav
 
 | Phase | What | Difficulty | Skippable | Time |
 |---|---|---|---|---|
-| 1 | GCP setup + service account | 2/5 | No | 45 min |
-| 2 | GSC API route | 2/5 | Deferrable | 2 hrs |
-| 3 | GA4 API route | 3/5 | Yes (defer to v2) | 3 hrs |
-| 4 | Claude AI integration | 3/5 | No | 3 hrs |
-| 5 | /growth page + UI | 3/5 | No | 4 hrs |
+| 1 | GCP + service account | 2/5 | No | 45 min |
+| 2 | GSC API route | 2/5 | No | 2 hrs |
+| 3 | Orders by source | 1/5 | No (high value, free) | 15 min |
+| 3b | Insights storage table + GET/POST/DELETE routes | 1/5 | No | 30 min |
+| 4 | AI prompt generator | 3/5 | No — it's the product | 3 hrs |
+| 5 | /growth page + copy button | 2/5 | No | 4 hrs |
 
-**Full build (all 5 phases): 3–5 focused days**  
-**MVP (phases 1, 2, 4, 5): ~2 days**
+**Total MVP: ~2 days**
+
+GA4 is not in the MVP. Add it in v2 if you want page-level behaviour data.
 
 ---
 
-## Critical Files to Modify
+## New files
+
+- `app/api/growth/gsc/route.ts`
+- `app/api/growth/orders/route.ts`
+- `app/api/growth/insights/route.ts` — GET (load stored), POST (generate + save), DELETE (purge)
+- `app/growth/page.jsx`
+- `app/growth/GrowthClient.jsx`
+- `db-schema/migration_v9.sql` — `growth_insights` table
+
+## Files to modify
 
 | File | Change |
 |---|---|
-| `components/Sidebar.jsx` | Add Growth Insights nav item |
-| `app/dashboard/DashboardClient.jsx` | Reference for KPI card + chart patterns to reuse |
-| `.env.local` | Add 5 new environment variables |
-| `app/globals.css` | Reference for design tokens (colors, fonts) |
-
-**New files to create:**
-- `app/api/growth/gsc/route.ts`
-- `app/api/growth/ga4/route.ts`
-- `app/api/growth/analyze/route.ts`
-- `app/growth/page.jsx`
-- `app/growth/GrowthClient.jsx`
+| `components/Sidebar.jsx` | Add Growth nav item |
+| `.env.local` | Add 4 new env vars |
 
 ---
 
-## Alternative Features Worth Considering
+## Verification
 
-If the goal is increasing traffic and conversions, here are adjacent features ranked by impact-to-effort:
-
-1. **Webhook from healingsoil.in → SoapLedger** — The app already has `/api/orders/incoming`. If the website fires this webhook on order placement, SoapLedger gets real-time conversion data. This closes the loop between traffic (GSC/GA4) and actual orders. **Difficulty: 2/5. High value.**
-
-2. **Content calendar** — A simple table inside SoapLedger where you log planned blogs, reels, and ads with their target keywords and publish dates. Could be seeded from the AI recommendations. **Difficulty: 2/5. Low maintenance.**
-
-3. **Order source tagging** — Add a "source" field to orders (Instagram DM, website, WhatsApp, referral). Over time this tells you which channel actually converts, not just which drives traffic. **Difficulty: 1/5. Very high signal.**
-
-4. **Monthly growth report email** — Auto-generate a summary email (GSC + GA4 + AI) on the 1st of each month via a cron job. Sends to your inbox without you having to open the app. **Difficulty: 3/5. Good for accountability.**
-
----
-
-## Verification Plan
-
-1. After Phase 1: Confirm service account can authenticate by calling the GSC API from a local test script and seeing real data returned
-2. After Phase 2: Hit `/api/growth/gsc` in browser and confirm JSON response with real healingsoil.in query data
-3. After Phase 3: Hit `/api/growth/ga4` in browser and confirm session + page data
-4. After Phase 4: POST sample GSC/GA4 data to `/api/growth/analyze` and verify Claude returns structured JSON with specific (not generic) recommendations
-5. After Phase 5: Click "Run Analysis" on the `/growth` page and confirm the full flow end-to-end: stats appear, then AI analysis streams in within 15 seconds
+1. GCP done: run a local script that calls GSC API and returns real healingsoil.in query data
+2. `/api/growth/gsc`: hit in browser, see real queries with positions
+3. `/api/growth/orders`: returns source breakdown matching what you know from SoapLedger
+4. `/api/growth/analyze`: POST sample data, verify each action has a usable `prompt` field — specific to healingsoil.in, not generic
+5. Full page: click Run Analysis, see prompt cards appear. Copy the blog prompt and paste into ChatGPT/Gemini — verify it outputs a complete MDX file with correct frontmatter. Copy the SEO prompt — verify it references the actual file path and Metadata API pattern, not generic advice.

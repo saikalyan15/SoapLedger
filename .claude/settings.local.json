@@ -12,7 +12,14 @@
       "WebFetch(domain:www.modernsoapmaking.com)",
       "Bash(wc -l /e/Projects/SoapLedger/app/**/*.jsx /e/Projects/SoapLedger/lib/**/*.js)",
       "Bash(xargs ls:*)",
-      "Bash(xargs wc:*)"
+      "Bash(xargs wc:*)",
+      "Bash(gh repo:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:onsitepetgrooming.com)",
+      "WebFetch(domain:saikalyanakunuri.com)",
+      "WebFetch(domain:deepanjalinaik.com)"
     ]
   }
 }
