@@ -73,13 +73,13 @@ const LabelsClient = ({ labels, orderInfo }) => {
         .section-header { color: ${COLORS.brand}; margin: 20px 0 10px 0; display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; }
         
         .product-label {
-          width: 60mm; height: 40mm; background: white; border: 1px dashed #CCC;
+          width: 60mm; height: 40mm; background: white;
           padding: 2.5mm 3.5mm; display: flex; flex-direction: column; position: relative;
           cursor: pointer; transition: opacity 0.2s; box-sizing: border-box; overflow: hidden;
         }
-        
+
         .address-label {
-          background: white; border: 1px solid #000; padding: 8mm; 
+          background: white; padding: 8mm;
           display: flex; flex-direction: column; cursor: pointer; position: relative; box-sizing: border-box;
         }
 
@@ -88,14 +88,14 @@ const LabelsClient = ({ labels, orderInfo }) => {
 
         @media print {
           .no-print { display: none !important; }
-          .labels-page { background: white !important; padding: 0 !important; }
+          .labels-page { background: white !important; padding: 0 !important; min-height: 0 !important; }
           .deselected { display: none !important; }
           
           .product-grid { display: grid; grid-template-columns: repeat(3, 60mm); gap: 4mm; margin-bottom: 6mm; }
-          .product-label { width: 60mm !important; height: 40mm !important; border: 0.1mm solid #000 !important; page-break-inside: avoid !important; padding: 2.5mm 3.5mm !important; box-sizing: border-box !important; overflow: hidden !important; }
-          
+          .product-label { width: 60mm !important; height: 40mm !important; page-break-inside: avoid !important; padding: 2.5mm 3.5mm !important; box-sizing: border-box !important; overflow: hidden !important; }
+
           .shipping-section { display: flex; flex-wrap: wrap; gap: 5mm; border-top: 0.2mm solid #000; paddingTop: 6mm; page-break-inside: avoid; }
-          .address-label { border: 0.1mm solid #000 !important; box-sizing: border-box !important; padding: 8mm !important; }
+          .address-label { box-sizing: border-box !important; padding: 8mm !important; }
           .to-label { width: 115mm !important; height: 75mm !important; }
           .from-label { width: 75mm !important; height: 50mm !important; }
           

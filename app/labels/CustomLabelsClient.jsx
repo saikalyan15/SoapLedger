@@ -89,19 +89,18 @@ export default function CustomLabelsClient({ products }) {
         .labels-page { background: #F0EDE8; padding: 20px; min-height: 100vh; font-family: ${FONTS.sans}; }
 
         .product-label {
-          width: 60mm; height: 40mm; background: white; border: 1px dashed #CCC;
+          width: 60mm; height: 40mm; background: white;
           padding: 2.5mm 3.5mm; display: flex; flex-direction: column; position: relative;
           box-sizing: border-box; overflow: hidden;
         }
 
         @media print {
           .no-print { display: none !important; }
-          .labels-page { background: white !important; padding: 0 !important; }
+          .labels-page { background: white !important; padding: 0 !important; min-height: 0 !important; }
 
           .product-grid { display: grid; grid-template-columns: repeat(3, 60mm); gap: 4mm; }
           .product-label {
             width: 60mm !important; height: 40mm !important;
-            border: 0.1mm solid #000 !important;
             page-break-inside: avoid !important;
             padding: 2.5mm 3.5mm !important;
             box-sizing: border-box !important;
