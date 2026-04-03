@@ -9,9 +9,17 @@ export async function GET() {
     }
 
     // Robust key parsing for Vercel/Node environment variables
-    const privateKey = rawKey
+    let privateKey = rawKey
       .replace(/^"(.*)"$/, '$1') // Remove surrounding quotes
-      .replace(/\\n/g, '\n');    // Handle literal \n if they exist
+      .replace(/\\n/g, '\n');    // Handle literal \n
+
+    // Fallback: If it still looks like a single line without newlines, it will fail.
+    // Ensure the headers have real newlines.
+    if (!privateKey.includes('\n') && privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+      privateKey = privateKey
+        .replace('-----BEGIN PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----\n')
+        .replace('-----END PRIVATE KEY-----', '\n-----END PRIVATE KEY-----');
+    }
 
     const auth = new google.auth.GoogleAuth({
       credentials: {
