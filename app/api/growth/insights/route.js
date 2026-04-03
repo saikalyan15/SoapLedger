@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   try {
     const [latestInsight] = await sql`
-      SELECT id, generated_at, data_from, data_to, analysis, observations, actions, raw_input
+      SELECT id, generated_at, data_from, data_to, analysis, observations, actions, provider, gsc_data_id
       FROM growth_insights
       ORDER BY generated_at DESC
       LIMIT 1

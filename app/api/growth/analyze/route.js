@@ -1,119 +1,127 @@
-import { google } from 'googleapis';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
-import sql from '@/lib/db';
-import { getOrdersBySource } from '@/lib/queries/orders';
 import { NextResponse } from 'next/server';
+import { getLatestGscData, insertInsight } from '@/lib/queries/growth';
 
-export async function POST() {
+const SYSTEM_PROMPT = `You are the SEO and Growth Strategist for Healing Soil (healingsoil.in), a small-batch handcrafted natural soap brand in Goa, India.
+
+Your ONLY goal is to increase organic search traffic to healingsoil.in. Analyze the Google Search Console data, order sources, and existing blog content provided to generate specific, data-driven recommendations.
+
+SITE CONTEXT:
+- Brand: Healing Soil — handcrafted natural soaps, small-batch, Goa, India
+- Tech stack: Next.js App Router, MDX blog at /blog/[slug]
+- Target customers: people searching for natural, chemical-free skincare
+
+FOCUS AREAS (in priority order):
+1. seo — Near-miss pages: ranking 5–20 with meaningful impressions. Rewrite title/meta to reach top 5.
+2. blog — Keyword gaps: queries with impressions but no ranking page, not already covered by existing blog posts. Generate a complete blog brief.
+3. thin_content — Low CTR pages: impressions exist but CTR below 3%, suggesting title/content mismatch.
+4. gsc_errors — Generate one self-contained ChatGPT/Gemini prompt the user can paste to audit and fix common GSC crawl errors, coverage issues, and 404s for healingsoil.in.
+
+DO NOT suggest Instagram Reels, WhatsApp broadcasts, or social media content. Traffic from organic search only.`;
+
+function buildUserPrompt(gscData) {
+  const { queries, pages, orders, blog_posts, data_from, data_to } = gscData;
+  return `GSC DATA (${data_from} to ${data_to}):
+
+Top Search Queries:
+${JSON.stringify(queries)}
+
+Top Pages by Clicks:
+${JSON.stringify(pages)}
+
+Order Sources (last 60 days):
+${JSON.stringify(orders)}
+
+Existing Blog Posts on healingsoil.in — DO NOT suggest these topics as new content:
+${JSON.stringify(blog_posts)}
+
+TASK:
+Identify 4–6 highest-leverage actions to increase organic traffic. Reference specific queries, pages, and metrics from the data above.
+
+Return ONLY valid JSON with no markdown, no code fences, no explanation outside the JSON:
+{
+  "analysis": "2–3 sentence strategic summary of the SEO opportunity based on the data.",
+  "observations": ["3–5 specific data signals you noticed — cite actual numbers"],
+  "actions": [
+    {
+      "type": "seo|blog|thin_content|gsc_errors",
+      "title": "Specific action title",
+      "signal": "The exact data point that triggered this (e.g. 'ranks #9 for natural soap goa with 180 impressions, 0 clicks')",
+      "rationale": "Why this is a priority and what traffic impact it could have.",
+      "prompt": "The complete, self-contained prompt for the user to paste into ChatGPT or Gemini. Include all healingsoil.in context needed so the AI can act without additional input."
+    }
+  ]
+}`;
+}
+
+async function callGemini(userPrompt) {
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    systemInstruction: SYSTEM_PROMPT,
+  });
+  const result = await model.generateContent(userPrompt);
+  return result.response.text();
+}
+
+async function callOpenAI(userPrompt) {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userPrompt },
+    ],
+    response_format: { type: 'json_object' },
+  });
+  return completion.choices[0].message.content;
+}
+
+export async function POST(request) {
   try {
-    // 1. DATA COLLECTION PHASE (GSC + DB)
-    const rawKey = process.env.GOOGLE_PRIVATE_KEY;
-    const privateKey = rawKey
-      .replace(/^"(.*)"$/, '$1')
-      .replace(/\\n/g, '\n');
+    const body = await request.json().catch(() => ({}));
+    const provider = body.provider === 'openai' ? 'openai' : 'gemini';
 
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key: privateKey,
-      },
-      scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
+    const gscData = await getLatestGscData();
+    if (!gscData) {
+      return NextResponse.json(
+        { error: 'No GSC data found. Fetch GSC data first.' },
+        { status: 400 }
+      );
+    }
+
+    const userPrompt = buildUserPrompt(gscData);
+
+    const rawText = provider === 'openai'
+      ? await callOpenAI(userPrompt)
+      : await callGemini(userPrompt);
+
+    // Strip markdown code fences that Gemini sometimes wraps around JSON
+    const cleaned = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/, '').trim();
+
+    let response;
+    try {
+      response = JSON.parse(cleaned);
+    } catch (parseError) {
+      console.error('AI JSON parse error:', parseError, '\nRaw output:', rawText);
+      return NextResponse.json(
+        { error: 'AI returned malformed JSON. Try again or switch provider.' },
+        { status: 422 }
+      );
+    }
+
+    const saved = await insertInsight({
+      dataFrom: gscData.data_from,
+      dateTo: gscData.data_to,
+      analysis: response.analysis,
+      observations: response.observations,
+      actions: response.actions,
+      provider,
+      gscDataId: gscData.id,
     });
 
-    const searchconsole = google.searchconsole({ version: 'v1', auth });
-    const today = new Date();
-    const endDate = new Date(today.setDate(today.getDate() - 3)).toISOString().split('T')[0];
-    const startDate = new Date(today.setDate(today.getDate() - 28)).toISOString().split('T')[0];
-    const siteUrl = process.env.GSC_SITE_URL;
-
-    // Fetch everything concurrently before AI starts
-    const [queryResponse, pageResponse, orders] = await Promise.all([
-      searchconsole.searchanalytics.query({
-        siteUrl,
-        requestBody: { startDate, endDate, dimensions: ['query'], rowLimit: 50 },
-      }),
-      searchconsole.searchanalytics.query({
-        siteUrl,
-        requestBody: { startDate, endDate, dimensions: ['page'], rowLimit: 20 },
-      }),
-      getOrdersBySource(60)
-    ]);
-
-    const rawInput = {
-      gsc: {
-        queries: queryResponse.data.rows || [],
-        pages: pageResponse.data.rows || []
-      },
-      orders
-    };
-
-    // 2. AI ANALYSIS PHASE (OpenAI)
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
-    const systemPrompt = `
-      You are the Growth Strategy Lead for Healing Soil (healingsoil.in), a small-batch handcrafted natural soap brand in Goa, India.
-      Your goal is to analyze Google Search Console data and order source data to provide 3-5 high-leverage marketing actions.
-      
-      SITE CONTEXT:
-      - Next.js App Router, TypeScript, Tailwind, MDX blog.
-      - Blog files: /content/blog/[slug].mdx (title, date, slug, excerpt, category, author).
-      - Discovery channel is Instagram Reels. Purchase often happens via WhatsApp.
-      
-      EXISTING BLOG POSTS:
-      1. Glycerin vs Goat Milk Soap, 2. Goat Milk Soap for Sensitive Skin, 3. Natural Soap for Eczema & Dry Skin, 4. Neem Tulsi Soap Benefits, 5. Shea Butter Soap Benefits, 6. What Makes Soap Chemical-Free, 7. Why Handmade Soap Lasts Longer, 8. Why We Make Soap in Small Batches.
-    `;
-
-    const userPrompt = `
-      DATA INPUTS:
-      Search Console Queries (Last 28 days): ${JSON.stringify(rawInput.gsc.queries)}
-      Order Sources (Last 60 days): ${JSON.stringify(rawInput.orders)}
-
-      TASK:
-      Identify 3-5 highest-leverage actions. 
-      Weight recommendations toward channels that are already converting (Instagram/WhatsApp).
-
-      Return JSON in this EXACT format:
-      {
-        "analysis": "2-3 sentence strategic summary of performance vs conversion reality.",
-        "observations": ["List 3-5 specific data signals noted"],
-        "actions": [
-          {
-            "type": "seo|blog|reel|whatsapp",
-            "title": "Action title",
-            "signal": "What specific data point triggered this?",
-            "rationale": "Detailed explanation of WHY this is a priority.",
-            "prompt": "The full, self-contained prompt for the user to paste into ChatGPT/Claude to execute this. Bake in all healingsoil.in context."
-          }
-        ]
-      }
-    `;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      response_format: { type: "json_object" }
-    });
-
-    const response = JSON.parse(completion.choices[0].message.content);
-
-    // 3. STORAGE PHASE
-    const [savedInsight] = await sql`
-      INSERT INTO growth_insights (
-        data_from, data_to, analysis, observations, actions, raw_input
-      ) VALUES (
-        ${startDate}, ${endDate}, ${response.analysis}, 
-        ${JSON.stringify(response.observations)}, 
-        ${JSON.stringify(response.actions)}, 
-        ${JSON.stringify(rawInput)}
-      ) RETURNING *
-    `;
-
-    return NextResponse.json(savedInsight);
+    return NextResponse.json(saved);
   } catch (error) {
     console.error('Growth Analysis Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
