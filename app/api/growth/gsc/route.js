@@ -3,10 +3,21 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
+    const rawKey = process.env.GOOGLE_PRIVATE_KEY;
+    if (!rawKey) {
+      throw new Error('GOOGLE_PRIVATE_KEY is missing');
+    }
+
+    // More robust key parsing for Vercel/Node environment variables
+    const privateKey = rawKey
+      .replace(/^"(.*)"$/, '$1') // Remove surrounding double quotes
+      .replace(/^'(.*)'$/, '$1') // Remove surrounding single quotes
+      .replace(/\\n/g, '\n');    // Replace literal \n with real newlines
+
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        private_key: privateKey,
       },
       scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
     });
