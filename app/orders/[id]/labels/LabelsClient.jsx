@@ -98,8 +98,8 @@ const LabelsClient = ({ labels, orderInfo }) => {
 
           .shipping-section { display: flex; flex-wrap: wrap; gap: 5mm; border-top: 0.2mm solid #000; paddingTop: 6mm; page-break-inside: avoid; }
           .address-label { border: 0.3mm dashed #000 !important; box-sizing: border-box !important; padding: 8mm !important; }
-          .to-label { width: 115mm !important; height: 90mm !important; }
-          .from-label { width: 75mm !important; height: 50mm !important; }
+          .to-label { width: 115mm !important; height: auto !important; }
+          .from-label { width: 75mm !important; height: auto !important; }
           
           * { color: #000000 !important; border-color: #000000 !important; }
           .address-label div { background: none !important; }
@@ -173,7 +173,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
           
           {/* TO LABEL */}
           <div className={`address-label to-label ${selectedIds.has(-1) ? '' : 'deselected'}`}
-               style={{ width: '115mm', height: '90mm', padding: '8mm', boxSizing: 'border-box' }}
+               style={{ width: '115mm', padding: '8mm', boxSizing: 'border-box' }}
                onClick={() => toggleLabel(-1)}>
             <div className="selection-overlay no-print">
               {selectedIds.has(-1) ? <CheckSquare size={20} fill={COLORS.brand} color="white" /> : <Square size={20} color={COLORS.muted} />}
@@ -196,7 +196,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
 
           {/* FROM LABEL */}
           <div className={`address-label from-label ${selectedIds.has(-2) ? '' : 'deselected'}`} 
-               style={{ width: '75mm', height: '50mm', padding: '5mm', boxSizing: 'border-box' }}
+               style={{ width: '75mm', padding: '5mm', boxSizing: 'border-box' }}
                onClick={() => toggleLabel(-2)}>
             <div className="selection-overlay no-print">
               {selectedIds.has(-2) ? <CheckSquare size={18} fill={COLORS.brand} color="white" /> : <Square size size={18} color={COLORS.muted} />}
