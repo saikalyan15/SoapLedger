@@ -69,7 +69,7 @@ export default function OutreachView({ candidates }) {
           <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: '#1B4332' }}>Reorder Outreach</h1>
         </div>
         <p style={{ margin: 0, color: '#6B7280', fontSize: '14px' }}>
-          Customers whose last order was 28–90 days ago and are likely due for a reorder.
+          Based on soaps ordered × 30 days per bar. Repeat customers also factor in their average reorder interval.
         </p>
       </div>
 
@@ -97,10 +97,17 @@ export default function OutreachView({ candidates }) {
                   </div>
                   <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '4px' }}>
                     Last ordered: <strong>{new Date(c.last_order_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
-                    {' '}· <span style={{ color: c.days_since_order > 60 ? '#EF4444' : '#D97706', fontWeight: 600 }}>{c.days_since_order} days ago</span>
+                    {' '}· {c.days_since_order} days ago
+                  </div>
+                  <div style={{ fontSize: '13px', marginTop: '3px' }}>
+                    <span style={{ color: '#6B7280' }}>Expected to finish in </span>
+                    <strong>{c.expected_days} days</strong>
+                    <span style={{ marginLeft: '8px', color: '#EF4444', fontWeight: 700 }}>
+                      {c.days_overdue} day{c.days_overdue !== 1 ? 's' : ''} overdue
+                    </span>
                   </div>
                   <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '3px' }}>
-                    Products: {c.products_ordered}
+                    {Math.round(c.bar_equiv_soaps)} bar-equivalent soap{c.bar_equiv_soaps !== 1 ? 's' : ''} · {c.products_ordered}
                   </div>
                 </div>
 
