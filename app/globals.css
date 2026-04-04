@@ -199,3 +199,7 @@
     padding: 16px !important;
   }
 }
+
+@media print {
+  .mobile-fab { display: none !important; }
+}
