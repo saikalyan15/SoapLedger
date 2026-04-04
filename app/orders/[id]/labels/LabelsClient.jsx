@@ -79,9 +79,9 @@ const LabelsClient = ({ labels, orderInfo }) => {
           background-image: url('/label-bg.png'); background-size: cover; background-position: center;
           -webkit-print-color-adjust: exact; print-color-adjust: exact;
         }
-        
+
         .address-label {
-          background: white; border: 1px solid #000; padding: 8mm; 
+          background: white; padding: 8mm;
           display: flex; flex-direction: column; cursor: pointer; position: relative; box-sizing: border-box;
         }
 
@@ -90,12 +90,12 @@ const LabelsClient = ({ labels, orderInfo }) => {
 
         @media print {
           .no-print { display: none !important; }
-          .labels-page { background: white !important; padding: 0 !important; }
+          .labels-page { background: white !important; padding: 0 !important; min-height: 0 !important; }
           .deselected { display: none !important; }
           
           .product-grid { display: grid; grid-template-columns: repeat(3, 60mm); gap: 4mm; margin-bottom: 6mm; }
           .product-label { width: 60mm !important; height: 40mm !important; border: 0.1mm solid #000 !important; page-break-inside: avoid !important; box-sizing: border-box !important; overflow: hidden !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          
+
           .shipping-section { display: flex; flex-wrap: wrap; gap: 5mm; border-top: 0.2mm solid #000; paddingTop: 6mm; page-break-inside: avoid; }
           .address-label { border: 0.1mm solid #000 !important; box-sizing: border-box !important; padding: 8mm !important; }
           .to-label { width: 115mm !important; height: 90mm !important; }

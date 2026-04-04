@@ -1,24 +1,44 @@
-import 'dotenv/config';
-import dotenv from 'dotenv';
-import { neon } from '@neondatabase/serverless';
+import { google } from 'googleapis';
+import fs from 'fs';
 
-dotenv.config({ path: '.env.local' });
+async function testGSC() {
+  console.log('--- GSC Diagnostic (Domain Property Test) ---');
+  
+  const envContent = fs.readFileSync('.env.local', 'utf8');
+  const keyMatch = envContent.match(/GOOGLE_PRIVATE_KEY="([\s\S]*?)"/);
+  const privateKey = keyMatch[1].replace(/\\n/g, '\n');
 
-const sql = neon(process.env.DATABASE_URL);
+  try {
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: "soapledger-growth-insights@healingsoil.iam.gserviceaccount.com",
+        private_key: privateKey,
+      },
+      scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
+    });
 
-async function diagnostic() {
-  console.log('--- Orders with ZERO items ---');
-  const ghostOrders = await sql.query('SELECT id, status, order_date, created_at FROM orders WHERE id NOT IN (SELECT order_id FROM order_items)');
-  console.log(JSON.stringify(ghostOrders, null, 2));
+    const searchconsole = google.searchconsole({ version: 'v1', auth });
 
-  console.log('\n--- Orders with "Order Placed" status ---');
-  const placedOrders = await sql.query("SELECT id, status, created_at FROM orders WHERE status = 'Order Placed'");
-  console.log(JSON.stringify(placedOrders, null, 2));
+    // TRYING THE DOMAIN PROPERTY PREFIX
+    const siteUrl = "sc-domain:healingsoil.in";
+    console.log(`Testing with: ${siteUrl}`);
 
-  process.exit();
+    const res = await searchconsole.searchanalytics.query({
+      siteUrl: siteUrl,
+      requestBody: {
+        startDate: "2026-03-21",
+        endDate: "2026-03-31",
+        dimensions: ['query'],
+        rowLimit: 5,
+      },
+    });
+
+    console.log('✅ SUCCESS! Domain property access verified.');
+    console.log('Data:', res.data.rows);
+
+  } catch (error) {
+    console.error('❌ Failed:', error.message);
+  }
 }
 
-diagnostic().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+testGSC();

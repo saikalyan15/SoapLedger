@@ -9,7 +9,20 @@
       "Bash(node -p \"const p=require\\(''./package.json''\\); JSON.stringify\\(p.dependencies\\)\")",
       "Bash(grep -n \"order_summary\\\\|CREATE VIEW\\\\|total_soaps\\\\|soap_count\\\\|quantity\" /e/Projects/SoapLedger/db-schema/*.sql)",
       "WebSearch",
-      "WebFetch(domain:www.modernsoapmaking.com)"
+      "WebFetch(domain:www.modernsoapmaking.com)",
+      "Bash(wc -l /e/Projects/SoapLedger/app/**/*.jsx /e/Projects/SoapLedger/lib/**/*.js)",
+      "Bash(xargs ls:*)",
+      "Bash(xargs wc:*)",
+      "Bash(gh repo:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:onsitepetgrooming.com)",
+      "WebFetch(domain:saikalyanakunuri.com)",
+      "WebFetch(domain:deepanjalinaik.com)",
+      "WebFetch(domain:healingsoil.in)",
+      "WebFetch(domain:www.healingsoil.in)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); const deps = {...p.dependencies, ...p.devDependencies}; console.log\\(JSON.stringify\\(Object.keys\\(deps\\).filter\\(k => k.includes\\('google'\\) || k.includes\\('gemini'\\) || k.includes\\('openai'\\)\\), null, 2\\)\\)\")"
     ]
   }
 }

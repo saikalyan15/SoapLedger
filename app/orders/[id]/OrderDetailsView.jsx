@@ -224,6 +224,13 @@ const OrderDetailsView = ({ order, items, shipments = [] }) => {
               </div>
             </div>
             <div style={{ color: '#4B5563' }}>{formatPhoneForDisplay(order.customer_phone)}</div>
+            {order.source && (
+              <div style={{ marginTop: '8px' }}>
+                <span style={{ background: '#D8F3DC', color: '#1B4332', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase' }}>
+                  via {order.source}
+                </span>
+              </div>
+            )}
           </div>
 
           <div style={sectionLabelStyle}>Shipping & Delivery</div>
