@@ -1,7 +1,5 @@
 import { validateApiKey, ALLOWED_ORIGINS } from '@/lib/auth';
 import { NextResponse } from 'next/server';
-import { Redis } from '@upstash/redis';
-import { Ratelimit } from '@upstash/ratelimit';
 import { Pool } from '@neondatabase/serverless';
 import { revalidatePath } from 'next/cache';
 import { normaliseToE164 } from '@/lib/utils/phone';
@@ -9,33 +7,12 @@ import { normaliseToE164 } from '@/lib/utils/phone';
 // Initialize Neon Pool for transactions
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-// Initialize Upstash Redis & Ratelimit
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
-
-const ratelimit = new Ratelimit({
-  redis: redis,
-  limiter: Ratelimit.slidingWindow(20, '1 h'),
-  analytics: true,
-});
-
 export async function POST(request) {
   const origin = request.headers.get('origin');
   
   if (!validateApiKey(request)) {
     return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
-  const { success } = await ratelimit.limit(ip);
-  if (!success) {
-    return new NextResponse(JSON.stringify({ error: 'Too Many Requests' }), {
-      status: 429,
       headers: { 'Content-Type': 'application/json' },
     });
   }
