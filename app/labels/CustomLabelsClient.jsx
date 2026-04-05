@@ -30,7 +30,7 @@ const WavyDivider = ({ color = COLORS.brand, opacity = 0.3 }) => (
   <svg
     viewBox="0 0 200 8"
     preserveAspectRatio="none"
-    style={{ width: '100%', height: '3px', display: 'block', margin: '0.5mm 0' }}
+    style={{ width: '100%', height: '3px', display: 'block', margin: '0.2mm 0' }}
   >
     <path
       d="M0,4 C12.5,0 12.5,8 25,4 C37.5,0 37.5,8 50,4 C62.5,0 62.5,8 75,4 C87.5,0 87.5,8 100,4 C112.5,0 112.5,8 125,4 C137.5,0 137.5,8 150,4 C162.5,0 162.5,8 175,4 C187.5,0 187.5,8 200,4"
@@ -55,30 +55,30 @@ function ProductLabel({ label }) {
       {/* White overlay for readability over background image */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: 'rgba(255,255,255,0.45)',
+        background: 'rgba(255,255,255,0.65)',
         zIndex: 0,
         WebkitPrintColorAdjust: 'exact',
         printColorAdjust: 'exact',
       }} />
 
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '2mm 3mm' }}>
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '1.5mm 2.5mm' }}>
         {/* Logo + brand name centered */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1mm' }}>
-          <img src="/HealingSoil-Formatted.png" style={{ width: '7mm', height: '7mm', borderRadius: '50%' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '0.5mm' }}>
+          <img src="/HealingSoil-Formatted.png" style={{ width: '5mm', height: '5mm', borderRadius: '50%' }} />
           <div style={{ fontSize: '5pt', fontWeight: 700, color: COLORS.brand, letterSpacing: '0.08em', marginTop: '0.3mm' }}>
             {businessConfig.brand.name}
           </div>
         </div>
 
         {/* Product name */}
-        <div style={{ textAlign: 'center', fontSize: '11pt', fontWeight: 800, color: COLORS.brand, lineHeight: 1.1, marginBottom: '1mm' }}>
+        <div style={{ textAlign: 'center', fontSize: '9pt', fontWeight: 800, color: COLORS.brand, lineHeight: 1.15, marginBottom: '0.5mm' }}>
           {label.product_name}
         </div>
 
         <WavyDivider opacity={0.3} />
 
-        {/* Ingredients */}
-        <div style={{ fontSize: '7pt', color: COLORS.text, lineHeight: 1.3, flex: 1, overflow: 'hidden', fontWeight: 500 }}>
+        {/* Ingredients — white background for guaranteed readability */}
+        <div style={{ fontSize: '7pt', color: COLORS.text, lineHeight: 1.2, flex: 1, overflow: 'hidden', fontWeight: 500, background: 'rgba(255,255,255,0.70)', borderRadius: '1mm', padding: '0.5mm 1mm' }}>
           <span style={{ fontWeight: 800 }}>Ingredients: </span>
           {getFullIngredients(label.base_type, label.ingredients)}
         </div>
