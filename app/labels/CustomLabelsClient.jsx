@@ -78,7 +78,7 @@ function ProductLabel({ label }) {
         <WavyDivider opacity={0.3} />
 
         {/* Ingredients — white background for guaranteed readability */}
-        <div style={{ fontSize: '7pt', color: COLORS.text, lineHeight: 1.2, flex: 1, overflow: 'hidden', fontWeight: 500, background: 'rgba(255,255,255,0.70)', borderRadius: '1mm', padding: '0.5mm 1mm' }}>
+        <div style={{ fontSize: '6pt', color: COLORS.text, lineHeight: 1.15, flex: 1, overflow: 'hidden', fontWeight: 500, background: 'rgba(255,255,255,0.70)', borderRadius: '1mm', padding: '0.5mm 1mm' }}>
           <span style={{ fontWeight: 800 }}>Ingredients: </span>
           {getFullIngredients(label.base_type, label.ingredients)}
         </div>
