@@ -1,7 +1,6 @@
 import { validateApiKey, ALLOWED_ORIGINS } from '@/lib/auth';
 import { NextResponse } from 'next/server';
 import { Pool } from '@neondatabase/serverless';
-import { revalidatePath } from 'next/cache';
 import { normaliseToE164 } from '@/lib/utils/phone';
 
 // Initialize Neon Pool for transactions
@@ -111,10 +110,6 @@ export async function POST(request) {
     }
 
     await client.query('COMMIT');
-
-    // Clear caches so the dashboard shows new data immediately
-    revalidatePath('/orders');
-    revalidatePath('/customers');
 
     return NextResponse.json({ order_id: newOrder.id, status: newOrder.status }, {
       headers: { ...(origin && { 'Access-Control-Allow-Origin': origin }) }
