@@ -241,17 +241,6 @@ export default function ProductView({ products }) {
                 />
               </div>
 
-              <div>
-                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
-                  Slug (URL)
-                </label>
-                <input
-                  name="slug"
-                  defaultValue={editingProduct?.slug}
-                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
-                  placeholder="lavender-bliss"
-                />
-              </div>
 
               <div>
                 <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
@@ -359,18 +348,6 @@ export default function ProductView({ products }) {
                 />
               </div>
 
-              <div>
-                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
-                  Display Order (lower is first)
-                </label>
-                <input
-                  name="display_order"
-                  type="number"
-                  defaultValue={editingProduct?.display_order || 0}
-                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
-                  placeholder="0"
-                />
-              </div>
 
               {/* Status Toggles */}
               <div className="flex flex-wrap gap-[20px] md:col-span-2 mt-[8px]">
