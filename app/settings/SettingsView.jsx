@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Save, Settings as SettingsIcon, CheckCircle2, Loader2, Download, Upload, AlertTriangle, ShieldCheck } from 'lucide-react';
-import { updateSettingAction } from '@/lib/actions/settings';
+import { Save, Settings as SettingsIcon, CheckCircle2, Loader2, Download, Upload, AlertTriangle, ShieldCheck, Building2 } from 'lucide-react';
+import { updateSettingAction, saveBusinessConfigAction } from '@/lib/actions/settings';
 
-export default function SettingsView({ settings }) {
+export default function SettingsView({ settings, businessConfig }) {
   const [savingKey, setSavingKey] = useState(null);
   const [successKey, setSuccessKey] = useState(null);
 
@@ -19,6 +19,31 @@ export default function SettingsView({ settings }) {
   const [importStatus, setImportStatus] = useState('idle'); // idle | confirming | loading | done | error
   const [importResult, setImportResult] = useState(null);
   const fileInputRef = useRef(null);
+
+  // ── Business profile state ─────────────────────────────────────────
+  const [bizConfig, setBizConfig] = useState(businessConfig);
+  const [bizSaving, setBizSaving] = useState(false);
+  const [bizSaved, setBizSaved] = useState(false);
+
+  const handleBizChange = (section, field, value) => {
+    setBizConfig(prev => ({
+      ...prev,
+      [section]: { ...prev[section], [field]: value },
+    }));
+  };
+
+  const handleBizSave = async () => {
+    setBizSaving(true);
+    try {
+      await saveBusinessConfigAction(bizConfig);
+      setBizSaved(true);
+      setTimeout(() => setBizSaved(false), 2000);
+    } catch {
+      alert('Failed to save business profile');
+    } finally {
+      setBizSaving(false);
+    }
+  };
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -241,6 +266,79 @@ export default function SettingsView({ settings }) {
           <br /><br />
           Updates to these values will apply immediately to all new entries but will not change existing historical data.
         </p>
+      </div>
+
+      {/* ── Business Profile ─────────────────────────────────────────── */}
+      <div style={{ marginTop: '48px' }}>
+        <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '20px', color: '#1B4332', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Building2 size={20} /> Business Profile
+        </h2>
+        <p style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '14px', color: '#6B7280', marginBottom: '24px' }}>
+          Used on print labels and outreach messages.
+        </p>
+
+        <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+          {/* Brand */}
+          <div>
+            <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9CA3AF', marginBottom: '12px' }}>Brand</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              {[
+                { field: 'name',    label: 'Brand Name' },
+                { field: 'website', label: 'Website' },
+                { field: 'license', label: 'Udyam Registration No.' },
+              ].map(({ field, label }) => (
+                <div key={field} style={field === 'license' ? { gridColumn: '1 / -1' } : {}}>
+                  <label style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px' }}>{label}</label>
+                  <input
+                    value={bizConfig.brand?.[field] || ''}
+                    onChange={e => handleBizChange('brand', field, e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #E5E7EB', borderRadius: '8px', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '14px', color: '#1A1A1A', outline: 'none', boxSizing: 'border-box', background: '#FAFAFA' }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid #F3F4F6' }} />
+
+          {/* Return Address */}
+          <div>
+            <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9CA3AF', marginBottom: '12px' }}>Return Address (From Label)</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              {[
+                { field: 'name',        label: 'Name',          full: false },
+                { field: 'phone',       label: 'Phone',         full: false },
+                { field: 'line1',       label: 'Address Line 1', full: true },
+                { field: 'line2',       label: 'Address Line 2', full: true },
+                { field: 'line3',       label: 'Address Line 3', full: true },
+                { field: 'cityStateZip', label: 'City, State, PIN', full: true },
+              ].map(({ field, label, full }) => (
+                <div key={field} style={full ? { gridColumn: '1 / -1' } : {}}>
+                  <label style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px' }}>{label}</label>
+                  <input
+                    value={bizConfig.returnAddress?.[field] || ''}
+                    onChange={e => handleBizChange('returnAddress', field, e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #E5E7EB', borderRadius: '8px', fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: '14px', color: '#1A1A1A', outline: 'none', boxSizing: 'border-box', background: '#FAFAFA' }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Save button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '4px' }}>
+            <button
+              onClick={handleBizSave}
+              disabled={bizSaving}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 24px', borderRadius: '8px', border: 'none', background: bizSaving ? '#E5E7EB' : '#1B4332', color: bizSaving ? '#9CA3AF' : '#FFFFFF', fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: '14px', cursor: bizSaving ? 'not-allowed' : 'pointer' }}
+            >
+              {bizSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              {bizSaving ? 'Saving...' : 'Save Business Profile'}
+            </button>
+            {bizSaved && <CheckCircle2 size={18} color="#10B981" />}
+          </div>
+        </div>
       </div>
 
       {/* ── Backup & Restore ─────────────────────────────────────────── */}
