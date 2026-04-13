@@ -6,6 +6,7 @@ import {
   updateProductAction,
   deleteProductAction,
   updateProductSequenceAction,
+  updateFeaturedProductsAction,
   revalidateProductsAction,
 } from '@/lib/actions/products';
 import {
@@ -15,15 +16,13 @@ import {
   Pencil,
   Plus,
   X,
-  Link as LinkIcon,
-  Image as ImageIcon,
-  Tag,
   Trash2,
   GripVertical,
   Save,
   ArrowUpDown,
   RefreshCcw,
   Check,
+  Star,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -33,9 +32,11 @@ export default function ProductView({ products }) {
   const [isArchivedOpen, setIsArchivedOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isSortMode, setIsSortMode] = useState(false);
+  const [isFeaturedMode, setIsFeaturedMode] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [sortList, setSortList] = useState([]);
+  const [featuredList, setFeaturedList] = useState([]);
   const [formData, setFormData] = useState({
     ingredients: '',
     slug: '',
@@ -81,14 +82,35 @@ export default function ProductView({ products }) {
       const activeOnes = products
         .filter((p) => p.is_active)
         .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-      setSortList(activeOnes.map(p => ({ 
-        id: p.id, 
-        name: p.name, 
-        display_order: p.display_order || 0, 
-        base_type: p.base_type 
+      setSortList(activeOnes.map(p => ({
+        id: p.id,
+        name: p.name,
+        display_order: p.display_order || 0,
+        base_type: p.base_type
       })));
     }
   }, [isSortMode, products]);
+
+  // Initialize featured list when entering featured mode
+  useEffect(() => {
+    if (isFeaturedMode) {
+      const activeOnes = products.filter((p) => p.is_active);
+      // Featured products first (sorted by featured_order), then rest alphabetically
+      const featured = activeOnes
+        .filter(p => p.is_featured)
+        .sort((a, b) => (a.featured_order ?? 999) - (b.featured_order ?? 999));
+      const rest = activeOnes
+        .filter(p => !p.is_featured)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      setFeaturedList([...featured, ...rest].map((p, i) => ({
+        id: p.id,
+        name: p.name,
+        base_type: p.base_type,
+        is_featured: !!p.is_featured,
+        featured_order: p.is_featured ? (p.featured_order ?? i + 1) : null,
+      })));
+    }
+  }, [isFeaturedMode, products]);
 
   const activeProducts = products.filter((p) => p.is_active);
   const archivedProducts = products.filter((p) => !p.is_active);
@@ -132,6 +154,41 @@ export default function ProductView({ products }) {
     setIsSortMode(false);
   };
 
+  const toggleFeatured = (id) => {
+    setFeaturedList(prev => {
+      const updated = prev.map(item => {
+        if (item.id !== id) return item;
+        const nowFeatured = !item.is_featured;
+        return { ...item, is_featured: nowFeatured, featured_order: nowFeatured ? 99 : null };
+      });
+      // Re-sort: featured first (by featured_order), then unfeatured alphabetically
+      const f = updated.filter(p => p.is_featured).sort((a, b) => (a.featured_order ?? 99) - (b.featured_order ?? 99));
+      const u = updated.filter(p => !p.is_featured).sort((a, b) => a.name.localeCompare(b.name));
+      return [...f, ...u];
+    });
+  };
+
+  const handleFeaturedOrderChange = (id, val) => {
+    setFeaturedList(prev => {
+      const updated = prev.map(item =>
+        item.id === id ? { ...item, featured_order: parseInt(val) || 1 } : item
+      );
+      const f = updated.filter(p => p.is_featured).sort((a, b) => (a.featured_order ?? 99) - (b.featured_order ?? 99));
+      const u = updated.filter(p => !p.is_featured).sort((a, b) => a.name.localeCompare(b.name));
+      return [...f, ...u];
+    });
+  };
+
+  const saveFeatured = async () => {
+    const updates = featuredList.map(item => ({
+      id: item.id,
+      is_featured: item.is_featured,
+      featured_order: item.is_featured ? (item.featured_order ?? null) : null,
+    }));
+    await updateFeaturedProductsAction(updates);
+    setIsFeaturedMode(false);
+  };
+
   return (
     <div className="page-content" style={{ padding: isMobile ? '16px' : '0' }}>
       <div className="pt-[8px] flex justify-between items-start">
@@ -153,13 +210,20 @@ export default function ProductView({ products }) {
             {isRefreshing ? 'Refreshing...' : isMobile ? 'Refresh' : 'Refresh Products'}
           </button>
           <button
-            onClick={() => setIsSortMode(!isSortMode)}
+            onClick={() => { setIsFeaturedMode(!isFeaturedMode); setIsSortMode(false); }}
+            className={`font-sans text-[14px] font-semibold px-[16px] py-[10px] md:py-[12px] rounded-[10px] cursor-pointer flex items-center gap-[8px] tracking-[0.01em] shadow-[0_2px_8px_rgba(0,0,0,0.05)] ${isFeaturedMode ? 'bg-[#4338CA] text-white border-none' : 'bg-white text-[#4B5563] border border-[#E5E7EB]'}`}
+          >
+            {isFeaturedMode ? <X size={16} /> : <Star size={16} />}
+            {isFeaturedMode ? 'Cancel' : isMobile ? 'Featured' : 'Featured'}
+          </button>
+          <button
+            onClick={() => { setIsSortMode(!isSortMode); setIsFeaturedMode(false); }}
             className={`font-sans text-[14px] font-semibold px-[16px] py-[10px] md:py-[12px] rounded-[10px] cursor-pointer flex items-center gap-[8px] tracking-[0.01em] shadow-[0_2px_8px_rgba(0,0,0,0.05)] ${isSortMode ? 'bg-[#111827] text-white border-none' : 'bg-white text-[#4B5563] border border-[#E5E7EB]'}`}
           >
             {isSortMode ? <X size={16} /> : <ArrowUpDown size={16} />}
             {isSortMode ? 'Cancel' : isMobile ? 'Sort' : 'Sort Mode'}
           </button>
-          {!isSortMode && (
+          {!isSortMode && !isFeaturedMode && (
             <button
               onClick={() => setIsFormOpen(!isFormOpen)}
               className="bg-[#1B4332] text-[#FFFFFF] font-sans text-[14px] font-semibold px-[16px] md:px-[24px] py-[10px] md:py-[12px] rounded-[10px] border-none cursor-pointer flex items-center gap-[8px] tracking-[0.01em] shadow-[0_2px_8px_rgba(27,67,50,0.25)] m-0"
@@ -173,7 +237,70 @@ export default function ProductView({ products }) {
 
       <div className="mt-[24px] md:mt-[32px] border-b-[2px] border-[#E5E7EB] mb-[24px] md:mb-[32px]"></div>
 
-      {isSortMode ? (
+      {isFeaturedMode ? (
+        <div className="bg-white border border-[#E5E7EB] rounded-[14px] p-[20px] md:p-[32px] mb-[32px] shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
+          <div className="flex justify-between items-center mb-[24px]">
+            <div>
+              <h2 className="font-serif text-[20px] md:text-[22px] text-[#4338CA] m-0">
+                Featured Products
+              </h2>
+              <p className="font-sans text-[13px] text-[#6B7280] mt-[4px] m-0">
+                Toggle the star to feature a product on the website. Set order numbers to control display sequence.
+              </p>
+            </div>
+            <button
+              onClick={saveFeatured}
+              className="bg-[#4338CA] text-white font-sans text-[14px] font-semibold px-[20px] py-[10px] rounded-[8px] border-none cursor-pointer flex items-center gap-[8px] shadow-[0_2px_8px_rgba(67,56,202,0.25)]"
+            >
+              <Save size={16} /> Save Changes
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[12px]">
+            {featuredList.map((item) => (
+              <div
+                key={item.id}
+                className={`border rounded-[10px] p-[16px] flex items-center justify-between transition-all duration-200 ${item.is_featured ? 'bg-[#EEF2FF] border-[#C7D2FE]' : 'bg-[#FAFAFA] border-[#E5E7EB]'}`}
+              >
+                <div className="flex items-center gap-[12px] overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleFeatured(item.id)}
+                    className="border-none bg-none p-0 cursor-pointer flex-shrink-0"
+                    style={{ background: 'none' }}
+                  >
+                    <Star
+                      size={20}
+                      className={item.is_featured ? 'text-[#4338CA]' : 'text-[#D1D5DB]'}
+                      fill={item.is_featured ? '#4338CA' : 'none'}
+                    />
+                  </button>
+                  <div className="overflow-hidden">
+                    <div className="font-sans text-[14px] font-semibold text-[#1A1A1A] truncate">
+                      {item.name}
+                    </div>
+                    <div className="font-sans text-[11px] text-[#6B7280] uppercase tracking-wider">
+                      {item.base_type}
+                    </div>
+                  </div>
+                </div>
+                {item.is_featured && (
+                  <div className="flex items-center gap-[6px] flex-shrink-0">
+                    <span className="font-sans text-[11px] text-[#6B7280]">#</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.featured_order ?? ''}
+                      onChange={(e) => handleFeaturedOrderChange(item.id, e.target.value)}
+                      className="w-[52px] px-[8px] py-[6px] border border-[#C7D2FE] rounded-[6px] font-sans text-[14px] text-center text-[#4338CA] font-bold outline-none focus:border-[#4338CA] bg-white"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : isSortMode ? (
         <div className="bg-white border border-[#E5E7EB] rounded-[14px] p-[20px] md:p-[32px] mb-[32px] shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
           <div className="flex justify-between items-center mb-[24px]">
             <div>
@@ -223,7 +350,7 @@ export default function ProductView({ products }) {
             ))}
           </div>
         </div>
-      ) : isFormOpen ? (
+      ) : !isFeaturedMode && isFormOpen ? (
         <div className="bg-[#FAFDF9] border border-[#D8F3DC] rounded-[14px] p-[20px] md:p-[32px] mb-[32px] shadow-[0_2px_12px_rgba(27,67,50,0.08)]">
           <h2 className="font-serif text-[20px] md:text-[22px] text-[#1B4332] mb-[20px] md:mb-[24px] mt-0">
             {editingProduct ? 'Edit Product' : 'Add New Product'}
@@ -437,7 +564,7 @@ export default function ProductView({ products }) {
         </div>
       ) : null}
 
-      {!isSortMode && (
+      {!isSortMode && !isFeaturedMode && (
         <div className="space-y-[32px] md:space-y-[40px]">
           {Object.entries(groupedProducts).map(([base, items]) => (
             <div key={base}>
@@ -531,7 +658,7 @@ export default function ProductView({ products }) {
         </div>
       )}
 
-      {!isSortMode && archivedProducts.length > 0 && (
+      {!isSortMode && !isFeaturedMode && archivedProducts.length > 0 && (
         <div className="mt-[40px] md:mt-[48px]">
           <div
             onClick={() => setIsArchivedOpen(!isArchivedOpen)}
