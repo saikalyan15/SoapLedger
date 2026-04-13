@@ -14,6 +14,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   const isEdit = !!initialData;
   const isPendingRef = useRef(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -246,8 +247,11 @@ const OrderForm = ({ products, settings, initialData = null }) => {
       }
 
       if (result.success) {
-        router.push(isEdit ? `/orders/${initialData.order.id}` : '/orders');
-        router.refresh();
+        setIsSaved(true);
+        setTimeout(() => {
+          router.push(isEdit ? `/orders/${initialData.order.id}` : '/orders');
+          router.refresh();
+        }, 800);
       } else {
         alert(result.error || "Something went wrong");
         isPendingRef.current = false;
@@ -370,6 +374,12 @@ const OrderForm = ({ products, settings, initialData = null }) => {
               <button type="button" onClick={() => removeItem(index)} disabled={items.length === 1} style={{ padding: '12px', color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={18} /></button>
             </div>
           ))}
+
+          {items.length > 2 && (
+            <button type="button" onClick={addItem} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px dashed #A7F3D0', background: '#F0FDF4', color: '#1B4332', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '4px' }}>
+              <Plus size={16} /> Add Soap
+            </button>
+          )}
         </div>
 
         {/* Source & Notes */}
@@ -413,8 +423,8 @@ const OrderForm = ({ products, settings, initialData = null }) => {
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginBottom: '80px' }}>
           <button type="button" onClick={() => router.back()} style={{ padding: '12px 24px', borderRadius: '8px', border: '1px solid #E5E7EB', background: '#FFFFFF', cursor: 'pointer' }}>Cancel</button>
-          <button type="submit" disabled={isSubmitting} style={{ padding: '12px 40px', borderRadius: '8px', border: 'none', background: '#1B4332', color: '#FFFFFF', fontWeight: '700', cursor: 'pointer', opacity: isSubmitting ? 0.7 : 1 }}>
-            {isSubmitting ? 'Saving...' : 'Save Order'}
+          <button type="submit" disabled={isSubmitting} style={{ padding: '12px 40px', borderRadius: '8px', border: 'none', background: isSaved ? '#2D6A4F' : '#1B4332', color: '#FFFFFF', fontWeight: '700', cursor: 'pointer', opacity: isSubmitting && !isSaved ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.2s' }}>
+            {isSaved ? <><Check size={18} /> Order Saved!</> : isSubmitting ? 'Saving...' : 'Save Order'}
           </button>
         </div>
       </form>
