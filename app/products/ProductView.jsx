@@ -38,6 +38,8 @@ export default function ProductView({ products }) {
   const [sortList, setSortList] = useState([]);
   const [formData, setFormData] = useState({
     ingredients: '',
+    slug: '',
+    slugManuallyEdited: false,
   });
 
   const handleRefresh = async () => {
@@ -52,8 +54,18 @@ export default function ProductView({ products }) {
     }
   };
 
+  const buildSlug = (name) =>
+    name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'name' && !formData.slugManuallyEdited) {
+      setFormData({ ...formData, name: value, slug: buildSlug(value) });
+    } else if (name === 'slug') {
+      setFormData({ ...formData, slug: value, slugManuallyEdited: true });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   useEffect(() => {
@@ -92,6 +104,8 @@ export default function ProductView({ products }) {
     setEditingProduct(product);
     setFormData({
       ingredients: product.ingredients || '',
+      slug: product.slug || '',
+      slugManuallyEdited: true, // editing existing — don't auto-overwrite slug
     });
     setIsFormOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -100,9 +114,7 @@ export default function ProductView({ products }) {
   const handleCancel = () => {
     setIsFormOpen(false);
     setEditingProduct(null);
-    setFormData({
-      ingredients: '',
-    });
+    setFormData({ ingredients: '', slug: '', slugManuallyEdited: false });
   };
 
   const handleSortChange = (id, newVal) => {
@@ -234,7 +246,8 @@ export default function ProductView({ products }) {
                 </label>
                 <input
                   name="name"
-                  defaultValue={editingProduct?.name}
+                  value={formData.name ?? (editingProduct?.name || '')}
+                  onChange={handleChange}
                   required
                   className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
                   placeholder="e.g. Lavender Bliss"
@@ -247,11 +260,13 @@ export default function ProductView({ products }) {
                 </label>
                 <input
                   name="slug"
-                  defaultValue={editingProduct?.slug}
-                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
-                  placeholder="lavender-bliss"
+                  value={formData.slug}
+                  onChange={handleChange}
+                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#9CA3AF] bg-[#FAFAFA] outline-none font-mono"
+                  placeholder="auto-generated"
                 />
               </div>
+
 
               <div>
                 <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
@@ -359,18 +374,6 @@ export default function ProductView({ products }) {
                 />
               </div>
 
-              <div>
-                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
-                  Display Order (lower is first)
-                </label>
-                <input
-                  name="display_order"
-                  type="number"
-                  defaultValue={editingProduct?.display_order || 0}
-                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
-                  placeholder="0"
-                />
-              </div>
 
               {/* Status Toggles */}
               <div className="flex flex-wrap gap-[20px] md:col-span-2 mt-[8px]">
