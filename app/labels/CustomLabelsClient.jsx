@@ -451,65 +451,16 @@ export default function CustomLabelsClient({ products }) {
           padding: 8px 0;
         }
 
-        .band-grid {
-          display: grid;
-          grid-template-columns: 35mm 22mm 57mm 22mm 35mm;
-        }
-        .band-panel:not(:last-child) {
-          border-right: 1px dashed rgba(0, 0, 0, 0.1); /* Faint fold lines */
-        }
-
-        .only-print {
-          display: none;
-        }
-
         @media print {
-          .no-print {
-            display: none !important;
-          }
-          .only-print {
-            display: block;
-          }
-          .page-separator {
-            display: none !important;
-          }
-          .labels-page {
-            background: white !important;
+          .cutting-guide {
             padding: 0 !important;
-            min-height: 0 !important;
           }
-
-          .label-page-sheet {
-            display: grid !important;
-            grid-template-columns: repeat(3, 55mm) !important;
-            gap: 5mm !important;
-            padding: 10mm !important;
-            box-shadow: none !important;
-            border-radius: 0 !important;
-            page-break-after: always;
-            break-after: page;
-            width: 210mm !important;
-            height: 297mm !important;
-            box-sizing: border-box !important;
-          }
-          .label-page-sheet:last-child {
-            page-break-after: auto;
-            break-after: auto;
-          }
-
           .band-page-sheet {
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
-            padding: 21mm 0 !important;
-            box-shadow: none !important;
-            border-radius: 0 !important;
-            width: 210mm !important;
-            box-sizing: border-box !important;
-            page-break-after: always;
-            break-after: page;
-            gap: 2mm !important;
-          }
+            padding: 10mm 0 !important;
+...
           .band-page-sheet:last-child {
             page-break-after: avoid;
             break-after: avoid;
@@ -978,12 +929,12 @@ export default function CustomLabelsClient({ products }) {
                   <SoapBand key={label.uid} />
                 ),
               )}
-              {/* Final cutting guide for the bottom edge — screen only */}
+              {/* Final cutting guide for the bottom edge — screen-only text, print-only line */}
               {printMode === 'bands' && (
-                <div className="cutting-guide no-print" style={{ marginTop: '-8px' }}>
-                  <div style={{ height: '1px', flex: 1, borderTop: '1px dashed #999' }}></div>
-                  <span style={{ fontSize: '10px', color: '#999', padding: '0 8px' }}>Bottom Edge</span>
-                  <div style={{ height: '1px', flex: 1, borderTop: '1px dashed #999' }}></div>
+                <div className="cutting-guide" style={{ marginTop: '-8px' }}>
+                  <div style={{ height: '1px', flex: 1, borderTop: '0.1mm dashed #999' }}></div>
+                  <span className="no-print" style={{ fontSize: '10px', color: '#999', padding: '0 8px' }}>Bottom Edge</span>
+                  <div style={{ height: '1px', flex: 1, borderTop: '0.1mm dashed #999' }}></div>
                 </div>
               )}
             </div>
