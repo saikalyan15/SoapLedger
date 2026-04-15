@@ -221,7 +221,7 @@ function SoapBand() {
           <div
             className="band-panel"
             style={{
-              padding: '1mm 2mm',
+              padding: '2.5mm 2mm', /* Increased top/bottom padding to clear cut lines */
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -229,22 +229,25 @@ function SoapBand() {
               textAlign: 'center',
             }}
           >
-            {/* Logo at Top */}
+            {/* Logo at Top — safely away from cut line */}
             <img
               src="/HealingSoil-Formatted.png"
               style={{ width: '10mm', height: '10mm', borderRadius: '50%' }}
             />
 
             {/* Clear space for 20mm sticker in middle */}
-            <div style={{ height: '18mm' }}></div>
+            <div style={{ flex: 1 }}></div>
 
-            {/* Udyam at Bottom */}
+            {/* Udyam at Bottom — safely away from cut line */}
             <div
               style={{
-                fontSize: '4.5pt',
+                fontSize: '5pt',
                 fontWeight: 800,
                 color: COLORS.text,
                 letterSpacing: '0.05em',
+                background: 'rgba(255,255,255,0.3)',
+                padding: '0.2mm 1mm',
+                borderRadius: '0.5mm',
               }}
             >
               {businessConfig.brand.license}
