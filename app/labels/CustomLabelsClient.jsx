@@ -351,8 +351,8 @@ export default function CustomLabelsClient({ products }) {
   const [printMode, setPrintMode] = useState('bands'); // 'stickers' | 'bands'
   const [bandPages, setBandPages] = useState(1);
 
-  // 45mm height allows us to print exactly 6 bands per A4 sheet
-  const labelsPerPage = printMode === 'stickers' ? 18 : 6;
+  // 36mm height (40% of 90mm) allows us to print exactly 7 bands per A4 sheet
+  const labelsPerPage = printMode === 'stickers' ? 18 : 7;
 
   const addToQueue = () => {
     if (!selectedProductId) return;
@@ -435,7 +435,7 @@ export default function CustomLabelsClient({ products }) {
 
         .soap-band {
           width: 170mm;
-          height: 45mm;
+          height: 36mm;
           border: 0.1mm solid #eee;
           display: flex;
           flex-direction: column;
@@ -507,7 +507,7 @@ export default function CustomLabelsClient({ products }) {
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
-            padding: 13.5mm 0 !important;
+            padding: 22.5mm 0 !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             width: 210mm !important;
@@ -699,7 +699,7 @@ export default function CustomLabelsClient({ products }) {
                   />
                 </div>
                 <div style={{ fontSize: '13px', color: COLORS.muted, paddingBottom: '10px' }}>
-                  Each page contains 6 generic wrapper bands with cutting guidelines.
+                  Each page contains 7 generic wrapper bands with cutting guidelines.
                 </div>
               </div>
             </div>
@@ -963,8 +963,9 @@ export default function CustomLabelsClient({ products }) {
                 borderRadius: '4px',
                 boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
                 marginBottom: '32px',
-                padding: printMode === 'stickers' ? '10mm' : '13mm 0',
+                padding: printMode === 'stickers' ? '10mm' : '22.5mm 0',
                 display: printMode === 'stickers' ? 'grid' : 'flex',
+
                 gridTemplateColumns:
                   printMode === 'stickers' ? 'repeat(3, 60mm)' : 'none',
                 flexDirection: printMode === 'bands' ? 'column' : 'row',
