@@ -362,6 +362,13 @@ export default function CustomLabelsClient({ products }) {
           padding: 8px 0;
         }
 
+        .band-grid {
+          display: grid;
+          grid-template-columns: 35mm 22mm 57mm 22mm 35mm;
+          height: 100%;
+          align-items: stretch;
+        }
+
         @media print {
           .no-print {
             display: none !important;
