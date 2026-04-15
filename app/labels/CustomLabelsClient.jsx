@@ -452,18 +452,59 @@ export default function CustomLabelsClient({ products }) {
         }
 
         @media print {
-          .cutting-guide {
-            padding: 0 !important;
+          .no-print {
+            display: none !important;
           }
+          .only-print {
+            display: block;
+          }
+          .page-separator {
+            display: none !important;
+          }
+          .labels-page {
+            background: white !important;
+            padding: 0 !important;
+            min-height: 0 !important;
+          }
+
+          .label-page-sheet {
+            display: grid !important;
+            grid-template-columns: repeat(3, 55mm) !important;
+            gap: 5mm !important;
+            padding: 10mm !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            page-break-after: always;
+            break-after: page;
+            width: 210mm !important;
+            height: 297mm !important;
+            box-sizing: border-box !important;
+          }
+          .label-page-sheet:last-child {
+            page-break-after: auto;
+            break-after: auto;
+          }
+
           .band-page-sheet {
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
-            padding: 10mm 0 !important;
-...
+            padding: 12mm 0 !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            width: 210mm !important;
+            box-sizing: border-box !important;
+            page-break-after: always;
+            break-after: page;
+            gap: 2mm !important;
+          }
           .band-page-sheet:last-child {
             page-break-after: avoid;
             break-after: avoid;
+          }
+
+          .cutting-guide {
+            padding: 0 !important;
           }
 
           .product-label {
