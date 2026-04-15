@@ -209,124 +209,136 @@ function ProductLabel({ label }) {
 // Generic wrapper band designed specifically for kraft (brown) paper
 function SoapBand() {
   return (
-    <div className="soap-band">
-      {/* Notice: No white background overlay. We want the kraft paper to show through the background image natively */}
+    <div className="soap-band-container">
+      {/* Cutting guidelines — screen only */}
+      <div className="cutting-guide no-print">
+        <div style={{ height: '1px', flex: 1, borderTop: '1px dashed #999' }}></div>
+        <span style={{ fontSize: '10px', color: '#999', padding: '0 8px' }}>Cut Line</span>
+        <div style={{ height: '1px', flex: 1, borderTop: '1px dashed #999' }}></div>
+      </div>
+      
+      <div className="soap-band">
+        {/* Notice: No white background overlay. We want the kraft paper to show through the background image natively */}
 
-      <div
-        className="band-grid"
-        style={{ position: 'relative', zIndex: 1, height: '100%' }}
-      >
-        {/* Panel 1: Back Left Overlap (35mm) - Glued underneath */}
         <div
-          className="band-panel"
-          style={{
-            padding: '2mm',
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'flex-start',
-          }}
+          className="band-grid"
+          style={{ position: 'relative', zIndex: 1, height: '100%' }}
         >
-          <span style={{ fontSize: '5pt', color: COLORS.muted }}>
-            healingsoil.in
-          </span>
-        </div>
-
-        {/* Panel 2: Left Side (22mm) */}
-        <div
-          className="band-panel"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <span
-            style={{
-              transform: 'rotate(-90deg)',
-              fontSize: '5.5pt',
-              fontWeight: 800,
-              color: COLORS.brand,
-              letterSpacing: '0.2em',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            HANDCRAFTED
-          </span>
-        </div>
-
-        {/* Panel 3: Front Face (56mm) */}
-        <div
-          className="band-panel"
-          style={{
-            padding: '3mm 2mm',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            textAlign: 'center',
-          }}
-        >
-          <img
-            src="/HealingSoil-Formatted.png"
-            style={{ width: '14mm', height: '14mm', borderRadius: '50%' }}
-          />
-
-          {/* Empty flexible space where the 60x40 product sticker will be applied */}
-          <div style={{ flex: 1 }}></div>
-
+          {/* Panel 1: Back Left Overlap (35mm) - Glued underneath */}
           <div
+            className="band-panel"
             style={{
-              fontSize: '5pt',
-              fontWeight: 800,
-              color: COLORS.text,
-              letterSpacing: '0.05em',
-              background: 'rgba(255,255,255,0.4)',
-              padding: '0.5mm 1.5mm',
-              borderRadius: '1mm',
+              padding: '2mm',
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'flex-start',
             }}
           >
-            {businessConfig.brand.license}
+            <span style={{ fontSize: '5pt', color: COLORS.muted }}>
+              healingsoil.in
+            </span>
+          </div>
+
+          {/* Panel 2: Left Side (22mm) */}
+          <div
+            className="band-panel"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <span
+              style={{
+                transform: 'rotate(-90deg)',
+                fontSize: '5.5pt',
+                fontWeight: 800,
+                color: COLORS.brand,
+                letterSpacing: '0.2em',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              HANDCRAFTED
+            </span>
+          </div>
+
+          {/* Panel 3: Front Face (56mm) */}
+          <div
+            className="band-panel"
+            style={{
+              padding: '3mm 2mm',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              textAlign: 'center',
+            }}
+          >
+            <img
+              src="/HealingSoil-Formatted.png"
+              style={{ width: '14mm', height: '14mm', borderRadius: '50%' }}
+            />
+
+            {/* Empty flexible space where the 60x40 product sticker will be applied */}
+            <div style={{ flex: 1 }}></div>
+
+            <div
+              style={{
+                fontSize: '5pt',
+                fontWeight: 800,
+                color: COLORS.text,
+                letterSpacing: '0.05em',
+                background: 'rgba(255,255,255,0.4)',
+                padding: '0.5mm 1.5mm',
+                borderRadius: '1mm',
+              }}
+            >
+              {businessConfig.brand.license}
+            </div>
+          </div>
+
+          {/* Panel 4: Right Side (22mm) */}
+          <div
+            className="band-panel"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <span
+              style={{
+                transform: 'rotate(90deg)',
+                fontSize: '5.5pt',
+                fontWeight: 800,
+                color: COLORS.brand,
+                letterSpacing: '0.2em',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              100% NATURAL
+            </span>
+          </div>
+
+          {/* Panel 5: Back Right Overlap (35mm) - Glued on top */}
+          <div
+            className="band-panel"
+            style={{
+              padding: '2mm',
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'flex-end',
+            }}
+          >
+            <span style={{ fontSize: '5pt', color: COLORS.muted }}>
+              Made in Goa
+            </span>
           </div>
         </div>
-
-        {/* Panel 4: Right Side (22mm) */}
-        <div
-          className="band-panel"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <span
-            style={{
-              transform: 'rotate(90deg)',
-              fontSize: '5.5pt',
-              fontWeight: 800,
-              color: COLORS.brand,
-              letterSpacing: '0.2em',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            100% NATURAL
-          </span>
-        </div>
-
-        {/* Panel 5: Back Right Overlap (35mm) - Glued on top */}
-        <div
-          className="band-panel"
-          style={{
-            padding: '2mm',
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'flex-end',
-          }}
-        >
-          <span style={{ fontSize: '5pt', color: COLORS.muted }}>
-            Made in Goa
-          </span>
-        </div>
       </div>
+
+      {/* Print-only cutting guides */}
+      <div className="print-guide only-print"></div>
     </div>
   );
 }
@@ -337,6 +349,7 @@ export default function CustomLabelsClient({ products }) {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [printMode, setPrintMode] = useState('bands'); // 'stickers' | 'bands'
+  const [bandPages, setBandPages] = useState(1);
 
   // 45mm height allows us to print exactly 6 bands per A4 sheet
   const labelsPerPage = printMode === 'stickers' ? 18 : 6;
@@ -364,10 +377,14 @@ export default function CustomLabelsClient({ products }) {
 
   // Expand batches into flat label list for the print grid
   const queue = useMemo(() => {
+    if (printMode === 'bands') {
+      // For bands, we just fill the requested number of pages (6 per page)
+      return Array.from({ length: bandPages * 6 }, (_, i) => ({ uid: `band-${i}` }));
+    }
     return batches.flatMap((b) =>
       Array.from({ length: b.qty }, (_, i) => ({ uid: `${b.id}-${i}`, ...b })),
     );
-  }, [batches]);
+  }, [batches, printMode, bandPages]);
 
   const totalLabels = queue.length;
 
@@ -383,7 +400,7 @@ export default function CustomLabelsClient({ products }) {
 
         @page {
           size: A4 portrait;
-          margin: 5mm;
+          margin: 0;
         }
         .labels-page {
           background: #f0ede8;
@@ -408,10 +425,18 @@ export default function CustomLabelsClient({ products }) {
           print-color-adjust: exact;
         }
 
+        .soap-band-container {
+          position: relative;
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
         .soap-band {
           width: 170mm;
           height: 45mm;
-          border: 1px dashed #999;
+          border: 0.1mm solid #eee;
           display: flex;
           flex-direction: column;
           position: relative;
@@ -424,17 +449,32 @@ export default function CustomLabelsClient({ products }) {
           print-color-adjust: exact;
         }
 
+        .cutting-guide {
+          width: 100%;
+          max-width: 210mm;
+          display: flex;
+          align-items: center;
+          padding: 8px 0;
+        }
+
         .band-grid {
           display: grid;
           grid-template-columns: 35mm 22mm 56mm 22mm 35mm;
         }
         .band-panel:not(:last-child) {
-          border-right: 1px dashed rgba(0, 0, 0, 0.15); /* Faint fold lines */
+          border-right: 1px dashed rgba(0, 0, 0, 0.1); /* Faint fold lines */
+        }
+
+        .only-print {
+          display: none;
         }
 
         @media print {
           .no-print {
             display: none !important;
+          }
+          .only-print {
+            display: block;
           }
           .page-separator {
             display: none !important;
@@ -449,11 +489,14 @@ export default function CustomLabelsClient({ products }) {
             display: grid !important;
             grid-template-columns: repeat(3, 60mm) !important;
             gap: 4mm !important;
-            padding: 0 !important;
+            padding: 10mm !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             page-break-after: always;
             break-after: page;
+            width: 210mm !important;
+            height: 297mm !important;
+            box-sizing: border-box !important;
           }
           .label-page-sheet:last-child {
             page-break-after: auto;
@@ -464,16 +507,19 @@ export default function CustomLabelsClient({ products }) {
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
-            padding: 0 !important;
+            padding: 13mm 0 !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             page-break-after: always;
+            width: 210mm !important;
+            height: 297mm !important;
+            box-sizing: border-box !important;
           }
 
           .product-label {
             width: 60mm !important;
             height: 40mm !important;
-            border: 0.3mm dashed #000 !important;
+            border: 0.1mm dashed #000 !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             box-sizing: border-box !important;
@@ -483,13 +529,28 @@ export default function CustomLabelsClient({ products }) {
           }
 
           .soap-band {
-            border: 0.3mm dashed #000 !important;
-            margin-bottom: 0 !important; /* Touch exactly to save space/cuts */
+            border: none !important;
+            border-top: 0.1mm dashed #999 !important;
+            border-bottom: 0.1mm dashed #999 !important;
+            margin-bottom: 0 !important;
+          }
+          
+          .soap-band-container:last-child .soap-band {
+             /* preserve bottom border for the last one */
+          }
+
+          .print-guide {
+            width: 100%;
+            height: 0;
+            border-top: 0.1mm dashed #000;
+            position: absolute;
+            left: 0;
+            right: 0;
           }
 
           * {
-            color: #000000 !important;
-            border-color: #000000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         }
       `}</style>
@@ -513,11 +574,10 @@ export default function CustomLabelsClient({ products }) {
           <Tag size={20} />
           <div>
             <div style={{ fontSize: '18px', fontWeight: 800 }}>
-              Print Packaging
+              Print
             </div>
             <div style={{ fontSize: '12px', opacity: 0.7 }}>
-              {totalLabels} item{totalLabels !== 1 ? 's' : ''} · {pages.length}{' '}
-              A4 page{pages.length !== 1 ? 's' : ''}
+              {printMode === 'bands' ? `${bandPages} page(s) · ${totalLabels} bands` : `${totalLabels} item(s) · ${pages.length} page(s)`}
             </div>
           </div>
         </div>
@@ -528,9 +588,9 @@ export default function CustomLabelsClient({ products }) {
           style={{
             display: 'flex',
             background: 'rgba(0,0,0,0.15)',
-            borderRadius: '8px',
-            padding: '4px',
-            gap: '4px',
+            borderRadius: '10px',
+            padding: '5px',
+            gap: '5px',
           }}
         >
           <button
@@ -539,11 +599,13 @@ export default function CustomLabelsClient({ products }) {
               background: printMode === 'bands' ? 'white' : 'transparent',
               color: printMode === 'bands' ? COLORS.brand : 'white',
               border: 'none',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 700,
+              padding: '8px 16px',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: 800,
               cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: printMode === 'bands' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
             }}
           >
             Wrapper Bands
@@ -554,20 +616,22 @@ export default function CustomLabelsClient({ products }) {
               background: printMode === 'stickers' ? 'white' : 'transparent',
               color: printMode === 'stickers' ? COLORS.brand : 'white',
               border: 'none',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 700,
+              padding: '8px 16px',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: 800,
               cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: printMode === 'stickers' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
             }}
           >
-            Product Stickers
+            Label Prints
           </button>
         </div>
 
         <button
           onClick={() => window.print()}
-          disabled={queue.length === 0}
+          disabled={totalLabels === 0}
           style={{
             background: totalLabels === 0 ? 'rgba(255,255,255,0.3)' : 'white',
             color: COLORS.brand,
@@ -587,7 +651,7 @@ export default function CustomLabelsClient({ products }) {
       </div>
 
       <div style={{ maxWidth: '860px', margin: '0 auto' }}>
-        {/* Add form */}
+        {/* Configuration Panel */}
         <div
           className="no-print"
           style={{
@@ -598,117 +662,153 @@ export default function CustomLabelsClient({ products }) {
             border: '1px solid #E5E7EB',
           }}
         >
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: '14px',
-              color: COLORS.brand,
-              marginBottom: '14px',
-            }}
-          >
-            Add Labels to Queue
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              gap: '12px',
-              flexWrap: 'wrap',
-              alignItems: 'flex-end',
-            }}
-          >
-            <div style={{ flex: '2 1 200px' }}>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: COLORS.muted,
-                  marginBottom: '4px',
-                }}
-              >
-                Product
-              </label>
-              <select
-                value={selectedProductId}
-                onChange={(e) => setSelectedProductId(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: '8px',
-                  border: '1px solid #D1D5DB',
-                  fontSize: '14px',
-                  fontFamily: FONTS.sans,
-                }}
-              >
-                <option value="">— Select a product —</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.base_type})
-                  </option>
-                ))}
-              </select>
+          {printMode === 'bands' ? (
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '14px', color: COLORS.brand, marginBottom: '14px' }}>
+                Configure Wrapper Bands
+              </div>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
+                <div style={{ flex: '0 1 150px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: COLORS.muted, marginBottom: '4px' }}>
+                    Number of Pages
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={bandPages}
+                    onChange={(e) => setBandPages(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #D1D5DB',
+                      fontSize: '14px',
+                      fontFamily: FONTS.sans,
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+                <div style={{ fontSize: '13px', color: COLORS.muted, paddingBottom: '10px' }}>
+                  Each page contains 6 generic wrapper bands with cutting guidelines.
+                </div>
+              </div>
             </div>
-
-            <div style={{ flex: '0 1 100px' }}>
-              <label
+          ) : (
+            <>
+              <div
                 style={{
-                  display: 'block',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: COLORS.muted,
-                  marginBottom: '4px',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  color: COLORS.brand,
+                  marginBottom: '14px',
                 }}
               >
-                Qty
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={200}
-                value={quantity}
-                onChange={(e) =>
-                  setQuantity(
-                    Math.max(1, Math.min(200, parseInt(e.target.value) || 1)),
-                  )
-                }
+                Add Labels to Queue
+              </div>
+              <div
                 style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: '8px',
-                  border: '1px solid #D1D5DB',
-                  fontSize: '14px',
-                  fontFamily: FONTS.sans,
-                  boxSizing: 'border-box',
+                  display: 'flex',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  alignItems: 'flex-end',
                 }}
-              />
-            </div>
+              >
+                <div style={{ flex: '2 1 200px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: COLORS.muted,
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Product
+                  </label>
+                  <select
+                    value={selectedProductId}
+                    onChange={(e) => setSelectedProductId(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #D1D5DB',
+                      fontSize: '14px',
+                      fontFamily: FONTS.sans,
+                    }}
+                  >
+                    <option value="">— Select a product —</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.base_type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            <button
-              onClick={addToQueue}
-              disabled={!selectedProductId}
-              style={{
-                padding: '8px 16px',
-                background: selectedProductId ? COLORS.brand : '#9CA3AF',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: 700,
-                fontSize: '14px',
-                cursor: selectedProductId ? 'pointer' : 'not-allowed',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                whiteSpace: 'nowrap',
-                height: '38px',
-              }}
-            >
-              <Plus size={16} /> Add
-            </button>
-          </div>
+                <div style={{ flex: '0 1 100px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: COLORS.muted,
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Qty
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={quantity}
+                    onChange={(e) =>
+                      setQuantity(
+                        Math.max(1, Math.min(200, parseInt(e.target.value) || 1)),
+                      )
+                    }
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #D1D5DB',
+                      fontSize: '14px',
+                      fontFamily: FONTS.sans,
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                <button
+                  onClick={addToQueue}
+                  disabled={!selectedProductId}
+                  style={{
+                    padding: '8px 16px',
+                    background: selectedProductId ? COLORS.brand : '#9CA3AF',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: selectedProductId ? 'pointer' : 'not-allowed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                    height: '38px',
+                  }}
+                >
+                  <Plus size={16} /> Add
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Print list — one row per batch */}
-        {batches.length > 0 && (
+        {/* Print list — only for stickers */}
+        {printMode === 'stickers' && batches.length > 0 && (
           <div
             className="no-print"
             style={{
@@ -841,35 +941,37 @@ export default function CustomLabelsClient({ products }) {
                   whiteSpace: 'nowrap',
                 }}
               >
-                Page {pageIdx + 1} of {pages.length} — {page.length} label
-                {page.length !== 1 ? 's' : ''}
+                Page {pageIdx + 1} of {pages.length} — {page.length} {printMode === 'bands' ? 'bands' : 'labels'}
               </div>
               <div style={{ flex: 1, height: '1px', background: '#D1D5DB' }} />
             </div>
 
             {/* A4 sheet — white card in browser, actual print page when printing */}
             <div
-              className="label-page-sheet"
+              className={printMode === 'stickers' ? 'label-page-sheet' : 'band-page-sheet'}
               style={{
                 background: 'white',
                 borderRadius: '4px',
                 boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
                 marginBottom: '32px',
-                padding: printMode === 'stickers' ? '8mm' : '10mm 20mm',
+                padding: printMode === 'stickers' ? '10mm' : '13mm 0',
                 display: printMode === 'stickers' ? 'grid' : 'flex',
                 gridTemplateColumns:
                   printMode === 'stickers' ? 'repeat(3, 60mm)' : 'none',
                 flexDirection: printMode === 'bands' ? 'column' : 'row',
+                alignItems: 'center',
                 gap: printMode === 'stickers' ? '4mm' : '0',
-                width: 'fit-content',
+                width: '210mm',
+                height: '297mm',
                 margin: '0 auto 32px auto',
+                boxSizing: 'border-box',
               }}
             >
               {page.map((label) =>
                 printMode === 'stickers' ? (
                   <ProductLabel key={label.uid} label={label} />
                 ) : (
-                  <SoapBand key={label.uid} label={label} />
+                  <SoapBand key={label.uid} />
                 ),
               )}
             </div>
@@ -896,7 +998,9 @@ export default function CustomLabelsClient({ products }) {
                 margin: '0 auto 12px',
               }}
             />
-            Select a product and add labels to see the A4 page preview.
+            {printMode === 'stickers' 
+              ? 'Select a product and add labels to see the A4 page preview.'
+              : 'Add pages to see the wrapper bands preview.'}
           </div>
         )}
       </div>
