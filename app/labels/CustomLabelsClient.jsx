@@ -507,17 +507,17 @@ export default function CustomLabelsClient({ products }) {
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
-            padding: 13mm 0 !important;
+            padding: 13.5mm 0 !important;
             box-shadow: none !important;
             border-radius: 0 !important;
-            page-break-after: always;
             width: 210mm !important;
-            height: 296mm !important;
             box-sizing: border-box !important;
+            page-break-after: always;
+            break-after: page;
           }
           .band-page-sheet:last-child {
-            page-break-after: auto;
-            break-after: auto;
+            page-break-after: avoid;
+            break-after: avoid;
           }
 
           .product-label {
@@ -530,6 +530,11 @@ export default function CustomLabelsClient({ products }) {
             overflow: hidden !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+          }
+
+          .soap-band-container {
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
 
           .soap-band {
