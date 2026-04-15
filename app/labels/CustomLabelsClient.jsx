@@ -194,39 +194,21 @@ function SoapBand() {
             </span>
           </div>
 
-          {/* Panel 2: Left Side (22mm) */}
-          <div
-            className="band-panel"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <span
-              style={{
-                transform: 'rotate(-90deg)',
-                fontSize: '5.5pt',
-                fontWeight: 800,
-                color: COLORS.brand,
-                letterSpacing: '0.2em',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              HANDCRAFTED
-            </span>
-          </div>
+          {/* Panel 2: Left Side (22mm) - EMPTY for clean look */}
+          <div className="band-panel" />
 
           {/* Panel 3: Front Face (57mm) */}
           <div
             className="band-panel"
             style={{
-              padding: '2.5mm 2mm', /* Increased top/bottom padding to clear cut lines */
+              padding: '2.5mm 2mm',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'space-between',
               textAlign: 'center',
+              height: '100%',
+              boxSizing: 'border-box',
             }}
           >
             {/* Logo at Top — safely away from cut line */}
@@ -245,52 +227,18 @@ function SoapBand() {
                 fontWeight: 800,
                 color: COLORS.text,
                 letterSpacing: '0.05em',
-                background: 'rgba(255,255,255,0.3)',
                 padding: '0.2mm 1mm',
-                borderRadius: '0.5mm',
               }}
             >
               {businessConfig.brand.license}
             </div>
           </div>
 
-          {/* Panel 4: Right Side (22mm) */}
-          <div
-            className="band-panel"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <span
-              style={{
-                transform: 'rotate(90deg)',
-                fontSize: '5.5pt',
-                fontWeight: 800,
-                color: COLORS.brand,
-                letterSpacing: '0.2em',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              100% NATURAL
-            </span>
-          </div>
+          {/* Panel 4: Right Side (22mm) - EMPTY for clean look */}
+          <div className="band-panel" />
 
-          {/* Panel 5: Back Right Overlap (35mm) - Glued on top */}
-          <div
-            className="band-panel"
-            style={{
-              padding: '2mm',
-              display: 'flex',
-              alignItems: 'flex-end',
-              justifyContent: 'flex-end',
-            }}
-          >
-            <span style={{ fontSize: '5pt', color: COLORS.muted }}>
-              Made in Goa
-            </span>
-          </div>
+          {/* Panel 5: Back Right Overlap (35mm) - EMPTY for clean look */}
+          <div className="band-panel" />
         </div>
       </div>
 
