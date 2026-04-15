@@ -203,15 +203,14 @@ function ProductLabel({ label }) {
   );
 }
 
-// Generic wrapper band designed specifically for kraft (brown) paper
 function SoapBand() {
   return (
     <div className="soap-band-container">
-      {/* Cutting guidelines — screen only */}
-      <div className="cutting-guide no-print">
-        <div style={{ height: '1px', flex: 1, borderTop: '1px dashed #999' }}></div>
-        <span style={{ fontSize: '10px', color: '#999', padding: '0 8px' }}>Cut Line</span>
-        <div style={{ height: '1px', flex: 1, borderTop: '1px dashed #999' }}></div>
+      {/* Cutting guidelines — thin dashed line for print, text for screen */}
+      <div className="cutting-guide">
+        <div style={{ height: '1px', flex: 1, borderTop: '0.1mm dashed #999' }}></div>
+        <span className="no-print" style={{ fontSize: '10px', color: '#999', padding: '0 8px' }}>Cut Line</span>
+        <div style={{ height: '1px', flex: 1, borderTop: '0.1mm dashed #999' }}></div>
       </div>
       
       <div className="soap-band">
@@ -431,7 +430,7 @@ export default function CustomLabelsClient({ products }) {
         .soap-band {
           width: 171mm;
           height: 36mm;
-          border: 0.1mm solid #eee;
+          border: 0.1mm dashed #999;
           display: flex;
           flex-direction: column;
           position: relative;
@@ -502,13 +501,14 @@ export default function CustomLabelsClient({ products }) {
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
-            padding: 22.5mm 0 !important;
+            padding: 21mm 0 !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             width: 210mm !important;
             box-sizing: border-box !important;
             page-break-after: always;
             break-after: page;
+            gap: 2mm !important;
           }
           .band-page-sheet:last-child {
             page-break-after: avoid;
@@ -533,9 +533,7 @@ export default function CustomLabelsClient({ products }) {
           }
 
           .soap-band {
-            border: none !important;
-            border-top: 0.1mm dashed #999 !important;
-            border-bottom: 0.1mm dashed #999 !important;
+            border: 0.1mm dashed #999 !important;
             margin-bottom: 0 !important;
           }
           
@@ -958,14 +956,14 @@ export default function CustomLabelsClient({ products }) {
                 borderRadius: '4px',
                 boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
                 marginBottom: '32px',
-                padding: printMode === 'stickers' ? '10mm' : '22.5mm 0',
+                padding: printMode === 'stickers' ? '10mm' : '21mm 0',
                 display: printMode === 'stickers' ? 'grid' : 'flex',
 
                 gridTemplateColumns:
                   printMode === 'stickers' ? 'repeat(3, 60mm)' : 'none',
                 flexDirection: printMode === 'bands' ? 'column' : 'row',
                 alignItems: 'center',
-                gap: printMode === 'stickers' ? '4mm' : '0',
+                gap: printMode === 'stickers' ? '5mm' : '2mm',
                 width: '210mm',
                 height: printMode === 'stickers' ? '297mm' : 'auto',
                 minHeight: '297mm',
