@@ -372,8 +372,8 @@ export default function CustomLabelsClient({ products }) {
   // Expand batches into flat label list for the print grid
   const queue = useMemo(() => {
     if (printMode === 'bands') {
-      // For bands, we just fill the requested number of pages (6 per page)
-      return Array.from({ length: bandPages * 6 }, (_, i) => ({ uid: `band-${i}` }));
+      // For bands, we just fill the requested number of pages (7 per page)
+      return Array.from({ length: bandPages * 7 }, (_, i) => ({ uid: `band-${i}` }));
     }
     return batches.flatMap((b) =>
       Array.from({ length: b.qty }, (_, i) => ({ uid: `${b.id}-${i}`, ...b })),
