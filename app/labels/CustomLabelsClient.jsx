@@ -434,7 +434,7 @@ export default function CustomLabelsClient({ products }) {
         }
 
         .soap-band {
-          width: 170mm;
+          width: 171mm;
           height: 36mm;
           border: 0.1mm solid #eee;
           display: flex;
@@ -459,7 +459,7 @@ export default function CustomLabelsClient({ products }) {
 
         .band-grid {
           display: grid;
-          grid-template-columns: 35mm 22mm 56mm 22mm 35mm;
+          grid-template-columns: 35mm 22mm 57mm 22mm 35mm;
         }
         .band-panel:not(:last-child) {
           border-right: 1px dashed rgba(0, 0, 0, 0.1); /* Faint fold lines */
