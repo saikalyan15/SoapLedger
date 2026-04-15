@@ -512,8 +512,12 @@ export default function CustomLabelsClient({ products }) {
             border-radius: 0 !important;
             page-break-after: always;
             width: 210mm !important;
-            height: 297mm !important;
+            height: 296mm !important;
             box-sizing: border-box !important;
+          }
+          .band-page-sheet:last-child {
+            page-break-after: auto;
+            break-after: auto;
           }
 
           .product-label {
@@ -962,7 +966,8 @@ export default function CustomLabelsClient({ products }) {
                 alignItems: 'center',
                 gap: printMode === 'stickers' ? '4mm' : '0',
                 width: '210mm',
-                height: '297mm',
+                height: printMode === 'stickers' ? '297mm' : 'auto',
+                minHeight: '297mm',
                 margin: '0 auto 32px auto',
                 boxSizing: 'border-box',
               }}
@@ -973,6 +978,14 @@ export default function CustomLabelsClient({ products }) {
                 ) : (
                   <SoapBand key={label.uid} />
                 ),
+              )}
+              {/* Final cutting guide for the bottom edge — screen only */}
+              {printMode === 'bands' && (
+                <div className="cutting-guide no-print" style={{ marginTop: '-8px' }}>
+                  <div style={{ height: '1px', flex: 1, borderTop: '1px dashed #999' }}></div>
+                  <span style={{ fontSize: '10px', color: '#999', padding: '0 8px' }}>Bottom Edge</span>
+                  <div style={{ height: '1px', flex: 1, borderTop: '1px dashed #999' }}></div>
+                </div>
               )}
             </div>
           </div>
