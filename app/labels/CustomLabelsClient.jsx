@@ -73,44 +73,19 @@ function ProductLabel({ label }) {
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          padding: '1mm 2mm',
+          padding: '0.5mm 1.5mm',
         }}
       >
-        {/* Logo + brand name centered — minimized to fit 34mm height */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '1.5mm',
-            marginBottom: '0.3mm',
-          }}
-        >
-          <img
-            src="/HealingSoil-Formatted.png"
-            style={{ width: '4mm', height: '4mm', borderRadius: '50%' }}
-          />
-          <div
-            style={{
-              fontSize: '4.5pt',
-              fontWeight: 700,
-              color: COLORS.brand,
-              letterSpacing: '0.05em',
-            }}
-          >
-            {businessConfig.brand.name}
-          </div>
-        </div>
-
-        {/* Product name */}
+        {/* Product name — prominent in 20mm height */}
         <div
           style={{
             textAlign: 'center',
             fontSize: '8pt',
             fontWeight: 800,
             color: COLORS.brand,
-            lineHeight: 1.1,
-            marginBottom: '0.3mm',
+            lineHeight: 1,
+            marginTop: '0.5mm',
+            marginBottom: '0.5mm',
           }}
         >
           {label.product_name}
@@ -118,29 +93,29 @@ function ProductLabel({ label }) {
 
         <WavyDivider opacity={0.3} />
 
-        {/* Ingredients — minimized padding */}
+        {/* Ingredients — compact */}
         <div
           style={{
             flex: 1,
             overflow: 'hidden',
             display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'flex-start',
-            marginTop: '0.3mm',
+            alignItems: 'center',
           }}
         >
           <div
             style={{
-              fontSize: '5.5pt',
+              fontSize: '5pt',
               color: COLORS.text,
-              lineHeight: 1.1,
+              lineHeight: 1,
               fontWeight: 500,
               background: 'rgba(255,255,255,0.60)',
-              borderRadius: '0.8mm',
-              padding: '0.3mm 0.8mm',
-              display: 'inline-block',
+              borderRadius: '0.5mm',
+              padding: '0.2mm 0.5mm',
               width: '100%',
               boxSizing: 'border-box',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
             }}
           >
             <span style={{ fontWeight: 800 }}>Ingredients: </span>
@@ -148,54 +123,38 @@ function ProductLabel({ label }) {
           </div>
         </div>
 
-        {/* Bottom row: Udyam left | Weight + BBE right */}
+        {/* Bottom row: Weight + BBE only (License is on band) */}
         <div
           style={{
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            marginTop: '0.3mm',
+            justifyContent: 'center',
+            gap: '2mm',
+            marginTop: '0.5mm',
           }}
         >
           <div
             style={{
-              fontSize: '4.5pt',
+              fontSize: '5pt',
               fontWeight: 700,
               color: COLORS.text,
+              background: 'rgba(255,255,255,0.7)',
+              padding: '0.1mm 0.8mm',
+              borderRadius: '0.5mm',
             }}
           >
-            {businessConfig.brand.license}
+            Wt: {label.weight_grams}g
           </div>
           <div
             style={{
-              display: 'flex',
-              gap: '1mm',
+              fontSize: '5pt',
+              fontWeight: 700,
+              color: COLORS.text,
+              background: 'rgba(255,255,255,0.7)',
+              padding: '0.1mm 0.8mm',
+              borderRadius: '0.5mm',
             }}
           >
-            <div
-              style={{
-                fontSize: '5pt',
-                fontWeight: 700,
-                color: COLORS.text,
-                background: 'rgba(255,255,255,0.7)',
-                padding: '0.2mm 0.8mm',
-                borderRadius: '0.8mm',
-              }}
-            >
-              Wt: {label.weight_grams}g
-            </div>
-            <div
-              style={{
-                fontSize: '5pt',
-                fontWeight: 700,
-                color: COLORS.text,
-                background: 'rgba(255,255,255,0.7)',
-                padding: '0.2mm 0.8mm',
-                borderRadius: '0.8mm',
-              }}
-            >
-              BBE: ______
-            </div>
+            BBE: ______
           </div>
         </div>
       </div>
@@ -262,29 +221,30 @@ function SoapBand() {
           <div
             className="band-panel"
             style={{
-              padding: '2mm',
+              padding: '1mm 2mm',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'flex-start',
+              justifyContent: 'space-between',
               textAlign: 'center',
             }}
           >
+            {/* Logo at Top */}
             <img
               src="/HealingSoil-Formatted.png"
-              style={{ width: '10mm', height: '10mm', borderRadius: '50%', marginBottom: '1mm' }}
+              style={{ width: '10mm', height: '10mm', borderRadius: '50%' }}
             />
 
-            {/* Empty space for the 55x34 sticker to be placed BELOW the logo */}
-            <div style={{ flex: 1 }}></div>
+            {/* Clear space for 20mm sticker in middle */}
+            <div style={{ height: '18mm' }}></div>
 
+            {/* Udyam at Bottom */}
             <div
               style={{
                 fontSize: '4.5pt',
                 fontWeight: 800,
                 color: COLORS.text,
                 letterSpacing: '0.05em',
-                opacity: 0.5, /* Faded because sticker will likely cover it */
               }}
             >
               {businessConfig.brand.license}
@@ -346,7 +306,7 @@ export default function CustomLabelsClient({ products }) {
   const [bandPages, setBandPages] = useState(1);
 
   // 36mm height (40% of 90mm) allows us to print exactly 7 bands per A4 sheet
-  const labelsPerPage = printMode === 'stickers' ? 21 : 7;
+  const labelsPerPage = printMode === 'stickers' ? 42 : 7;
 
   const addToQueue = () => {
     if (!selectedProductId) return;
@@ -405,7 +365,7 @@ export default function CustomLabelsClient({ products }) {
 
         .product-label {
           width: 55mm;
-          height: 34mm;
+          height: 20mm;
           border: 1px dashed #ccc;
           display: flex;
           flex-direction: column;
@@ -509,7 +469,7 @@ export default function CustomLabelsClient({ products }) {
 
           .product-label {
             width: 55mm !important;
-            height: 34mm !important;
+            height: 20mm !important;
             border: 0.1mm dashed #000 !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
@@ -957,7 +917,7 @@ export default function CustomLabelsClient({ products }) {
                 alignItems: 'center',
                 gap: printMode === 'stickers' ? '5mm' : '2mm',
                 width: '210mm',
-                height: printMode === 'stickers' ? '297mm' : 'auto',
+                height: 'auto',
                 minHeight: '297mm',
                 margin: '0 auto 32px auto',
                 boxSizing: 'border-box',
