@@ -16,6 +16,25 @@ export default function LayoutWrapper({ children }) {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <style jsx global>{`
+        @media print {
+          aside.sidebar, 
+          .mobile-topbar, 
+          .mobile-overlay, 
+          .mobile-fab {
+            display: none !important;
+          }
+          main.main-content {
+            margin-left: 0 !important;
+            padding: 0 !important;
+            background-color: white !important;
+          }
+          main.main-content > div {
+            max-width: none !important;
+            margin: 0 !important;
+          }
+        }
+      `}</style>
       {/* Mobile top bar — only visible on mobile */}
       <div 
         style={{ display: 'none' }} 
