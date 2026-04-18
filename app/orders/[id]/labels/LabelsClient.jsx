@@ -68,7 +68,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         
-        @page { size: A4; margin: 8mm; }
+        @page { size: A4; margin: 12mm 8mm; }
         .labels-page { background: #F0EDE8; padding: 20px; min-height: 100vh; font-family: ${FONTS.sans}; }
         .section-header { color: ${COLORS.brand}; margin: 20px 0 10px 0; display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; }
         
@@ -93,7 +93,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
           .labels-page { background: white !important; padding: 0 !important; min-height: 0 !important; }
           .deselected { display: none !important; }
           
-          .product-grid { display: grid; grid-template-columns: repeat(3, 60mm); gap: 4mm; margin-bottom: 6mm; }
+          .product-grid { display: grid; grid-template-columns: repeat(3, 60mm); gap: 4mm; margin-bottom: 6mm; padding-top: 2mm; }
           .product-label { width: 60mm !important; height: 40mm !important; border: 0.3mm dashed #000 !important; page-break-inside: avoid !important; box-sizing: border-box !important; overflow: hidden !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
           .shipping-section { display: flex; flex-wrap: wrap; gap: 5mm; border-top: 0.2mm solid #000; paddingTop: 6mm; page-break-inside: avoid; }

@@ -286,7 +286,7 @@ export default function CustomLabelsClient({ products }) {
 
         @page {
           size: A4 portrait;
-          margin: 0;
+          margin: 10mm 8mm;
         }
         .labels-page {
           background: #f0ede8;
@@ -391,10 +391,12 @@ export default function CustomLabelsClient({ products }) {
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
-            padding: 15mm 0 !important;
+            padding: 4mm 0 !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             width: 210mm !important;
+            height: 277mm !important;
+            min-height: 0 !important;
             box-sizing: border-box !important;
             page-break-after: always;
             break-after: page;
