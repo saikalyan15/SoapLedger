@@ -20,7 +20,8 @@ import {
   getCostPriceTrend,
   getMonthlySurplusDeficit,
   getBreakEvenProjection,
-  getMonthlyProductionData
+  getMonthlyProductionData,
+  getMonthlyOrderTrend
 } from '@/lib/queries/dashboard';
 
 const fmt = (n, decimals = 0) => {
@@ -147,7 +148,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, initialOperations, initialAvgTrend, initialCostTrend, initialProfitability, initialProjection, initialProduction }) => {
+const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, initialOperations, initialAvgTrend, initialCostTrend, initialProfitability, initialProjection, initialProduction, initialOrderTrend }) => {
   const [filter, setFilter] = useState('All Time');
   const [isPending, startTransition] = useTransition();
   const [isMobile, setIsMobile] = useState(false); /* mobile only */
@@ -169,9 +170,10 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
   const [profitability, setProfitability] = useState(initialProfitability);
   const [projection, setProjection] = useState(initialProjection);
   const [production, setProduction] = useState(initialProduction);
+  const [orderTrend, setOrderTrend] = useState(initialOrderTrend);
 
   const fetchFilteredData = async (range) => {
-    const [rev, cust, prod, oper, trend, cTrend, cProf, proj, prodData] = await Promise.all([
+    const [rev, cust, prod, oper, trend, cTrend, cProf, proj, prodData, oTrend] = await Promise.all([
       getRevenueKPIs(range),
       getRepeatCustomerRate(range),
       getProductPerformance(range),
@@ -180,7 +182,8 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
       getCostPriceTrend(range),
       getMonthlySurplusDeficit(),
       getBreakEvenProjection(),
-      getMonthlyProductionData(range)
+      getMonthlyProductionData(range),
+      getMonthlyOrderTrend(range)
     ]);
     setRevenue(rev);
     setCustomers(cust);
@@ -191,6 +194,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
     setProfitability(cProf);
     setProjection(proj);
     setProduction(prodData);
+    setOrderTrend(oTrend);
   };
 
   const handleFilterChange = (label) => {
@@ -281,25 +285,23 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
         <KPICard label="Pending Qty" value={fmtNum(revenue.pending_soaps)} sub="Units" color="#6B21A8" loading={isPending} isMobile={isMobile} />
       </div>
 
-      {/* Row 2: Monthly Profitability & Base Type */}
+      {/* Row 2: Order Volume & Profitability */}
       <div 
         className="chart-row-2col"
-        style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', marginBottom: '32px' }}
+        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}
       >
-        <ChartCard title="Monthly Profitability" subtitle="Surplus/Deficit Trend" loading={isPending} empty={profitability.length === 0} icon={DollarSign} isMobile={isMobile}>
-          <div style={{ height: isMobile ? '280px' : '360px', width: '100%' }} className="recharts-responsive-container">
+        <ChartCard title="Order Volume Trend" subtitle="MoM Orders vs Revenue" loading={isPending} empty={orderTrend.length === 0} icon={ShoppingBag} isMobile={isMobile}>
+          <div style={{ height: isMobile ? '240px' : '320px', width: '100%' }} className="recharts-responsive-container">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={profitability} margin={{ top: 10, right: 40, left: 0, bottom: 0 }}>
+              <ComposedChart data={orderTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
-                <YAxis yAxisId="money" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmtNum(Math.round(v/10)*10)}`} />
-                <YAxis yAxisId="soaps" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#3B82F6' }} tickFormatter={(v) => `${v}`} />
+                <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => fmtNum(v)} />
+                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#1B4332' }} tickFormatter={(v) => `₹${fmtNum(Math.round(v/1000))}k`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                <Bar yAxisId="money" dataKey="revenue" name="Revenue" fill="#1B4332" radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="money" dataKey="recurring_costs" name="Costs" fill="#DC2626" radius={[4, 4, 0, 0]} />
-                <Line yAxisId="money" type="monotone" dataKey="surplus_deficit" name="Surplus/Deficit" stroke="#10B981" strokeWidth={3} dot={{ fill: '#10B981' }} />
-                <Line yAxisId="soaps" type="monotone" dataKey="soaps_shipped" name="Soaps Shipped" stroke="#3B82F6" strokeWidth={2} strokeDasharray="4 3" dot={{ fill: '#3B82F6', r: 3 }} />
+                <Bar yAxisId="left" dataKey="order_count" name="Orders" fill="#D8F3DC" radius={[4, 4, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="total_order_value" name="Revenue" stroke="#1B4332" strokeWidth={2} dot={!isMobile} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -344,6 +346,28 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
                 <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 800, color: '#111827', fontFamily: 'DM Serif Display, serif' }}>{fmtCurrency(totalBaseRevenue)}</div>
               </div>
             </div>
+          </div>
+        </ChartCard>
+      </div>
+
+      {/* Row 3: Monthly Profitability */}
+      <div style={{ marginBottom: '32px' }}>
+        <ChartCard title="Monthly Profitability" subtitle="Surplus/Deficit Trend" loading={isPending} empty={profitability.length === 0} icon={DollarSign} isMobile={isMobile}>
+          <div style={{ height: isMobile ? '280px' : '360px', width: '100%' }} className="recharts-responsive-container">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={profitability} margin={{ top: 10, right: 40, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
+                <YAxis yAxisId="money" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmtNum(Math.round(v/10)*10)}`} />
+                <YAxis yAxisId="soaps" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#3B82F6' }} tickFormatter={(v) => `${v}`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                <Bar yAxisId="money" dataKey="revenue" name="Revenue" fill="#1B4332" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="money" dataKey="recurring_costs" name="Costs" fill="#DC2626" radius={[4, 4, 0, 0]} />
+                <Line yAxisId="money" type="monotone" dataKey="surplus_deficit" name="Surplus/Deficit" stroke="#10B981" strokeWidth={3} dot={{ fill: '#10B981' }} />
+                <Line yAxisId="soaps" type="monotone" dataKey="soaps_shipped" name="Soaps Shipped" stroke="#3B82F6" strokeWidth={2} strokeDasharray="4 3" dot={{ fill: '#3B82F6', r: 3 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
           </div>
         </ChartCard>
       </div>
