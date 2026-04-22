@@ -290,7 +290,7 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
         className="chart-row-2col"
         style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}
       >
-        <ChartCard title="Order Volume Trend" subtitle="MoM Orders vs Revenue" loading={isPending} empty={orderTrend.length === 0} icon={ShoppingBag} isMobile={isMobile}>
+        <ChartCard title="Order Volume Trend" subtitle="MoM Orders, Revenue & Average Value" loading={isPending} empty={orderTrend.length === 0} icon={ShoppingBag} isMobile={isMobile}>
           <div style={{ height: isMobile ? '240px' : '320px', width: '100%' }} className="recharts-responsive-container">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={orderTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -300,8 +300,9 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
                 <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#1B4332' }} tickFormatter={(v) => `₹${fmtNum(Math.round(v/1000))}k`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                <Bar yAxisId="left" dataKey="order_count" name="Orders" fill="#D8F3DC" radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="left" dataKey="order_count" name="Orders" fill="#40916C" radius={[4, 4, 0, 0]} />
                 <Line yAxisId="right" type="monotone" dataKey="total_order_value" name="Revenue" stroke="#1B4332" strokeWidth={2} dot={!isMobile} />
+                <Line yAxisId="right" type="monotone" dataKey="avg_order_value" name="Avg Order Value" stroke="#D4A017" strokeWidth={2} dot={!isMobile} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
