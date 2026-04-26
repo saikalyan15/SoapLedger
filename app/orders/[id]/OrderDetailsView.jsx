@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Pencil, ArrowLeft, ChevronDown, CheckCircle, UserCheck, AlertCircle, Printer, Package, MapPin } from 'lucide-react';
+import { Pencil, ArrowLeft, ChevronDown, CheckCircle, UserCheck, AlertCircle, Printer, Package, MapPin, Droplets } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
 import { updateShipmentStatusAction, updateOrderStatusAction } from '@/lib/actions/orders';
 import { SETTABLE_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
@@ -105,7 +105,7 @@ const ShipmentCard = ({ shipment, items, isMobile, onStatusUpdate }) => {
   );
 };
 
-const OrderDetailsView = ({ order, items, shipments = [] }) => {
+const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [] }) => {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -276,7 +276,7 @@ const OrderDetailsView = ({ order, items, shipments = [] }) => {
           </div>
         </div>
 
-        {/* Right: Internal Notes / Helper info */}
+        {/* Right: Order Notes + Essential Oils Checklist */}
         <div>
           <div style={cardStyle}>
             <div style={sectionLabelStyle}>Order Notes</div>
@@ -284,6 +284,48 @@ const OrderDetailsView = ({ order, items, shipments = [] }) => {
               {order.notes || <em style={{ color: '#9CA3AF' }}>No notes provided for this order.</em>}
             </div>
           </div>
+
+          {essentialOils.length > 0 && (
+            <div style={cardStyle}>
+              <div style={{ ...sectionLabelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Droplets size={13} />
+                Essential Oils Checklist
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                {essentialOils.map((row, idx) => (
+                  <div
+                    key={row.product_id + idx}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '14px',
+                      padding: '8px 0',
+                      borderBottom: idx < essentialOils.length - 1 ? '1px solid #F3F4F6' : 'none',
+                    }}
+                  >
+                    <span style={{ color: '#374151' }}>
+                      {row.product_name} <span style={{ color: '#9CA3AF' }}>×{row.soap_qty}</span>
+                    </span>
+                    {row.oil_name ? (
+                      <span style={{ fontWeight: '600', color: '#1B4332', fontSize: '13px' }}>
+                        {row.oil_name}
+                      </span>
+                    ) : (
+                      <span style={{ fontWeight: '600', color: '#DC2626', fontSize: '12px' }}>
+                        No default oil
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {essentialOils.every(r => r.oil_name) && (
+                <div style={{ marginTop: '12px', fontSize: '12px', color: '#9CA3AF', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+                  All products have a default oil assigned.
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

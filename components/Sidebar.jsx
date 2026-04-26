@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, PlusCircle, ShoppingBag, Users,
-  Package, FlaskConical, Receipt, Settings, X, Tag, TrendingUp, Bell, BarChart2
+  Package, FlaskConical, Receipt, Settings, X, Tag, TrendingUp, Bell, BarChart2, Droplets
 } from 'lucide-react'
 
 const navItems = [
@@ -13,6 +13,7 @@ const navItems = [
   { label: 'Customers',     href: '/customers',    icon: Users },
   { label: 'Reorder Outreach', href: '/outreach',  icon: Bell },
   { label: 'Products',      href: '/products',     icon: Package },
+  { label: 'Inventory',     href: '/inventory',    icon: Droplets },
   { label: 'SKU Report',    href: '/sku-report',   icon: BarChart2 },
   { label: 'Print',          href: '/labels',       icon: Tag },
   { label: 'Growth',        href: '/growth',       icon: TrendingUp },

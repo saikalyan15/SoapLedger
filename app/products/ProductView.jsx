@@ -9,6 +9,7 @@ import {
   updateFeaturedProductsAction,
   revalidateProductsAction,
 } from '@/lib/actions/products';
+import { saveProductOilsAction } from '@/lib/actions/essential_oils';
 import {
   Archive,
   ArchiveRestore,
@@ -23,10 +24,11 @@ import {
   RefreshCcw,
   Check,
   Star,
+  Droplets,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-export default function ProductView({ products }) {
+export default function ProductView({ products, allOils = [] }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isArchivedOpen, setIsArchivedOpen] = useState(false);
@@ -42,6 +44,7 @@ export default function ProductView({ products }) {
     slug: '',
     slugManuallyEdited: false,
   });
+  const [selectedOils, setSelectedOils] = useState([]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -129,6 +132,8 @@ export default function ProductView({ products }) {
       slug: product.slug || '',
       slugManuallyEdited: true, // editing existing — don't auto-overwrite slug
     });
+    const linked = Array.isArray(product.linked_oils) ? product.linked_oils : [];
+    setSelectedOils(linked.map(o => ({ essential_oil_id: o.id, is_default: o.is_default })));
     setIsFormOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -137,6 +142,7 @@ export default function ProductView({ products }) {
     setIsFormOpen(false);
     setEditingProduct(null);
     setFormData({ ingredients: '', slug: '', slugManuallyEdited: false });
+    setSelectedOils([]);
   };
 
   const handleSortChange = (id, newVal) => {
@@ -359,8 +365,12 @@ export default function ProductView({ products }) {
             action={async (formData) => {
               if (editingProduct) {
                 await updateProductAction(editingProduct.id, formData);
+                await saveProductOilsAction(editingProduct.id, selectedOils);
               } else {
-                await createProductAction(formData);
+                const result = await createProductAction(formData);
+                if (result?.id && selectedOils.length > 0) {
+                  await saveProductOilsAction(result.id, selectedOils);
+                }
               }
               handleCancel();
             }}
@@ -475,6 +485,75 @@ export default function ProductView({ products }) {
                   placeholder="e.g. Neem Extract, Tulsi Extract, Essential Oils"
                 />
               </div>
+
+              {/* Essential Oils Multi-Select */}
+              {allOils.length > 0 && (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[10px] flex items-center gap-[6px]">
+                    <Droplets size={13} />
+                    Essential Oils for this Product
+                  </label>
+                  <div className="border border-[#E5E7EB] rounded-[8px] bg-white divide-y divide-[#F3F4F6] max-h-[220px] overflow-y-auto">
+                    {allOils.map((oil) => {
+                      const isChecked = selectedOils.some(o => o.essential_oil_id === oil.id);
+                      const isDefault = selectedOils.some(o => o.essential_oil_id === oil.id && o.is_default);
+
+                      const toggleOil = () => {
+                        if (isChecked) {
+                          setSelectedOils(prev => prev.filter(o => o.essential_oil_id !== oil.id));
+                        } else {
+                          setSelectedOils(prev => [...prev, { essential_oil_id: oil.id, is_default: false }]);
+                        }
+                      };
+
+                      const setDefault = (e) => {
+                        e.stopPropagation();
+                        setSelectedOils(prev =>
+                          prev.map(o => ({ ...o, is_default: o.essential_oil_id === oil.id }))
+                        );
+                      };
+
+                      return (
+                        <div
+                          key={oil.id}
+                          className={`flex items-center justify-between px-[14px] py-[10px] cursor-pointer transition-colors ${isChecked ? 'bg-[#F0FDF4]' : 'hover:bg-[#FAFAFA]'}`}
+                          onClick={toggleOil}
+                        >
+                          <div className="flex items-center gap-[10px]">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={toggleOil}
+                              onClick={e => e.stopPropagation()}
+                              className="w-[16px] h-[16px] accent-[#1B4332] cursor-pointer"
+                            />
+                            <span className="font-sans text-[14px] text-[#1A1A1A]">{oil.name}</span>
+                            {oil.quantity_ml != null && (
+                              <span className="font-sans text-[11px] text-[#9CA3AF]">{oil.quantity_ml} ml</span>
+                            )}
+                          </div>
+                          {isChecked && (
+                            <button
+                              type="button"
+                              onClick={setDefault}
+                              title={isDefault ? 'Default oil' : 'Set as default'}
+                              className={`flex items-center gap-[4px] font-sans text-[11px] font-semibold px-[8px] py-[3px] rounded-[6px] border transition-colors ${isDefault ? 'bg-[#1B4332] text-white border-[#1B4332]' : 'bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#1B4332] hover:text-[#1B4332]'}`}
+                            >
+                              <Star size={11} fill={isDefault ? 'white' : 'none'} />
+                              {isDefault ? 'Default' : 'Set default'}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {selectedOils.length > 0 && !selectedOils.some(o => o.is_default) && (
+                    <p className="font-sans text-[12px] text-[#D97706] mt-[6px] m-0">
+                      No default oil selected — tap "Set default" on one oil.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div style={{ gridColumn: '1 / -1' }}>
                 <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
