@@ -487,12 +487,20 @@ export default function ProductView({ products, allOils = [] }) {
               </div>
 
               {/* Essential Oils Multi-Select */}
-              {allOils.length > 0 && (
-                <div style={{ gridColumn: '1 / -1' }}>
+              <div style={{ gridColumn: '1 / -1' }}>
                   <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[10px] flex items-center gap-[6px]">
                     <Droplets size={13} />
                     Essential Oils for this Product
                   </label>
+                  {allOils.length === 0 ? (
+                    <div className="border border-dashed border-[#E5E7EB] rounded-[8px] px-[14px] py-[14px] bg-[#FAFAFA] text-center">
+                      <p className="font-sans text-[13px] text-[#9CA3AF] m-0">
+                        No oils in inventory yet.{' '}
+                        <a href="/inventory" className="text-[#1B4332] font-semibold underline">Add oils in Inventory</a>{' '}
+                        first, then come back to link them.
+                      </p>
+                    </div>
+                  ) : (
                   <div className="border border-[#E5E7EB] rounded-[8px] bg-white divide-y divide-[#F3F4F6] max-h-[220px] overflow-y-auto">
                     {allOils.map((oil) => {
                       const isChecked = selectedOils.some(o => o.essential_oil_id === oil.id);
@@ -547,13 +555,13 @@ export default function ProductView({ products, allOils = [] }) {
                       );
                     })}
                   </div>
-                  {selectedOils.length > 0 && !selectedOils.some(o => o.is_default) && (
+                  )}
+                  {allOils.length > 0 && selectedOils.length > 0 && !selectedOils.some(o => o.is_default) && (
                     <p className="font-sans text-[12px] text-[#D97706] mt-[6px] m-0">
                       No default oil selected — tap "Set default" on one oil.
                     </p>
                   )}
                 </div>
-              )}
 
               <div style={{ gridColumn: '1 / -1' }}>
                 <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
