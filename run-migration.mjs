@@ -16,10 +16,10 @@ if (!dbUrl) {
 const sql = neon(dbUrl);
 
 async function runMigration() {
-  const migrationPath = path.join(process.cwd(), 'db-schema', 'migration_v9.sql');
+  const migrationPath = path.join(process.cwd(), 'db-schema', 'migration_v13.sql');
   const migrationSql = fs.readFileSync(migrationPath, 'utf8');
 
-  console.log('Running migration v9.0...');
+  console.log('Running migration v13.0...');
   
   try {
     // Better splitting that respects simple cases but ignores comments
@@ -35,7 +35,7 @@ async function runMigration() {
       await sql.query(command);
     }
     
-    console.log('Migration v5.0 completed successfully.');
+    console.log('Migration v13.0 completed successfully.');
   } catch (error) {
     console.error('Migration failed:', error);
     process.exit(1);
