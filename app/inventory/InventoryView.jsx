@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, X, Pencil, Trash2, Droplets } from 'lucide-react';
+import { Plus, X, Pencil, Trash2, Droplets, Star } from 'lucide-react';
 import {
   createEssentialOilAction,
   updateEssentialOilAction,
   deleteEssentialOilAction,
+  toggleFrequentlyUsedAction,
 } from '@/lib/actions/essential_oils';
 
 const emptyForm = { name: '', notes: '', quantity_ml: '' };
@@ -36,6 +37,11 @@ export default function InventoryView({ oils }) {
   const handleDelete = async (oil) => {
     if (!confirm(`Delete "${oil.name}"? This cannot be undone.`)) return;
     const result = await deleteEssentialOilAction(oil.id);
+    if (result.error) alert(result.error);
+  };
+
+  const handleToggleFrequent = async (oil) => {
+    const result = await toggleFrequentlyUsedAction(oil.id, oil.is_frequently_used);
     if (result.error) alert(result.error);
   };
 
@@ -177,6 +183,11 @@ export default function InventoryView({ oils }) {
                       {oil.quantity_ml} ml
                     </span>
                   )}
+                  {oil.is_frequently_used && (
+                    <span className="bg-[#FEF9C3] text-[#A16207] font-sans text-[10px] font-bold tracking-[0.06em] px-[10px] py-[3px] rounded-[20px] uppercase flex items-center gap-1">
+                      <Star size={10} fill="#A16207" /> Frequent
+                    </span>
+                  )}
                 </div>
                 {oil.notes && (
                   <p className="font-sans text-[13px] text-[#9CA3AF] mt-[4px] ml-[23px] m-0 line-clamp-1">
@@ -186,6 +197,17 @@ export default function InventoryView({ oils }) {
               </div>
 
               <div className="flex items-center gap-[8px]">
+                <button
+                  onClick={() => handleToggleFrequent(oil)}
+                  title={oil.is_frequently_used ? 'Unmark as frequent' : 'Mark as frequent'}
+                  className={`bg-transparent border font-sans text-[12px] font-semibold px-3 py-2 md:py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 ${
+                    oil.is_frequently_used
+                      ? 'border-[#FDE68A] text-[#A16207] hover:bg-[#FEF9C3]'
+                      : 'border-[#E5E7EB] text-[#9CA3AF] hover:bg-[#F9FAFB]'
+                  }`}
+                >
+                  <Star size={13} fill={oil.is_frequently_used ? '#A16207' : 'none'} />
+                </button>
                 <button
                   onClick={() => handleEdit(oil)}
                   className="bg-transparent border border-[#1B4332] text-[#1B4332] font-sans text-[12px] font-semibold px-[16px] py-[8px] md:py-[6px] rounded-[8px] cursor-pointer flex items-center gap-[6px]"
