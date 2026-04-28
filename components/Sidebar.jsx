@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, PlusCircle, ShoppingBag, Users,
@@ -64,23 +65,22 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
       {/* Brand */}
       <div style={{
-        padding: '28px 24px 24px',
+        padding: '20px 24px',
         borderBottom: '1px solid rgba(255,255,255,0.10)',
       }}>
-        <div style={{
-          fontFamily: 'DM Serif Display, serif',
-          fontSize: '20px',
-          color: '#FFFFFF',
-          letterSpacing: '0.01em',
-          lineHeight: 1.2,
-        }}>
-          Healing Soil
-        </div>
+        <Image
+          src="/logo/healing-soil-v2.1-transparent.png"
+          alt="Healing Soil"
+          width={160}
+          height={88}
+          style={{ width: '100%', height: 'auto', maxWidth: '160px' }}
+          priority
+        />
         <div style={{
           fontFamily: 'Plus Jakarta Sans, sans-serif',
           fontSize: '11px',
           color: 'rgba(255,255,255,0.5)',
-          marginTop: '4px',
+          marginTop: '6px',
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
         }}>

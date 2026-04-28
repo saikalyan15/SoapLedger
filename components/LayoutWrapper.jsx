@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { Menu, Plus } from 'lucide-react'
 import Sidebar from '@/components/Sidebar'
 import { usePathname } from 'next/navigation'
@@ -55,13 +56,15 @@ export default function LayoutWrapper({ children }) {
           boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
         }}>
           {/* Brand */}
-          <div>
-            <div style={{
-              fontFamily: 'DM Serif Display, serif',
-              fontSize: '18px',
-              color: '#FFFFFF',
-              lineHeight: 1,
-            }}>Healing Soil</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <Image
+              src="/logo/healing-soil-v2.1-transparent.png"
+              alt="Healing Soil"
+              width={120}
+              height={66}
+              style={{ width: '120px', height: 'auto' }}
+              priority
+            />
             <div style={{
               fontFamily: 'Plus Jakarta Sans, sans-serif',
               fontSize: '10px',

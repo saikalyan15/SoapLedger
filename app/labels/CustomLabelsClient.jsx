@@ -194,7 +194,7 @@ function SoapBand() {
           >
             {/* Logo at Top — safely away from cut line */}
             <img
-              src="/HealingSoil-Formatted.png"
+              src="/logo/profile-dark-green.png"
               style={{ width: '13mm', height: '13mm', borderRadius: '50%' }}
             />
 
