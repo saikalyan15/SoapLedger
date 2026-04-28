@@ -14,6 +14,7 @@ import {
   Archive,
   ArchiveRestore,
   ChevronRight,
+  LayoutList,
   Pencil,
   Plus,
   X,
@@ -36,6 +37,7 @@ export default function ProductView({ products, allOils = [] }) {
   const [isSortMode, setIsSortMode] = useState(false);
   const [isFeaturedMode, setIsFeaturedMode] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isReportMode, setIsReportMode] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [sortList, setSortList] = useState([]);
   const [featuredList, setFeaturedList] = useState([]);
@@ -216,20 +218,27 @@ export default function ProductView({ products, allOils = [] }) {
             {isRefreshing ? 'Refreshing...' : isMobile ? 'Refresh' : 'Refresh Products'}
           </button>
           <button
-            onClick={() => { setIsFeaturedMode(!isFeaturedMode); setIsSortMode(false); }}
+            onClick={() => { setIsFeaturedMode(!isFeaturedMode); setIsSortMode(false); setIsReportMode(false); }}
             className={`font-sans text-[14px] font-semibold px-[16px] py-[10px] md:py-[12px] rounded-[10px] cursor-pointer flex items-center gap-[8px] tracking-[0.01em] shadow-[0_2px_8px_rgba(0,0,0,0.05)] ${isFeaturedMode ? 'bg-[#4338CA] text-white border-none' : 'bg-white text-[#4B5563] border border-[#E5E7EB]'}`}
           >
             {isFeaturedMode ? <X size={16} /> : <Star size={16} />}
-            {isFeaturedMode ? 'Cancel' : isMobile ? 'Featured' : 'Featured'}
+            {isFeaturedMode ? 'Cancel' : 'Featured'}
           </button>
           <button
-            onClick={() => { setIsSortMode(!isSortMode); setIsFeaturedMode(false); }}
+            onClick={() => { setIsReportMode(!isReportMode); setIsSortMode(false); setIsFeaturedMode(false); }}
+            className={`font-sans text-[14px] font-semibold px-[16px] py-[10px] md:py-[12px] rounded-[10px] cursor-pointer flex items-center gap-[8px] tracking-[0.01em] shadow-[0_2px_8px_rgba(0,0,0,0.05)] ${isReportMode ? 'bg-[#0F766E] text-white border-none' : 'bg-white text-[#4B5563] border border-[#E5E7EB]'}`}
+          >
+            {isReportMode ? <X size={16} /> : <LayoutList size={16} />}
+            {isReportMode ? 'Cancel' : 'Report'}
+          </button>
+          <button
+            onClick={() => { setIsSortMode(!isSortMode); setIsFeaturedMode(false); setIsReportMode(false); }}
             className={`font-sans text-[14px] font-semibold px-[16px] py-[10px] md:py-[12px] rounded-[10px] cursor-pointer flex items-center gap-[8px] tracking-[0.01em] shadow-[0_2px_8px_rgba(0,0,0,0.05)] ${isSortMode ? 'bg-[#111827] text-white border-none' : 'bg-white text-[#4B5563] border border-[#E5E7EB]'}`}
           >
             {isSortMode ? <X size={16} /> : <ArrowUpDown size={16} />}
             {isSortMode ? 'Cancel' : isMobile ? 'Sort' : 'Sort Mode'}
           </button>
-          {!isSortMode && !isFeaturedMode && (
+          {!isSortMode && !isFeaturedMode && !isReportMode && (
             <button
               onClick={() => setIsFormOpen(!isFormOpen)}
               className="bg-[#1B4332] text-[#FFFFFF] font-sans text-[14px] font-semibold px-[16px] md:px-[24px] py-[10px] md:py-[12px] rounded-[10px] border-none cursor-pointer flex items-center gap-[8px] tracking-[0.01em] shadow-[0_2px_8px_rgba(27,67,50,0.25)] m-0"
@@ -664,7 +673,7 @@ export default function ProductView({ products, allOils = [] }) {
         </div>
       ) : null}
 
-      {!isSortMode && !isFeaturedMode && (
+      {!isSortMode && !isFeaturedMode && !isReportMode && (
         <div className="space-y-[32px] md:space-y-[40px]">
           {Object.entries(groupedProducts).map(([base, items]) => (
             <div key={base}>
@@ -682,7 +691,8 @@ export default function ProductView({ products, allOils = [] }) {
                 {items.map((product) => (
                   <div
                     key={product.id}
-                    className="bg-[#FFFFFF] border border-[#EBEBEB] rounded-[12px] px-[16px] md:px-[24px] py-[14px] md:py-[18px] flex flex-col md:flex-row md:items-center justify-between transition-all duration-[180ms] hover:border-[#D8F3DC] product-card"
+                    onClick={() => handleEdit(product)}
+                    className="bg-[#FFFFFF] border border-[#EBEBEB] rounded-[12px] px-[16px] md:px-[24px] py-[14px] md:py-[18px] flex flex-col md:flex-row md:items-center justify-between transition-all duration-[180ms] hover:border-[#D8F3DC] hover:shadow-[0_2px_8px_rgba(27,67,50,0.06)] product-card cursor-pointer"
                   >
                     <div className="mb-[12px] md:mb-0">
                       <div className="flex items-center gap-2">
@@ -724,7 +734,7 @@ export default function ProductView({ products, allOils = [] }) {
                       })()}
                     </div>
 
-                    <div className="flex flex-col md:flex-row md:items-center gap-[12px]">
+                    <div className="flex flex-col md:flex-row md:items-center gap-[12px]" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center gap-[8px]">
                         {product.is_seasonal && (
                           <span className="bg-[#FEF3C7] text-[#92400E] font-sans text-[10px] font-bold tracking-[0.06em] px-[10px] py-[3px] rounded-[20px] uppercase m-0">
@@ -777,7 +787,7 @@ export default function ProductView({ products, allOils = [] }) {
         </div>
       )}
 
-      {!isSortMode && !isFeaturedMode && archivedProducts.length > 0 && (
+      {!isSortMode && !isFeaturedMode && !isReportMode && archivedProducts.length > 0 && (
         <div className="mt-[40px] md:mt-[48px]">
           <div
             onClick={() => setIsArchivedOpen(!isArchivedOpen)}
@@ -830,6 +840,79 @@ export default function ProductView({ products, allOils = [] }) {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {isReportMode && (
+        <div className="space-y-[32px] md:space-y-[40px]">
+          {Object.entries(groupedProducts).map(([base, items]) => (
+            <div key={base}>
+              <div className="flex justify-between items-center mb-[12px]">
+                <h3 className="font-serif text-[18px] text-[#1B4332] font-normal m-0">{base}</h3>
+                <span className="font-sans text-[12px] text-[#6B7280] bg-[#F3F4F6] px-[10px] py-[3px] rounded-[20px] font-medium m-0">
+                  {items.length} {items.length === 1 ? 'item' : 'items'}
+                </span>
+              </div>
+              <div className="border-b-[1px] border-[#E5E7EB] mb-[16px]"></div>
+
+              <div className="space-y-[8px]">
+                {/* Column headers — desktop only */}
+                <div className="hidden md:grid md:grid-cols-[200px_1fr_2fr] gap-[20px] px-[20px] pb-[4px]">
+                  <div className="font-sans text-[10px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">Product</div>
+                  <div className="font-sans text-[10px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">Essential Oils</div>
+                  <div className="font-sans text-[10px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">Internal Notes</div>
+                </div>
+
+                {items
+                  .slice()
+                  .sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || a.name.localeCompare(b.name))
+                  .map((product) => (
+                  <div
+                    key={product.id}
+                    onClick={() => handleEdit(product)}
+                    className="bg-white border border-[#EBEBEB] rounded-[12px] px-[16px] md:px-[20px] py-[14px] md:py-[16px] grid grid-cols-1 md:grid-cols-[200px_1fr_2fr] gap-[10px] md:gap-[20px] transition-all duration-[180ms] hover:border-[#A7F3D0] hover:shadow-[0_2px_8px_rgba(27,67,50,0.06)] cursor-pointer"
+                  >
+                    {/* Product name + meta */}
+                    <div>
+                      <div className="font-sans text-[14px] font-semibold text-[#1A1A1A] leading-snug">{product.name}</div>
+                      <div className="font-sans text-[11px] text-[#6B7280] uppercase tracking-wider mt-[2px]">{product.base_type}</div>
+                      <div className="font-sans text-[12px] text-[#9CA3AF] mt-[2px]">₹{product.unit_price}{product.weight_grams ? ` · ${product.weight_grams}g` : ''}</div>
+                    </div>
+
+                    {/* Essential oils */}
+                    <div>
+                      <div className="font-sans text-[10px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF] mb-[6px] md:hidden">Essential Oils</div>
+                      {Array.isArray(product.linked_oils) && product.linked_oils.length > 0 ? (
+                        <div className="flex flex-wrap gap-[5px]">
+                          {product.linked_oils.map((oil) => (
+                            <span
+                              key={oil.id}
+                              className={`inline-flex items-center gap-[3px] font-sans text-[12px] px-[8px] py-[3px] rounded-full border ${oil.is_default ? 'bg-[#F0FDF4] border-[#A7F3D0] text-[#1B4332] font-semibold' : 'bg-[#F9FAFB] border-[#E5E7EB] text-[#4B5563]'}`}
+                            >
+                              {oil.is_default && <Star size={9} fill="#1B4332" className="text-[#1B4332]" />}
+                              {oil.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="font-sans text-[12px] text-[#D1D5DB] italic">None linked</span>
+                      )}
+                    </div>
+
+                    {/* Internal notes */}
+                    <div>
+                      <div className="font-sans text-[10px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF] mb-[6px] md:hidden">Internal Notes</div>
+                      {product.notes ? (
+                        <div className="font-sans text-[13px] text-[#4B5563] leading-[1.55] whitespace-pre-wrap">{product.notes}</div>
+                      ) : (
+                        <span className="font-sans text-[12px] text-[#D1D5DB] italic">No notes</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
