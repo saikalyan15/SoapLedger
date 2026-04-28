@@ -690,6 +690,20 @@ export default function ProductView({ products, allOils = [] }) {
                         • ₹{product.unit_price}
                         {product.slug && ` • /${product.slug}`}
                       </div>
+                      {Array.isArray(product.linked_oils) && product.linked_oils.length > 0 && (() => {
+                        const defaultOil = product.linked_oils.find(o => o.is_default);
+                        const extraCount = product.linked_oils.length - (defaultOil ? 1 : 0);
+                        return (
+                          <div className="flex items-center gap-[5px] mt-[4px]">
+                            <Droplets size={12} className="text-[#1B4332] opacity-50 flex-shrink-0" />
+                            <span className="font-sans text-[12px] text-[#6B7280]">
+                              {defaultOil
+                                ? defaultOil.name + (extraCount > 0 ? ` +${extraCount} more` : '')
+                                : `${product.linked_oils.length} oil${product.linked_oils.length > 1 ? 's' : ''} linked`}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div className="flex flex-col md:flex-row md:items-center gap-[12px]">
