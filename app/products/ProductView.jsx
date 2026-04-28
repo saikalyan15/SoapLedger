@@ -486,6 +486,19 @@ export default function ProductView({ products, allOils = [] }) {
                 />
               </div>
 
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
+                  INTERNAL NOTES
+                </label>
+                <textarea
+                  name="notes"
+                  defaultValue={editingProduct?.notes || ''}
+                  rows={3}
+                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none resize-vertical"
+                  placeholder="e.g. essential oil recommendations, batch notes..."
+                />
+              </div>
+
               {/* Essential Oils Multi-Select */}
               <div style={{ gridColumn: '1 / -1' }}>
                   <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[10px] flex items-center gap-[6px]">
@@ -690,6 +703,11 @@ export default function ProductView({ products, allOils = [] }) {
                         • ₹{product.unit_price}
                         {product.slug && ` • /${product.slug}`}
                       </div>
+                      {product.notes && (
+                        <div className="mt-[4px] font-sans text-[11px] text-[#9CA3AF] leading-[1.4] line-clamp-1" title={product.notes}>
+                          {product.notes}
+                        </div>
+                      )}
                       {Array.isArray(product.linked_oils) && product.linked_oils.length > 0 && (() => {
                         const defaultOil = product.linked_oils.find(o => o.is_default);
                         const extraCount = product.linked_oils.length - (defaultOil ? 1 : 0);
