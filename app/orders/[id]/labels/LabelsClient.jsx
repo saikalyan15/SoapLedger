@@ -134,7 +134,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
               <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '2mm 3mm' }}>
                 {/* Logo centered */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1mm' }}>
-                  <img src="/logo/healing-soil-v2.1-transparent.png" style={{ width: '14mm', height: 'auto' }} />
+                  <img src="/logo/healing-soil-v2.1.png" style={{ width: '14mm', height: 'auto' }} />
                   <div style={{ fontSize: '5pt', fontWeight: 700, color: COLORS.brand, letterSpacing: '0.08em', marginTop: '0.3mm' }}>{businessConfig.brand.name}</div>
                 </div>
 
@@ -179,7 +179,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
               {selectedIds.has(-1) ? <CheckSquare size={20} fill={COLORS.brand} color="white" /> : <Square size={20} color={COLORS.muted} />}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', borderBottom: '1.5px dashed black', paddingBottom: '6px', marginBottom: '12px' }}>
-              <img src="/logo/healing-soil-v2.1-transparent.png" style={{ width: '18mm', height: 'auto' }} />
+              <img src="/logo/healing-soil-v2.1.png" style={{ width: '18mm', height: 'auto' }} />
               <div style={{ fontSize: '14px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name} — TO</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
@@ -202,7 +202,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
               {selectedIds.has(-2) ? <CheckSquare size={18} fill={COLORS.brand} color="white" /> : <Square size size={18} color={COLORS.muted} />}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', borderBottom: '1.5px dashed #CCC', paddingBottom: '4px', marginBottom: '8px' }}>
-              <img src="/logo/healing-soil-v2.1-transparent.png" style={{ width: '11mm', height: 'auto' }} />
+              <img src="/logo/healing-soil-v2.1.png" style={{ width: '11mm', height: 'auto' }} />
               <div style={{ fontSize: '10px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name} — FROM</div>
             </div>
             <div style={{ fontSize: '20px', fontWeight: 800, color: 'black', lineHeight: 1.1 }}>{businessConfig.returnAddress.name}</div>

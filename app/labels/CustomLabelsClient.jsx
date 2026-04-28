@@ -194,7 +194,7 @@ function SoapBand() {
           >
             {/* Logo at Top — safely away from cut line */}
             <img
-              src="/logo/healing-soil-v2.1-transparent.png"
+              src="/logo/healing-soil-v2.1.png"
               style={{ width: '22mm', height: 'auto' }}
             />
 

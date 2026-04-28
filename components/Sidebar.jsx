@@ -75,7 +75,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           display: 'inline-block',
         }}>
           <Image
-            src="/logo/healing-soil-v2.1-transparent.png"
+            src="/logo/healing-soil-v2.1.png"
             alt="Healing Soil"
             width={160}
             height={88}

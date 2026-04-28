@@ -59,7 +59,7 @@ export default function LayoutWrapper({ children }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <div style={{ background: '#FFFFFF', borderRadius: '6px', padding: '4px 8px', display: 'inline-block' }}>
               <Image
-                src="/logo/healing-soil-v2.1-transparent.png"
+                src="/logo/healing-soil-v2.1.png"
                 alt="Healing Soil"
                 width={120}
                 height={66}
