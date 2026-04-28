@@ -194,8 +194,8 @@ function SoapBand() {
           >
             {/* Logo at Top — safely away from cut line */}
             <img
-              src="/logo/profile-dark-green.png"
-              style={{ width: '13mm', height: '13mm', borderRadius: '50%' }}
+              src="/logo/healing-soil-v2.1-transparent.png"
+              style={{ width: '22mm', height: 'auto' }}
             />
 
             {/* Clear space for sticker in middle */}

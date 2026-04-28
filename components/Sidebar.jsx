@@ -68,14 +68,21 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         padding: '20px 24px',
         borderBottom: '1px solid rgba(255,255,255,0.10)',
       }}>
-        <Image
-          src="/logo/healing-soil-v2.1-transparent.png"
-          alt="Healing Soil"
-          width={160}
-          height={88}
-          style={{ width: '100%', height: 'auto', maxWidth: '160px' }}
-          priority
-        />
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '8px',
+          padding: '6px 10px',
+          display: 'inline-block',
+        }}>
+          <Image
+            src="/logo/healing-soil-v2.1-transparent.png"
+            alt="Healing Soil"
+            width={160}
+            height={88}
+            style={{ width: '160px', height: 'auto', display: 'block' }}
+            priority
+          />
+        </div>
         <div style={{
           fontFamily: 'Plus Jakarta Sans, sans-serif',
           fontSize: '11px',

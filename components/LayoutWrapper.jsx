@@ -57,14 +57,16 @@ export default function LayoutWrapper({ children }) {
         }}>
           {/* Brand */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <Image
-              src="/logo/healing-soil-v2.1-transparent.png"
-              alt="Healing Soil"
-              width={120}
-              height={66}
-              style={{ width: '120px', height: 'auto' }}
-              priority
-            />
+            <div style={{ background: '#FFFFFF', borderRadius: '6px', padding: '4px 8px', display: 'inline-block' }}>
+              <Image
+                src="/logo/healing-soil-v2.1-transparent.png"
+                alt="Healing Soil"
+                width={120}
+                height={66}
+                style={{ width: '110px', height: 'auto', display: 'block' }}
+                priority
+              />
+            </div>
             <div style={{
               fontFamily: 'Plus Jakarta Sans, sans-serif',
               fontSize: '10px',
