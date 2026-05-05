@@ -17,23 +17,25 @@ export async function POST(request) {
       ? ingredients.join(', ')
       : ingredients || '';
 
-    const prompt = `You are writing copy for "Healing Soil", a handmade natural soap brand from Goa, India.
+    const prompt = `You are writing a short description for a handmade soap gift card for "Healing Soil", a small natural soap brand from Goa, India.
 
-Write a short, warm description for a gift handnote card for this soap:
-- Soap name: ${name}
-${baseType ? `- Soap base: ${baseType}` : ''}
-${ingredientsList ? `- Key ingredients: ${ingredientsList}` : ''}
-${notes ? `- Additional context: ${notes}` : ''}
+Soap details:
+- Name: ${name}
+${baseType ? `- Base: ${baseType}` : ''}
+${ingredientsList ? `- Ingredients: ${ingredientsList}` : ''}
+${notes ? `- Extra context: ${notes}` : ''}
 
-Write exactly 2 readable sentences:
-1. What the soap contains (describe key ingredients in a warm, sensory way)
-2. What it does for the skin or how it makes the person feel
+Write 2 short sentences that will go on a handwritten gift note. The tone should feel like a friend wrote it, not a brand.
 
-Rules:
-- Warm and genuine, not over-the-top or flowery
-- Max 35 words total
-- No bullet points, no quotation marks, no asterisks
-- Plain prose only — write as if telling a friend about this soap`;
+Sentence 1: Mention what the soap is made with in a warm, natural way.
+Sentence 2: Say what it does for the skin or how it feels to use.
+
+Hard rules:
+- No em-dashes, no hyphens joining words mid-sentence
+- No words like "nourishing", "luxurious", "indulge", "elevate", or other marketing words
+- No quotation marks, asterisks, or bullet points
+- Under 35 words total
+- Just plain, honest sentences`;
 
     const result = await model.generateContent(prompt);
     const description = result.response.text().trim();
