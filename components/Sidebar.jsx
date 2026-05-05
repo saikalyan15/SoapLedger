@@ -4,22 +4,23 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, PlusCircle, ShoppingBag, Users,
-  Package, FlaskConical, Receipt, Settings, X, Tag, TrendingUp, Bell, BarChart2, Droplets
+  Package, FlaskConical, Receipt, Settings, X, Tag, TrendingUp, Bell, BarChart2, Droplets, NotebookPen
 } from 'lucide-react'
 
 const navItems = [
-  { label: 'Dashboard',     href: '/dashboard',    icon: LayoutDashboard },
-  { label: 'New Order',     href: '/orders/new',   icon: PlusCircle },
-  { label: 'Orders',        href: '/orders',       icon: ShoppingBag },
-  { label: 'Customers',     href: '/customers',    icon: Users },
-  { label: 'Reorder Outreach', href: '/outreach',  icon: Bell },
-  { label: 'Products',      href: '/products',     icon: Package },
-  { label: 'Inventory',     href: '/inventory',    icon: Droplets },
-  { label: 'SKU Report',    href: '/sku-report',   icon: BarChart2 },
-  { label: 'Print',          href: '/labels',       icon: Tag },
-  { label: 'Growth',        href: '/growth',       icon: TrendingUp },
-  { label: 'Expenses',      href: '/expenses',     icon: Receipt },
-  { label: 'Settings',      href: '/settings',     icon: Settings },
+  { label: 'Dashboard',        href: '/dashboard',    icon: LayoutDashboard },
+  { label: 'New Order',        href: '/orders/new',   icon: PlusCircle },
+  { label: 'Orders',           href: '/orders',       icon: ShoppingBag },
+  { label: 'Customers',        href: '/customers',    icon: Users },
+  { label: 'Reorder Outreach', href: '/outreach',     icon: Bell },
+  { label: 'Products',         href: '/products',     icon: Package },
+  { label: 'Inventory',        href: '/inventory',    icon: Droplets },
+  { label: 'SKU Report',       href: '/sku-report',   icon: BarChart2 },
+  { label: 'Print',            href: '/labels',       icon: Tag },
+  { label: 'Gift Handnote',    href: '/handnote',     icon: NotebookPen },
+  { label: 'Growth',           href: '/growth',       icon: TrendingUp },
+  { label: 'Expenses',         href: '/expenses',     icon: Receipt },
+  { label: 'Settings',         href: '/settings',     icon: Settings },
 ]
 
 export default function Sidebar({ isOpen, setIsOpen }) {
