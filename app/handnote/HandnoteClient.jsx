@@ -5,110 +5,160 @@ import { Plus, Trash2, Printer, RefreshCw, Loader2, Sparkles, Edit3, ArrowLeft, 
 import Link from 'next/link';
 
 const C = {
-  brand:      '#1B4332',
-  pageBg:     '#FDF3E7',
-  textBrown:  '#4A3728',
-  subBrown:   '#7D5A35',
-  rule:       '#C9A876',
-  blobPeach:  '#EDCFAE',
-  blobPeach2: '#E5C49E',
-  blobSage:   '#C4D5C4',
-  muted:      '#6B7280',
+  brand:     '#1B4332',
+  pageBg:    '#FDF3E7',
+  textBrown: '#4A3728',
+  rule:      '#C9A876',
+  muted:     '#6B7280',
 };
 
 const SANS  = '"Plus Jakarta Sans", "Inter", Arial, sans-serif';
 const SERIF = '"Cormorant Garamond", "Garamond", Georgia, serif';
 
 const DEFAULT_INTRO =
-  'Every bar in this pouch is handcrafted in small batches on our farm in Goa. No shortcuts, no synthetics, just honest ingredients for your skin.';
-
-/* ── decorative blobs ── */
-function Blobs({ variant = 'cover' }) {
-  return (
-    <>
-      <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '48%', height: '38%', background: C.blobPeach, borderRadius: '50%', opacity: 0.55, pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: '-8%', left: '-6%', width: '38%', height: '28%', background: C.blobPeach2, borderRadius: '50%', opacity: 0.45, pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: '0%', right: '-6%', width: '30%', height: '22%', background: C.blobSage, borderRadius: '50%', opacity: 0.55, pointerEvents: 'none' }} />
-      {variant === 'cover' && (
-        <div style={{ position: 'absolute', top: '4%', right: '-4%', width: '20%', height: '14%', background: C.blobSage, borderRadius: '50%', opacity: 0.3, pointerEvents: 'none' }} />
-      )}
-    </>
-  );
-}
-
-function Rule({ width = '65%', mb = '0' }) {
-  return <div style={{ width, height: '0.4mm', background: C.rule, marginBottom: mb, flexShrink: 0 }} />;
-}
+  'Every bar in this pouch is handcrafted in small batches on our farm in Goa. We grow what we can, source the rest with care, and make each batch by hand.\n\nNo shortcuts, no synthetics, no fillers. Just real ingredients chosen for how they feel on skin and what they actually do.\n\nWe hope these little bars bring a moment of quiet to your day.';
 
 /* ══════════════════════════════════════
-   COVER PAGE
+   COVER PAGE — green header/footer, cream body
 ══════════════════════════════════════ */
 function CoverPage({ introText }) {
   return (
-    <div className="hn-page">
-      <Blobs variant="cover" />
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', padding: '7mm 7mm 5mm', boxSizing: 'border-box' }}>
-        <img src="/logo/healing-soil-v2.1-transparent.png" alt="Healing Soil" style={{ width: '22mm', height: 'auto', marginBottom: '2mm', flexShrink: 0 }} />
+    <div className="hn-page" style={{ display: 'flex', flexDirection: 'column' }}>
 
-        <div style={{ fontFamily: SANS, fontSize: '6.5pt', fontWeight: 700, color: C.subBrown, letterSpacing: '0.30em', marginBottom: '1.5mm' }}>
+      {/* ── Green header bar ── */}
+      <div style={{
+        background: C.brand, flexShrink: 0,
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', padding: '4mm 6mm 3.5mm', gap: '1.5mm',
+      }}>
+        <img
+          src="/logo/healing-soil-v2.1-transparent.png"
+          alt="Healing Soil"
+          style={{ width: '18mm', height: 'auto', filter: 'brightness(0) invert(1)' }}
+        />
+        <div style={{
+          fontFamily: SANS, fontSize: '5.5pt', fontWeight: 700,
+          color: 'rgba(255,255,255,0.85)', letterSpacing: '0.35em',
+        }}>
           HEALING SOIL
         </div>
+      </div>
 
-        <Rule mb="5mm" />
-
-        <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: '19pt', color: C.textBrown, textAlign: 'center', lineHeight: 1.35, marginBottom: '5mm', flexShrink: 0 }}>
+      {/* ── Cream body ── */}
+      <div style={{
+        flex: 1, background: C.pageBg,
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        padding: '6mm 7mm 5mm', overflow: 'hidden',
+      }}>
+        {/* Tagline */}
+        <div style={{
+          fontFamily: SERIF, fontStyle: 'italic', fontSize: '20pt',
+          color: C.textBrown, textAlign: 'center', lineHeight: 1.35,
+          marginBottom: '4mm', flexShrink: 0,
+        }}>
           a little something,<br />made with love
         </div>
 
-        <div style={{ fontFamily: SANS, fontSize: '8pt', fontWeight: 400, color: C.textBrown, textAlign: 'justify', lineHeight: 1.8, flex: 1, overflow: 'hidden' }}>
-          {introText}
-        </div>
+        {/* Gold rule */}
+        <div style={{ width: '40mm', height: '0.4mm', background: C.rule, marginBottom: '5mm', flexShrink: 0 }} />
 
-        <div style={{ width: '100%', marginTop: '3mm', flexShrink: 0 }}>
-          <Rule width="100%" mb="2.5mm" />
-          <div style={{ fontFamily: SANS, fontSize: '5.5pt', fontWeight: 600, color: C.subBrown, letterSpacing: '0.22em', textAlign: 'center' }}>
-            HANDMADE · SMALL BATCH · GOA
-          </div>
+        {/* Intro paragraphs */}
+        <div style={{
+          fontFamily: SANS, fontSize: '8pt', fontWeight: 400,
+          color: C.textBrown, textAlign: 'justify', lineHeight: 1.85,
+          flex: 1, overflow: 'hidden',
+          display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '3.5mm',
+        }}>
+          {introText.split('\n\n').map((para, i) => (
+            <p key={i} style={{ margin: 0 }}>{para}</p>
+          ))}
         </div>
       </div>
+
+      {/* ── Green footer bar ── */}
+      <div style={{
+        background: C.brand, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '3.5mm 6mm',
+      }}>
+        <div style={{
+          fontFamily: SANS, fontSize: '5pt', fontWeight: 600,
+          color: 'rgba(255,255,255,0.8)', letterSpacing: '0.25em',
+        }}>
+          HANDMADE · SMALL BATCH · GOA
+        </div>
+      </div>
+
     </div>
   );
 }
 
 /* ══════════════════════════════════════
-   INSIDE PAGE
+   INSIDE PAGE — green header/footer, cream body
 ══════════════════════════════════════ */
 function InsidePage({ soaps }) {
   return (
-    <div className="hn-page">
-      <Blobs variant="inside" />
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '7mm 7mm 5mm', boxSizing: 'border-box' }}>
-        <div style={{ fontFamily: SANS, fontSize: '6.5pt', fontWeight: 700, color: C.subBrown, letterSpacing: '0.25em', marginBottom: '4mm', flexShrink: 0 }}>
+    <div className="hn-page" style={{ display: 'flex', flexDirection: 'column' }}>
+
+      {/* ── Green header bar ── */}
+      <div style={{
+        background: C.brand, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '4mm 6mm',
+      }}>
+        <div style={{
+          fontFamily: SANS, fontSize: '6pt', fontWeight: 700,
+          color: 'rgba(255,255,255,0.85)', letterSpacing: '0.3em',
+        }}>
           WHAT'S INSIDE
         </div>
+      </div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3.5mm', overflow: 'hidden' }}>
-          {soaps.map((soap, i) => (
-            <div key={i}>
-              <div style={{ fontFamily: SERIF, fontSize: '11pt', fontWeight: 600, color: C.textBrown, lineHeight: 1.1, marginBottom: '1mm' }}>
-                {soap.name}
-              </div>
-              <div style={{ fontFamily: SANS, fontSize: '7.5pt', fontWeight: 400, color: C.textBrown, lineHeight: 1.7 }}>
-                {soap.description || ''}
-              </div>
+      {/* ── Cream body ── */}
+      <div style={{
+        flex: 1, background: C.pageBg,
+        display: 'flex', flexDirection: 'column',
+        justifyContent: 'space-evenly',
+        padding: '4mm 8mm', overflow: 'hidden',
+      }}>
+        {soaps.map((soap, i) => (
+          <div key={i}>
+            {/* Soap name in brand green */}
+            <div style={{
+              fontFamily: SERIF, fontSize: '12pt', fontWeight: 600,
+              color: C.brand, lineHeight: 1.2, marginBottom: '1.5mm',
+            }}>
+              {soap.name}
             </div>
-          ))}
-        </div>
-
-        <div style={{ flexShrink: 0, marginTop: '2mm' }}>
-          <Rule width="100%" mb="2mm" />
-          <div style={{ fontFamily: SANS, fontSize: '5.5pt', color: C.subBrown, textAlign: 'center', lineHeight: 1.8 }}>
-            View our catalog @ healingsoil.in/shop<br />
-            or WhatsApp +91-7483100651<br />
-            Follow us on @healingsoil.in on Instagram
+            {/* Description */}
+            <div style={{
+              fontFamily: SANS, fontSize: '7.5pt', fontWeight: 400,
+              color: C.textBrown, lineHeight: 1.75,
+            }}>
+              {soap.description || ''}
+            </div>
+            {/* Separator — gold rule between soaps, not after last */}
+            {i < soaps.length - 1 && (
+              <div style={{ width: '100%', height: '0.3mm', background: C.rule, opacity: 0.6, marginTop: '3.5mm' }} />
+            )}
           </div>
+        ))}
+      </div>
+
+      {/* ── Green footer bar ── */}
+      <div style={{
+        background: C.brand, flexShrink: 0,
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', padding: '3mm 6mm', gap: '0.8mm',
+      }}>
+        <div style={{ fontFamily: SANS, fontSize: '5.5pt', color: 'rgba(255,255,255,0.75)', letterSpacing: '0.05em' }}>
+          healingsoil.in/shop · WhatsApp +91-7483100651
+        </div>
+        <div style={{ fontFamily: SANS, fontSize: '5pt', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.05em' }}>
+          @healingsoil.in on Instagram
         </div>
       </div>
+
     </div>
   );
 }
@@ -120,12 +170,15 @@ function BifoldPreview({ introText, soaps, hasGenerated }) {
   if (!hasGenerated) {
     return (
       <div style={{
-        width: '210mm', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: '148mm', background: 'rgba(255,255,255,0.5)',
-        borderRadius: '4px', border: '1.5px dashed #D1D5DB',
+        width: '210mm', height: '148mm',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexDirection: 'column', gap: '10px',
+        background: 'rgba(255,255,255,0.45)',
+        border: '1.5px dashed #D1D5DB', borderRadius: '4px',
       }}>
-        <Sparkles size={28} color="#C9A876" />
+        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: C.brand, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Sparkles size={16} color="white" />
+        </div>
         <div style={{ fontFamily: SANS, fontSize: '13px', color: C.muted, fontWeight: 600, textAlign: 'center' }}>
           Add your soaps and click<br />"Generate Handnote"
         </div>
@@ -162,6 +215,7 @@ export default function HandnoteClient({ products }) {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [customName, setCustomName] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [genProgress, setGenProgress] = useState({ done: 0, total: 0 });
   const [hasGenerated, setHasGenerated] = useState(false);
   const [editingId, setEditingId]   = useState(null);
   const [regenId, setRegenId]       = useState(null);
@@ -194,29 +248,32 @@ export default function HandnoteClient({ products }) {
     setSoaps(prev => prev.map(s => s.id === id ? { ...s, description } : s));
   }
 
-  /* Generate descriptions for all soaps at once */
+  /* Generate descriptions one by one to avoid rate limits */
   async function generateAll() {
     if (soaps.length === 0 || generating) return;
     setGenerating(true);
+    setGenProgress({ done: 0, total: soaps.length });
     try {
-      const results = await Promise.all(
-        soaps.map(soap =>
-          fetch('/api/handnote/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name:        soap.name,
-              baseType:    soap.baseType,
-              ingredients: soap.ingredients,
-              notes:       '',
-            }),
-          }).then(r => r.json())
-        )
-      );
-      setSoaps(prev => prev.map((soap, i) => ({
-        ...soap,
-        description: results[i]?.description || soap.description,
-      })));
+      for (let i = 0; i < soaps.length; i++) {
+        const soap = soaps[i];
+        const res = await fetch('/api/handnote/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name:        soap.name,
+            baseType:    soap.baseType,
+            ingredients: soap.ingredients,
+            notes:       '',
+          }),
+        });
+        const data = await res.json();
+        if (data.description) {
+          setSoaps(prev => prev.map(s =>
+            s.id === soap.id ? { ...s, description: data.description } : s
+          ));
+        }
+        setGenProgress({ done: i + 1, total: soaps.length });
+      }
       setHasGenerated(true);
     } finally {
       setGenerating(false);
@@ -339,7 +396,7 @@ export default function HandnoteClient({ products }) {
             <textarea
               value={introText}
               onChange={e => setIntroText(e.target.value)}
-              rows={4}
+              rows={7}
               style={textarea}
             />
           </div>
@@ -415,7 +472,7 @@ export default function HandnoteClient({ products }) {
             }}
           >
             {generating
-              ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Generating…</>
+              ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> {genProgress.done}/{genProgress.total} done…</>
               : <><Sparkles size={16} /> Generate Handnote</>}
           </button>
 
