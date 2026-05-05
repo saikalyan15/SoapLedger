@@ -25,11 +25,11 @@ function CoverPage({ introText }) {
   return (
     <div className="hn-page" style={{ display: 'flex', flexDirection: 'column' }}>
 
-      {/* ── Green header bar ── */}
+      {/* ── Green header bar — fixed 26mm so it matches the inside page header ── */}
       <div style={{
-        background: C.brand, flexShrink: 0,
+        background: C.brand, flexShrink: 0, width: '100%', height: '26mm',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'center', padding: '4mm 6mm 3.5mm', gap: '1.5mm',
+        justifyContent: 'center', gap: '1.5mm', boxSizing: 'border-box',
       }}>
         <img
           src="/logo/healing-soil-v2.1-transparent.png"
@@ -75,11 +75,11 @@ function CoverPage({ introText }) {
         </div>
       </div>
 
-      {/* ── Green footer bar ── */}
+      {/* ── Green footer bar — fixed 14mm so it matches the inside page footer ── */}
       <div style={{
-        background: C.brand, flexShrink: 0,
+        background: C.brand, flexShrink: 0, width: '100%', height: '14mm',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '3.5mm 6mm',
+        boxSizing: 'border-box',
       }}>
         <div style={{
           fontFamily: SANS, fontSize: '5pt', fontWeight: 600,
@@ -100,11 +100,11 @@ function InsidePage({ soaps }) {
   return (
     <div className="hn-page" style={{ display: 'flex', flexDirection: 'column' }}>
 
-      {/* ── Green header bar ── */}
+      {/* ── Green header bar — fixed 26mm, same as cover ── */}
       <div style={{
-        background: C.brand, flexShrink: 0,
+        background: C.brand, flexShrink: 0, width: '100%', height: '26mm',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '4mm 6mm',
+        boxSizing: 'border-box',
       }}>
         <div style={{
           fontFamily: SANS, fontSize: '6pt', fontWeight: 700,
@@ -145,11 +145,11 @@ function InsidePage({ soaps }) {
         ))}
       </div>
 
-      {/* ── Green footer bar ── */}
+      {/* ── Green footer bar — fixed 14mm, same as cover ── */}
       <div style={{
-        background: C.brand, flexShrink: 0,
+        background: C.brand, flexShrink: 0, width: '100%', height: '14mm',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'center', padding: '3mm 6mm', gap: '0.8mm',
+        justifyContent: 'center', gap: '0.8mm', boxSizing: 'border-box',
       }}>
         <div style={{ fontFamily: SANS, fontSize: '5.5pt', color: 'rgba(255,255,255,0.75)', letterSpacing: '0.05em' }}>
           healingsoil.in/shop · WhatsApp +91-7483100651
@@ -192,14 +192,37 @@ function BifoldPreview({ introText, soaps, hasGenerated }) {
         OPEN — fold along the centre line, cover faces out
       </div>
 
-      <div style={{ display: 'flex', boxShadow: '0 4px 24px rgba(0,0,0,0.14)', borderRadius: '2px' }}>
+      <div style={{ display: 'flex', alignItems: 'stretch', boxShadow: '0 4px 24px rgba(0,0,0,0.14)' }}>
         <InsidePage soaps={soaps} />
-        <div style={{ width: '2px', background: 'linear-gradient(to bottom, transparent, #C9A876 20%, #C9A876 80%, transparent)', flexShrink: 0, opacity: 0.5 }} />
+
+        {/* ── Fold indicator column ── */}
+        <div style={{
+          width: '28px', flexShrink: 0, background: '#F3F4F6',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          justifyContent: 'center', gap: '6px', position: 'relative',
+        }}>
+          {/* dashed centre line */}
+          <div style={{
+            position: 'absolute', top: 0, bottom: 0, left: '50%',
+            borderLeft: '1.5px dashed #9CA3AF', transform: 'translateX(-50%)',
+          }} />
+          {/* label */}
+          <div style={{
+            background: '#9CA3AF', color: 'white', borderRadius: '3px',
+            fontFamily: SANS, fontSize: '8px', fontWeight: 700,
+            padding: '2px 4px', letterSpacing: '0.05em', zIndex: 1,
+            writingMode: 'vertical-rl', transform: 'rotate(180deg)',
+          }}>
+            FOLD
+          </div>
+          <Scissors size={12} color="#9CA3AF" style={{ zIndex: 1, transform: 'rotate(90deg)' }} />
+        </div>
+
         <CoverPage introText={introText} />
       </div>
 
-      <div style={{ fontFamily: SANS, fontSize: '10px', color: C.muted, textAlign: 'center', marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
-        <Scissors size={11} /> Print on A5 (or half an A4). Fold in half. Drop in the pouch.
+      <div style={{ fontFamily: SANS, fontSize: '10px', color: C.muted, textAlign: 'center', marginTop: '8px' }}>
+        Fold along the centre line · Cover faces out · Inside opens up · Slip into the pouch
       </div>
     </div>
   );
