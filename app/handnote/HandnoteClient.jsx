@@ -15,6 +15,13 @@ const C = {
 const SANS  = '"Plus Jakarta Sans", "Inter", Arial, sans-serif';
 const SERIF = '"Cormorant Garamond", "Garamond", Georgia, serif';
 
+/* Split array into chunks of at most `size` */
+function chunk(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
 const DEFAULT_INTRO =
   'Every bar in this pouch is handcrafted in small batches on our farm in Goa. We grow what we can, source the rest with care, and make each batch by hand.\n\nNo shortcuts, no synthetics, no fillers. Just real ingredients chosen for how they feel on skin and what they actually do.\n\nWe hope these little bars bring a moment of quiet to your day.';
 
@@ -163,10 +170,35 @@ function InsidePage({ soaps }) {
   );
 }
 
+/* ── Single bifold row (used in both preview and print) ── */
+function BifoldRow({ soaps, introText }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'stretch' }}>
+      <InsidePage soaps={soaps} />
+      {/* Fold indicator */}
+      <div style={{
+        width: '28px', flexShrink: 0, background: '#F3F4F6',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', gap: '6px', position: 'relative',
+      }}>
+        <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', borderLeft: '1.5px dashed #9CA3AF', transform: 'translateX(-50%)' }} />
+        <div style={{
+          background: '#9CA3AF', color: 'white', borderRadius: '3px',
+          fontFamily: SANS, fontSize: '8px', fontWeight: 700,
+          padding: '2px 4px', letterSpacing: '0.05em', zIndex: 1,
+          writingMode: 'vertical-rl', transform: 'rotate(180deg)',
+        }}>FOLD</div>
+        <Scissors size={12} color="#9CA3AF" style={{ zIndex: 1, transform: 'rotate(90deg)' }} />
+      </div>
+      <CoverPage introText={introText} />
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════
    BIFOLD PREVIEW (screen)
 ══════════════════════════════════════ */
-function BifoldPreview({ introText, soaps, hasGenerated }) {
+function BifoldPreview({ introText, noteGroups, hasGenerated }) {
   if (!hasGenerated) {
     return (
       <div style={{
@@ -187,42 +219,37 @@ function BifoldPreview({ introText, soaps, hasGenerated }) {
   }
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
       <div style={{ fontFamily: SANS, fontSize: '10px', fontWeight: 600, color: C.muted, letterSpacing: '0.1em', textAlign: 'center', marginBottom: '8px' }}>
-        OPEN — fold along the centre line, cover faces out
+        OPEN VIEW — fold along the centre line, cover faces out
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'stretch', boxShadow: '0 4px 24px rgba(0,0,0,0.14)' }}>
-        <InsidePage soaps={soaps} />
-
-        {/* ── Fold indicator column ── */}
-        <div style={{
-          width: '28px', flexShrink: 0, background: '#F3F4F6',
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          justifyContent: 'center', gap: '6px', position: 'relative',
-        }}>
-          {/* dashed centre line */}
-          <div style={{
-            position: 'absolute', top: 0, bottom: 0, left: '50%',
-            borderLeft: '1.5px dashed #9CA3AF', transform: 'translateX(-50%)',
-          }} />
-          {/* label */}
-          <div style={{
-            background: '#9CA3AF', color: 'white', borderRadius: '3px',
-            fontFamily: SANS, fontSize: '8px', fontWeight: 700,
-            padding: '2px 4px', letterSpacing: '0.05em', zIndex: 1,
-            writingMode: 'vertical-rl', transform: 'rotate(180deg)',
-          }}>
-            FOLD
+      {noteGroups.map((group, i) => (
+        <div key={i}>
+          <div style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.14)' }}>
+            <BifoldRow soaps={group} introText={introText} />
           </div>
-          <Scissors size={12} color="#9CA3AF" style={{ zIndex: 1, transform: 'rotate(90deg)' }} />
-        </div>
 
-        <CoverPage introText={introText} />
-      </div>
+          {/* Cut guide between notes */}
+          {i < noteGroups.length - 1 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '6px 0', width: '210mm',
+            }}>
+              <div style={{ flex: 1, borderTop: '1.5px dashed #D1D5DB' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: C.muted, fontFamily: SANS, fontSize: '10px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                <Scissors size={11} /> CUT HERE — separate into two notes
+              </div>
+              <div style={{ flex: 1, borderTop: '1.5px dashed #D1D5DB' }} />
+            </div>
+          )}
+        </div>
+      ))}
 
       <div style={{ fontFamily: SANS, fontSize: '10px', color: C.muted, textAlign: 'center', marginTop: '8px' }}>
-        Fold along the centre line · Cover faces out · Inside opens up · Slip into the pouch
+        {noteGroups.length === 1
+          ? 'Print on A5 (or half an A4) · Fold · Slip into the pouch'
+          : `${noteGroups.length} notes on 1 A4 sheet · Cut · Fold each · Slip into the pouch`}
       </div>
     </div>
   );
@@ -321,14 +348,16 @@ export default function HandnoteClient({ products }) {
     }
   }
 
-  const canGenerate = soaps.length > 0 && !generating;
+  const canGenerate  = soaps.length > 0 && !generating;
+  const noteGroups   = chunk(soaps, 3);                   // up to 3 soaps per note
+  const a4PageCount  = Math.ceil(noteGroups.length / 2);  // 2 notes per A4 page
 
   return (
     <div className="hn-root">
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&display=swap');
 
-        @page { size: 210mm 148mm; margin: 0; }
+        @page { size: 210mm 297mm; margin: 0; }
 
         .hn-root {
           background: #F0EDE8;
@@ -352,14 +381,42 @@ export default function HandnoteClient({ products }) {
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
         @media print {
-          .no-print  { display: none !important; }
-          .hn-root   { background: white !important; padding: 0 !important; min-height: 0 !important; }
+          .no-print { display: none !important; }
+          .hn-root  { background: white !important; padding: 0 !important; min-height: 0 !important; }
+
+          /* One A4 page holds up to 2 bifold notes stacked */
+          .hn-print-a4 {
+            display: flex !important;
+            flex-direction: column !important;
+            width: 210mm !important;
+            height: 297mm !important;
+            page-break-after: always;
+            break-after: page;
+          }
+          .hn-print-a4:last-child {
+            page-break-after: avoid;
+            break-after: avoid;
+          }
+
+          /* One bifold note row: inside | fold | cover */
           .hn-print-sheet {
             display: flex !important;
             flex-direction: row !important;
             width: 210mm !important;
             height: 148mm !important;
+            flex-shrink: 0 !important;
           }
+
+          /* Horizontal cut guide between the two notes on one A4 */
+          .hn-cut-guide {
+            display: block !important;
+            width: 210mm !important;
+            height: 1mm !important;
+            border-top: 0.3mm dashed rgba(0,0,0,0.2) !important;
+            flex-shrink: 0 !important;
+          }
+
+          /* Vertical fold guide inside each note */
           .hn-fold-guide {
             display: block !important;
             width: 0 !important;
@@ -367,6 +424,7 @@ export default function HandnoteClient({ products }) {
             height: 148mm !important;
             flex-shrink: 0 !important;
           }
+
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
       `}</style>
@@ -385,7 +443,11 @@ export default function HandnoteClient({ products }) {
           <div>
             <div style={{ fontSize: '16px', fontWeight: 800 }}>Gift Handnote</div>
             <div style={{ fontSize: '11px', opacity: 0.6 }}>
-              {hasGenerated ? 'Ready to print' : soaps.length === 0 ? 'Step 1: add your soaps below' : `${soaps.length} soap${soaps.length !== 1 ? 's' : ''} added — click Generate`}
+              {hasGenerated
+                ? `${noteGroups.length} note${noteGroups.length !== 1 ? 's' : ''} · prints on ${a4PageCount} A4 sheet${a4PageCount !== 1 ? 's' : ''}`
+                : soaps.length === 0
+                  ? 'Step 1: add your soaps below'
+                  : `${soaps.length} soap${soaps.length !== 1 ? 's' : ''} · ${noteGroups.length} note${noteGroups.length !== 1 ? 's' : ''} · click Generate`}
             </div>
           </div>
         </div>
@@ -545,16 +607,28 @@ export default function HandnoteClient({ products }) {
 
         {/* ── Right: preview ── */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-          <BifoldPreview introText={introText} soaps={soaps} hasGenerated={hasGenerated} />
+          <BifoldPreview introText={introText} noteGroups={noteGroups} hasGenerated={hasGenerated} />
         </div>
       </div>
 
-      {/* ── Print sheet ── */}
-      <div className="hn-print-sheet" style={{ display: 'none' }}>
-        <InsidePage soaps={soaps} />
-        <div className="hn-fold-guide" style={{ display: 'none' }} />
-        <CoverPage introText={introText} />
-      </div>
+      {/* ── Print output: A4 pages, 2 notes per page ── */}
+      {chunk(noteGroups, 2).map((pageNotes, pageIdx) => (
+        <div key={pageIdx} className="hn-print-a4" style={{ display: 'none' }}>
+          {pageNotes.map((group, noteIdx) => (
+            <div key={noteIdx}>
+              <div className="hn-print-sheet" style={{ display: 'none' }}>
+                <InsidePage soaps={group} />
+                <div className="hn-fold-guide" style={{ display: 'none' }} />
+                <CoverPage introText={introText} />
+              </div>
+              {/* Cut guide between the two notes on same A4 page */}
+              {noteIdx < pageNotes.length - 1 && (
+                <div className="hn-cut-guide" style={{ display: 'none' }} />
+              )}
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   );
 }
