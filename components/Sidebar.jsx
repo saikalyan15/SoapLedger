@@ -2,32 +2,160 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 import {
   LayoutDashboard, PlusCircle, ShoppingBag, Users,
-  Package, FlaskConical, Receipt, Settings, X, Tag, TrendingUp, Bell, BarChart2, Droplets, NotebookPen
+  Package, Receipt, Settings, X, Tag, TrendingUp, Bell, BarChart2, Droplets, NotebookPen,
+  ChevronDown, BarChart3, Wrench
 } from 'lucide-react'
 
 const navItems = [
-  { label: 'Dashboard',        href: '/dashboard',    icon: LayoutDashboard },
-  { label: 'New Order',        href: '/orders/new',   icon: PlusCircle },
-  { label: 'Orders',           href: '/orders',       icon: ShoppingBag },
-  { label: 'Customers',        href: '/customers',    icon: Users },
-  { label: 'Reorder Outreach', href: '/outreach',     icon: Bell },
-  { label: 'Products',         href: '/products',     icon: Package },
-  { label: 'Inventory',        href: '/inventory',    icon: Droplets },
-  { label: 'SKU Report',       href: '/sku-report',   icon: BarChart2 },
-  { label: 'Print',            href: '/labels',       icon: Tag },
-  { label: 'Gift Handnote',    href: '/handnote',     icon: NotebookPen },
-  { label: 'Growth',           href: '/growth',       icon: TrendingUp },
-  { label: 'Expenses',         href: '/expenses',     icon: Receipt },
-  { label: 'Settings',         href: '/settings',     icon: Settings },
+  { label: 'Dashboard',   href: '/dashboard',  icon: LayoutDashboard },
+  { label: 'New Order',   href: '/orders/new', icon: PlusCircle },
+  { label: 'Orders',      href: '/orders',     icon: ShoppingBag },
+  { label: 'Customers',   href: '/customers',  icon: Users },
+  { label: 'Products',    href: '/products',   icon: Package },
+  { label: 'Inventory',   href: '/inventory',  icon: Droplets },
+  {
+    label: 'Reports',
+    icon: BarChart3,
+    children: [
+      { label: 'SKU Report', href: '/sku-report', icon: BarChart2 },
+      { label: 'Growth',     href: '/growth',     icon: TrendingUp },
+      { label: 'Expenses',   href: '/expenses',   icon: Receipt },
+    ],
+  },
+  {
+    label: 'Operations',
+    icon: Wrench,
+    children: [
+      { label: 'Print',            href: '/labels',   icon: Tag },
+      { label: 'Gift Handnote',    href: '/handnote', icon: NotebookPen },
+      { label: 'Reorder Outreach', href: '/outreach', icon: Bell },
+    ],
+  },
+  { label: 'Settings', href: '/settings', icon: Settings },
 ]
+
+const linkBase = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  padding: '10px 24px',
+  textDecoration: 'none',
+  fontFamily: 'Plus Jakarta Sans, sans-serif',
+  fontSize: '14px',
+  transition: 'background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease',
+}
+
+function NavLink({ href, active, children, style = {} }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <Link
+      href={href}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        ...linkBase,
+        color: active ? '#FFFFFF' : hovered ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.6)',
+        fontWeight: active ? '600' : '400',
+        borderLeft: active ? '3px solid #D4A017' : '3px solid transparent',
+        backgroundColor: active ? 'rgba(255,255,255,0.08)' : hovered ? 'rgba(255,255,255,0.04)' : 'transparent',
+        ...style,
+      }}
+    >
+      {children}
+    </Link>
+  )
+}
+
+function NavItem({ item, pathname }) {
+  const hasChildren = Boolean(item.children)
+  const childActive = hasChildren && item.children.some(
+    c => pathname === c.href || pathname.startsWith(c.href)
+  )
+  const [open, setOpen] = useState(childActive)
+  const [hovered, setHovered] = useState(false)
+
+  const Icon = item.icon
+
+  if (!hasChildren) {
+    const isActive = pathname === item.href ||
+      (item.href !== '/dashboard' && pathname.startsWith(item.href))
+    return (
+      <NavLink href={item.href} active={isActive}>
+        <Icon size={17} strokeWidth={isActive ? 2.2 : 1.8} />
+        {item.label}
+      </NavLink>
+    )
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(v => !v)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          ...linkBase,
+          width: '100%',
+          color: childActive ? '#FFFFFF' : hovered ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.6)',
+          background: 'none',
+          border: 'none',
+          borderLeft: childActive ? '3px solid #D4A017' : '3px solid transparent',
+          backgroundColor: childActive ? 'rgba(255,255,255,0.08)' : hovered ? 'rgba(255,255,255,0.04)' : 'transparent',
+          fontWeight: childActive ? '600' : '400',
+          cursor: 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        <Icon size={17} strokeWidth={childActive ? 2.2 : 1.8} />
+        <span style={{ flex: 1 }}>{item.label}</span>
+        <ChevronDown
+          size={14}
+          style={{
+            marginRight: '4px',
+            opacity: 0.6,
+            transform: open ? 'rotate(0deg)' : 'rotate(-90deg)',
+            transition: 'transform 0.2s ease',
+          }}
+        />
+      </button>
+
+      {/* Animated submenu */}
+      <div
+        style={{
+          overflow: 'hidden',
+          maxHeight: open ? '200px' : '0',
+          transition: 'max-height 0.22s ease',
+          backgroundColor: 'rgba(0,0,0,0.18)',
+        }}
+      >
+        {item.children.map(child => {
+          const isActive = pathname === child.href || pathname.startsWith(child.href)
+          const ChildIcon = child.icon
+          return (
+            <NavLink
+              key={child.href}
+              href={child.href}
+              active={isActive}
+              style={{ padding: '8px 24px 8px 46px', fontSize: '13px' }}
+            >
+              <ChildIcon size={15} strokeWidth={isActive ? 2.2 : 1.8} />
+              {child.label}
+            </NavLink>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 export default function Sidebar({ isOpen, setIsOpen }) {
   const pathname = usePathname()
 
   return (
-    <aside 
+    <aside
       className={`sidebar ${isOpen ? 'open' : ''}`}
       style={{
         position: 'fixed',
@@ -46,7 +174,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         onClick={() => setIsOpen(false)}
         className="sidebar-close-btn"
         style={{
-          display: 'none', /* shown via media query on mobile */
+          display: 'none',
           position: 'absolute',
           top: '12px',
           right: '12px',
@@ -97,34 +225,10 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '16px 0' }}>
-        {navItems.map(({ label, href, icon: Icon }) => {
-          const isActive = pathname === href || 
-            (href !== '/dashboard' && pathname.startsWith(href))
-          return (
-            <Link
-              key={href}
-              href={href}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '11px 24px',
-                color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.6)',
-                textDecoration: 'none',
-                fontFamily: 'Plus Jakarta Sans, sans-serif',
-                fontSize: '14px',
-                fontWeight: isActive ? '600' : '400',
-                borderLeft: isActive ? '3px solid #D4A017' : '3px solid transparent',
-                backgroundColor: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <Icon size={17} strokeWidth={isActive ? 2.2 : 1.8} />
-              {label}
-            </Link>
-          )
-        })}
+      <nav style={{ flex: 1, padding: '16px 0', overflowY: 'auto' }}>
+        {navItems.map((item) => (
+          <NavItem key={item.label} item={item} pathname={pathname} />
+        ))}
       </nav>
 
       {/* Footer */}
