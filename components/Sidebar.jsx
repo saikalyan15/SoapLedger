@@ -225,7 +225,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '16px 0', overflowY: 'auto' }}>
+      <nav style={{ flex: 1, minHeight: 0, padding: '16px 0', overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.15) transparent' }}>
         {navItems.map((item) => (
           <NavItem key={item.label} item={item} pathname={pathname} />
         ))}
