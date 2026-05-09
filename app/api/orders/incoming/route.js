@@ -3,12 +3,9 @@ import { NextResponse } from 'next/server';
 import { Pool } from '@neondatabase/serverless';
 import { normaliseToE164 } from '@/lib/utils/phone';
 
-// Initialize Neon Pool for transactions
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
 export async function POST(request) {
   const origin = request.headers.get('origin');
-  
+
   if (!validateApiKey(request)) {
     return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
@@ -16,6 +13,8 @@ export async function POST(request) {
     });
   }
 
+  // Create pool per-request so serverless instances never reuse stale connections
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const client = await pool.connect();
 
   try {
@@ -124,6 +123,7 @@ export async function POST(request) {
     }, { status: 500 });
   } finally {
     client.release();
+    await pool.end();
   }
 }
 
