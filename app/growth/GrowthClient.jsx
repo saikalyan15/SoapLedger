@@ -13,7 +13,34 @@ import {
 import PageHeader from '@/components/PageHeader';
 
 function buildLLMPrompt(gscData) {
-  const { queries, pages, orders, blog_posts, data_from, data_to } = gscData;
+  const { queries = [], pages = [], orders = [], blog_posts = [], data_from, data_to } = gscData;
+
+  const queriesTable = [
+    'Query                                    | Clicks | Impressions | Position',
+    '---------------------------------------- | ------ | ----------- | --------',
+    ...(queries).map(q =>
+      `${(q.keys?.[0] ?? '').padEnd(40)} | ${String(q.clicks ?? 0).padStart(6)} | ${String(q.impressions ?? 0).padStart(11)} | ${(q.position ?? 0).toFixed(1).padStart(8)}`
+    ),
+  ].join('\n');
+
+  const pagesTable = [
+    'Page                                     | Clicks | Impressions |   CTR   | Position',
+    '---------------------------------------- | ------ | ----------- | ------- | --------',
+    ...(pages).map(p => {
+      const slug = (p.keys?.[0] ?? '').replace('https://healingsoil.in', '') || p.keys?.[0] ?? '';
+      const ctr = p.impressions > 0 ? ((p.clicks / p.impressions) * 100).toFixed(1) + '%' : '0.0%';
+      return `${slug.padEnd(40)} | ${String(p.clicks ?? 0).padStart(6)} | ${String(p.impressions ?? 0).padStart(11)} | ${ctr.padStart(7)} | ${(p.position ?? 0).toFixed(1).padStart(8)}`;
+    }),
+  ].join('\n');
+
+  const ordersText = Array.isArray(orders) && orders.length
+    ? orders.map(o => `  ${o.source ?? o.channel ?? 'unknown'}: ${o.count ?? o.orders ?? 0} orders`).join('\n')
+    : '  (no order source data)';
+
+  const blogList = Array.isArray(blog_posts) && blog_posts.length
+    ? blog_posts.map((b, i) => `  ${i + 1}. ${b.title ?? b.slug ?? b}`).join('\n')
+    : '  (no existing blog posts found)';
+
   return `You are the SEO and Growth Strategist for Healing Soil (healingsoil.in), a small-batch handcrafted natural soap brand in Goa, India.
 
 Your ONLY goal is to increase organic search traffic to healingsoil.in. Analyze the Google Search Console data, order sources, and existing blog content provided to generate specific, data-driven recommendations.
@@ -31,23 +58,23 @@ FOCUS AREAS (in priority order):
 
 DO NOT suggest Instagram Reels, WhatsApp broadcasts, or social media content. Traffic from organic search only.
 
----
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-GSC DATA (${data_from} to ${data_to}):
+GSC DATA: ${data_from} to ${data_to}
 
-Top Search Queries:
-${JSON.stringify(queries, null, 2)}
+── TOP SEARCH QUERIES (${queries.length} total) ──
+${queriesTable}
 
-Top Pages by Clicks:
-${JSON.stringify(pages, null, 2)}
+── TOP PAGES BY CLICKS (${pages.length} total) ──
+${pagesTable}
 
-Order Sources (last 60 days):
-${JSON.stringify(orders, null, 2)}
+── ORDER SOURCES (last 60 days) ──
+${ordersText}
 
-Existing Blog Posts on healingsoil.in — DO NOT suggest these topics as new content:
-${JSON.stringify(blog_posts, null, 2)}
+── EXISTING BLOG POSTS (do NOT suggest these as new content) ──
+${blogList}
 
----
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 TASK:
 Identify 4–6 highest-leverage actions to increase organic traffic. Reference specific queries, pages, and metrics from the data above.
@@ -57,7 +84,7 @@ For each action provide:
 - title: specific action title
 - signal: the exact data point that triggered this (cite actual numbers)
 - rationale: why this is a priority and what traffic impact it could have
-- prompt: a complete, self-contained prompt the user can paste into an LLM to execute this action (include all healingsoil.in context needed)
+- prompt: a complete, self-contained prompt the user can paste into an LLM to execute this action (include all healingsoil.in context needed so no extra input is required)
 
 Also include:
 - A 2–3 sentence strategic summary of the overall SEO opportunity
