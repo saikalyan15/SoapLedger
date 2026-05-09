@@ -27,7 +27,7 @@ function buildLLMPrompt(gscData) {
     'Page                                     | Clicks | Impressions |   CTR   | Position',
     '---------------------------------------- | ------ | ----------- | ------- | --------',
     ...(pages).map(p => {
-      const slug = (p.keys?.[0] ?? '').replace('https://healingsoil.in', '') || p.keys?.[0] ?? '';
+      const slug = (p.keys?.[0] ?? '').replace('https://healingsoil.in', '') || (p.keys?.[0] ?? '');
       const ctr = p.impressions > 0 ? ((p.clicks / p.impressions) * 100).toFixed(1) + '%' : '0.0%';
       return `${slug.padEnd(40)} | ${String(p.clicks ?? 0).padStart(6)} | ${String(p.impressions ?? 0).padStart(11)} | ${ctr.padStart(7)} | ${(p.position ?? 0).toFixed(1).padStart(8)}`;
     }),
