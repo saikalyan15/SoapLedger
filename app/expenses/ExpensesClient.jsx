@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useTransition, useEffect, useRef } from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { 
   Plus, Settings, Search, X, Pencil, Trash2, ChevronDown, 
   Check, AlertCircle, Loader2, MoreVertical, Edit3
@@ -17,7 +18,7 @@ const PRESET_COLORS = [
   '#92400E', '#6B7280', '#0369A1', '#BE185D', '#CA8A04'
 ];
 
-export default function ExpensesClient({ initialExpenses, initialCategories, summary }) {
+export default function ExpensesClient({ initialExpenses, initialCategories, summary, monthlyTrend = [] }) {
   const [expenses, setExpenses] = useState(initialExpenses);
   const [categories, setCategories] = useState(initialCategories);
   const [isPending, startTransition] = useTransition();
@@ -114,11 +115,11 @@ export default function ExpensesClient({ initialExpenses, initialCategories, sum
         <div className="space-y-4">
           <div className="w-full h-[14px] rounded-[7px] bg-[#F3F4F6] flex overflow-hidden">
             <div 
-              style={{ width: `${(summary.recurring_total / (summary.total_all_time || 1)) * 100}%` }} 
+              style={{ width: `${(summary.recurring_total / (summary.total_this_month || 1)) * 100}%` }}
               className="bg-[#1B4332] h-full"
             />
-            <div 
-              style={{ width: `${(summary.one_time_total / (summary.total_all_time || 1)) * 100}%` }} 
+            <div
+              style={{ width: `${(summary.one_time_total / (summary.total_this_month || 1)) * 100}%` }} 
               className="bg-[#6B7280] h-full"
             />
           </div>
@@ -134,6 +135,36 @@ export default function ExpensesClient({ initialExpenses, initialCategories, sum
           </div>
         </div>
       </div>
+
+      {/* Monthly Trend Chart */}
+      {monthlyTrend.length > 0 && (
+        <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 mb-10">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-[16px] font-semibold font-plus-jakarta text-[#111827] m-0">Monthly Spend</h2>
+              <p className="text-[12px] font-plus-jakarta text-[#6B7280] mt-1 m-0">Last 12 months — recurring vs one-time</p>
+            </div>
+          </div>
+          <div style={{ height: isMobile ? '220px' : '280px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyTrend} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barSize={isMobile ? 14 : 20}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9CA3AF', fontFamily: 'Plus Jakarta Sans, sans-serif' }} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={v => `₹${(v/1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: '#9CA3AF', fontFamily: 'Plus Jakarta Sans, sans-serif' }} axisLine={false} tickLine={false} width={44} />
+                <Tooltip
+                  formatter={(value, name) => [`₹${Number(value).toLocaleString('en-IN')}`, name === 'recurring' ? 'Recurring' : 'One-time']}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', fontSize: '13px', fontFamily: 'Plus Jakarta Sans, sans-serif' }}
+                  cursor={{ fill: '#F9FAFB' }}
+                />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px', fontFamily: 'Plus Jakarta Sans, sans-serif', paddingTop: '12px' }}
+                  formatter={name => name === 'recurring' ? 'Recurring' : 'One-time'} />
+                <Bar dataKey="recurring" stackId="a" fill="#1B4332" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="one_time" stackId="a" fill="#D1FAE5" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {/* Tab Navigation */}
       <div className="relative border-b border-[#E5E7EB] mb-8">
