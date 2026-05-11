@@ -152,14 +152,14 @@ export default function ExpensesClient({ initialExpenses, initialCategories, sum
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9CA3AF', fontFamily: 'Plus Jakarta Sans, sans-serif' }} axisLine={false} tickLine={false} />
                 <YAxis tickFormatter={v => `₹${(v/1000).toFixed(0)}k`} tick={{ fontSize: 11, fill: '#9CA3AF', fontFamily: 'Plus Jakarta Sans, sans-serif' }} axisLine={false} tickLine={false} width={44} />
                 <Tooltip
-                  formatter={(value, name) => [`₹${Number(value).toLocaleString('en-IN')}`, name === 'recurring' ? 'Recurring' : 'One-time']}
+                  formatter={(value, name) => [`₹${Number(value).toLocaleString('en-IN')}`, name === 'recurring' ? 'Fixed Costs' : 'Variable Costs']}
                   contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB', fontSize: '13px', fontFamily: 'Plus Jakarta Sans, sans-serif' }}
                   cursor={{ fill: '#F9FAFB' }}
                 />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px', fontFamily: 'Plus Jakarta Sans, sans-serif', paddingTop: '12px' }}
-                  formatter={name => name === 'recurring' ? 'Recurring' : 'One-time'} />
+                  formatter={name => name === 'recurring' ? 'Fixed Costs' : 'Variable Costs'} />
                 <Bar dataKey="recurring" stackId="a" fill="#1B4332" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="one_time" stackId="a" fill="#D1FAE5" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="one_time" stackId="a" fill="#D4A017" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

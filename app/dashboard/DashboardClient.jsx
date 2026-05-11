@@ -55,7 +55,7 @@ const BASE_COLOURS = {
   'Other': '#B7E4C7'
 };
 
-const KPICard = ({ label, value, sub, color, loading, isMobile }) => (
+const KPICard = ({ label, value, sub, color, valueColor, loading, isMobile }) => (
   <div className="kpi-card" style={{
     background: '#FFFFFF',
     border: '1px solid #E5E7EB',
@@ -69,7 +69,7 @@ const KPICard = ({ label, value, sub, color, loading, isMobile }) => (
     <div style={{ fontSize: '11px', fontWeight: '800', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
       {label}
     </div>
-    <div className="kpi-value" style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: '800', color: '#111827', fontFamily: 'DM Serif Display, serif', marginBottom: '4px' }}>
+    <div className="kpi-value" style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: '800', color: valueColor || '#111827', fontFamily: 'DM Serif Display, serif', marginBottom: '4px' }}>
       {loading ? <Loader2 size={24} className="animate-spin" style={{ color: '#E5E7EB' }} /> : value}
     </div>
     <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -283,6 +283,21 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
         <KPICard label="Cost Price" value={revenue.cost_price_per_soap > 0 ? fmtCurrency(revenue.cost_price_per_soap) : "—"} sub="Avg per soap" color="#6B21A8" loading={isPending} isMobile={isMobile} />
         <KPICard label="Pending ₹" value={fmtCurrency(revenue.pending_revenue || 0)} sub="Awaiting payment" color="#6B21A8" loading={isPending} isMobile={isMobile} />
         <KPICard label="Pending Qty" value={fmtNum(revenue.pending_soaps)} sub="Units" color="#6B21A8" loading={isPending} isMobile={isMobile} />
+
+        <div style={{ gridColumn: '1 / -1', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '-8px', marginTop: '12px' }}>
+          Profitability
+        </div>
+        <KPICard label="Total Expenses" value={fmtCurrency(revenue.total_expenses)} sub="All costs in period" color="#DC2626" loading={isPending} isMobile={isMobile} />
+        <KPICard
+          label="Profit / Loss"
+          value={revenue.profit_loss != null ? `${revenue.profit_loss >= 0 ? '+' : ''}${fmtCurrency(revenue.profit_loss)}` : '—'}
+          sub={revenue.profit_loss >= 0 ? 'Revenue surplus' : 'Running at a loss'}
+          color={revenue.profit_loss >= 0 ? '#1B4332' : '#DC2626'}
+          valueColor={revenue.profit_loss >= 0 ? '#1B4332' : '#DC2626'}
+          loading={isPending}
+          isMobile={isMobile}
+        />
+        <KPICard label="Margin" value={revenue.total_revenue > 0 ? `${fmt((revenue.profit_loss / revenue.total_revenue) * 100, 1)}%` : '—'} sub="Profit margin" color={revenue.profit_loss >= 0 ? '#1B4332' : '#DC2626'} valueColor={revenue.profit_loss >= 0 ? '#1B4332' : '#DC2626'} loading={isPending} isMobile={isMobile} />
       </div>
 
       {/* Row 2: Order Volume & Profitability */}
