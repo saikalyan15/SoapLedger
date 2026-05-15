@@ -87,9 +87,12 @@ export async function POST(request) {
     const finalRevenue = totalValue + shipCharge;
     const combinedNotes = customNotes || null;
 
+    // Normalize source
+    const normalizedSource = (source?.toLowerCase() === 'website order' || source?.toLowerCase() === 'website') ? 'Website' : source;
+
     const orderRes = await client.query(
       'INSERT INTO orders (customer_id, order_date, order_value, shipping_charge, status, source, notes) VALUES ($1, CURRENT_DATE, $2, $3, $4, $5, $6) RETURNING id, status',
-      [customerId, finalRevenue, shipCharge, 'Order Placed', source || null, combinedNotes]
+      [customerId, finalRevenue, shipCharge, 'Order Placed', normalizedSource || null, combinedNotes]
     );
     const newOrder = orderRes.rows[0];
 

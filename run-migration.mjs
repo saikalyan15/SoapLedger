@@ -16,10 +16,17 @@ if (!dbUrl) {
 const sql = neon(dbUrl);
 
 async function runMigration() {
-  const migrationPath = path.join(process.cwd(), 'db-schema', 'migration_v15.sql');
+  const fileName = process.argv[2] || 'migration_v15.sql';
+  const migrationPath = path.join(process.cwd(), 'db-schema', fileName);
+  
+  if (!fs.existsSync(migrationPath)) {
+    console.error(`Migration file not found: ${migrationPath}`);
+    process.exit(1);
+  }
+
   const migrationSql = fs.readFileSync(migrationPath, 'utf8');
 
-  console.log('Running migration v15.0...');
+  console.log(`Running migration ${fileName}...`);
   
   try {
     // Better splitting that respects simple cases but ignores comments
@@ -35,7 +42,7 @@ async function runMigration() {
       await sql.query(command);
     }
     
-    console.log('Migration v15.0 completed successfully.');
+    console.log(`Migration ${fileName} completed successfully.`);
   } catch (error) {
     console.error('Migration failed:', error);
     process.exit(1);
