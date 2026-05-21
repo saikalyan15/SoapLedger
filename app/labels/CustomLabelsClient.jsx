@@ -160,7 +160,7 @@ function SoapBand() {
           className="band-grid"
           style={{ position: 'relative', zIndex: 1, height: '100%' }}
         >
-          {/* Panel 1: Left glue tab — 40mm, overlaps on back */}
+          {/* Panel 1: Left glue tab — 50mm, overlaps on back */}
           <div
             className="band-panel"
             style={{
@@ -218,7 +218,7 @@ function SoapBand() {
           {/* Panel 4: Right side — 24mm depth */}
           <div className="band-panel" />
 
-          {/* Panel 5: Right glue tab — 40mm, overlaps on back */}
+          {/* Panel 5: Right glue tab — 50mm, overlaps on back */}
           <div className="band-panel" />
         </div>
       </div>
@@ -320,7 +320,7 @@ export default function CustomLabelsClient({ products }) {
         }
 
         .soap-band {
-          width: 182mm;
+          width: 202mm;
           height: 35mm;
           border: 0.1mm dashed #999;
           display: flex;
@@ -345,7 +345,7 @@ export default function CustomLabelsClient({ products }) {
 
         .band-grid {
           display: grid;
-          grid-template-columns: 40mm 24mm 54mm 24mm 40mm;
+          grid-template-columns: 50mm 24mm 54mm 24mm 50mm;
           height: 100%;
           align-items: stretch;
         }
