@@ -286,7 +286,7 @@ export default function CustomLabelsClient({ products }) {
 
         @page {
           size: A4 portrait;
-          margin: 10mm 8mm;
+          margin: 0;
         }
         .labels-page {
           background: #f0ede8;
@@ -320,7 +320,7 @@ export default function CustomLabelsClient({ products }) {
         }
 
         .soap-band {
-          width: 171mm;
+          width: 195mm;
           height: 31mm;
           border: 0.1mm dashed #999;
           display: flex;
@@ -345,7 +345,7 @@ export default function CustomLabelsClient({ products }) {
 
         .band-grid {
           display: grid;
-          grid-template-columns: 35mm 22mm 57mm 22mm 35mm;
+          grid-template-columns: 38mm 24mm 71mm 24mm 38mm;
           height: 100%;
           align-items: stretch;
         }
@@ -373,7 +373,7 @@ export default function CustomLabelsClient({ products }) {
             display: grid !important;
             grid-template-columns: repeat(3, 55mm) !important;
             gap: 5mm !important;
-            padding: 10mm !important;
+            padding: 6mm 8mm !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             page-break-after: always;
@@ -391,11 +391,11 @@ export default function CustomLabelsClient({ products }) {
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
-            padding: 4mm 0 !important;
+            padding: 3mm 0 !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             width: 210mm !important;
-            height: 277mm !important;
+            height: 297mm !important;
             min-height: 0 !important;
             box-sizing: border-box !important;
             page-break-after: always;
