@@ -201,7 +201,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           background: '#FFFFFF',
           borderRadius: '8px',
           padding: '6px 10px',
-          display: 'inline-block',
+          display: 'block',
         }}>
           <Image
             src="/logo/healing-soil-v2.1.png"
