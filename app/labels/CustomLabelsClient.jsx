@@ -160,7 +160,7 @@ function SoapBand() {
           className="band-grid"
           style={{ position: 'relative', zIndex: 1, height: '100%' }}
         >
-          {/* Panel 1: Back Left Overlap (35mm) - Glued underneath */}
+          {/* Panel 1: Back Left Overlap (35mm) — glued underneath */}
           <div
             className="band-panel"
             style={{
@@ -175,10 +175,10 @@ function SoapBand() {
             </span>
           </div>
 
-          {/* Panel 2: Left Side (22mm) - EMPTY for clean look */}
+          {/* Panel 2: Left Side — 22mm depth */}
           <div className="band-panel" />
 
-          {/* Panel 3: Front Face (57mm) */}
+          {/* Panel 3: Front Face — 52mm length */}
           <div
             className="band-panel"
             style={{
@@ -215,10 +215,10 @@ function SoapBand() {
             </div>
           </div>
 
-          {/* Panel 4: Right Side (22mm) - EMPTY for clean look */}
+          {/* Panel 4: Right Side — 22mm depth */}
           <div className="band-panel" />
 
-          {/* Panel 5: Back Right Overlap (35mm) - EMPTY for clean look */}
+          {/* Panel 5: Back Right Overlap — 35mm glue tab */}
           <div className="band-panel" />
         </div>
       </div>
@@ -237,7 +237,7 @@ export default function CustomLabelsClient({ products }) {
   const [printMode, setPrintMode] = useState('bands'); // 'stickers' | 'bands'
   const [bandPages, setBandPages] = useState(1);
 
-  // 31mm height allows us to print exactly 8 bands per A4 sheet
+  // 35mm height, 8 bands per A4 sheet
   const labelsPerPage = printMode === 'stickers' ? 42 : 8;
 
   const addToQueue = () => {
@@ -320,8 +320,8 @@ export default function CustomLabelsClient({ products }) {
         }
 
         .soap-band {
-          width: 205mm;
-          height: 31mm;
+          width: 166mm;
+          height: 35mm;
           border: 0.1mm dashed #999;
           display: flex;
           flex-direction: column;
@@ -345,12 +345,13 @@ export default function CustomLabelsClient({ products }) {
 
         .band-grid {
           display: grid;
-          grid-template-columns: 40mm 26mm 73mm 26mm 40mm;
+          grid-template-columns: 35mm 22mm 52mm 22mm 35mm;
           height: 100%;
           align-items: stretch;
         }
-        .band-panel:not(:last-child) {
-          border-right: 1px dashed rgba(0, 0, 0, 0.4); /* DARKER fold lines */
+        .band-panel:nth-child(2),
+        .band-panel:nth-child(3) {
+          border-right: 1px dashed rgba(0, 0, 0, 0.5);
         }
 
         @media print {
