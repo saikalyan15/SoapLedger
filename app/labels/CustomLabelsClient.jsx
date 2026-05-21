@@ -320,7 +320,7 @@ export default function CustomLabelsClient({ products }) {
         }
 
         .soap-band {
-          width: 166mm;
+          width: 164mm;
           height: 35mm;
           border: 0.1mm dashed #999;
           display: flex;
@@ -345,7 +345,7 @@ export default function CustomLabelsClient({ products }) {
 
         .band-grid {
           display: grid;
-          grid-template-columns: 35mm 22mm 52mm 22mm 35mm;
+          grid-template-columns: 34mm 22mm 52mm 22mm 34mm;
           height: 100%;
           align-items: stretch;
         }
