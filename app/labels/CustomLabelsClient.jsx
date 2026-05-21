@@ -375,6 +375,7 @@ export default function CustomLabelsClient({ products }) {
             grid-template-columns: repeat(3, 55mm) !important;
             gap: 5mm !important;
             padding: 6mm 8mm !important;
+            margin: 0 auto !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             page-break-after: always;
@@ -394,6 +395,7 @@ export default function CustomLabelsClient({ products }) {
             align-items: center !important;
             justify-content: space-between !important;
             padding: 6mm 0 3mm !important;
+            margin: 0 auto !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             width: 210mm !important;
