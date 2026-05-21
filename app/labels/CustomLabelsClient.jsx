@@ -453,57 +453,32 @@ export default function CustomLabelsClient({ products }) {
         }
       `}</style>
 
-      {/* Toolbar */}
+      {/* Slim control bar */}
       <div
         className="no-print"
         style={{
-          background: COLORS.brand,
-          color: 'white',
-          padding: '16px 20px',
-          borderRadius: '12px',
           maxWidth: '860px',
-          margin: '0 auto 20px auto',
+          margin: '0 auto 16px auto',
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
+          gap: '10px',
+          flexWrap: 'wrap',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Tag size={20} />
-          <div>
-            <div style={{ fontSize: '18px', fontWeight: 800 }}>
-              Print
-            </div>
-            <div style={{ fontSize: '12px', opacity: 0.7 }}>
-              {printMode === 'bands' ? `${bandPages} page(s) · ${totalLabels} bands` : `${totalLabels} item(s) · ${pages.length} page(s)`}
-            </div>
-          </div>
-        </div>
-
-        {/* Print Mode Toggle */}
-        <div
-          className="no-print"
-          style={{
-            display: 'flex',
-            background: 'rgba(0,0,0,0.15)',
-            borderRadius: '10px',
-            padding: '5px',
-            gap: '5px',
-          }}
-        >
+        {/* Mode toggle */}
+        <div style={{ display: 'flex', background: '#E5E7EB', borderRadius: '8px', padding: '3px', gap: '2px' }}>
           <button
             onClick={() => setPrintMode('bands')}
             style={{
-              background: printMode === 'bands' ? 'white' : 'transparent',
-              color: printMode === 'bands' ? COLORS.brand : 'white',
+              background: printMode === 'bands' ? COLORS.brand : 'transparent',
+              color: printMode === 'bands' ? 'white' : COLORS.muted,
               border: 'none',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 800,
+              padding: '6px 14px',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 700,
               cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: printMode === 'bands' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
+              fontFamily: FONTS.sans,
             }}
           >
             Wrapper Bands
@@ -511,310 +486,146 @@ export default function CustomLabelsClient({ products }) {
           <button
             onClick={() => setPrintMode('stickers')}
             style={{
-              background: printMode === 'stickers' ? 'white' : 'transparent',
-              color: printMode === 'stickers' ? COLORS.brand : 'white',
+              background: printMode === 'stickers' ? COLORS.brand : 'transparent',
+              color: printMode === 'stickers' ? 'white' : COLORS.muted,
               border: 'none',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 800,
+              padding: '6px 14px',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 700,
               cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: printMode === 'stickers' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
+              fontFamily: FONTS.sans,
             }}
           >
             Label Prints
           </button>
         </div>
 
+        {/* Bands: page count inline */}
+        {printMode === 'bands' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <label style={{ fontSize: '13px', color: COLORS.muted, fontFamily: FONTS.sans, whiteSpace: 'nowrap' }}>Pages:</label>
+            <input
+              type="number"
+              min={1}
+              max={20}
+              value={bandPages}
+              onChange={(e) => setBandPages(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+              style={{
+                width: '60px',
+                padding: '6px 8px',
+                borderRadius: '6px',
+                border: '1px solid #D1D5DB',
+                fontSize: '13px',
+                fontFamily: FONTS.sans,
+                boxSizing: 'border-box',
+              }}
+            />
+            <span style={{ fontSize: '12px', color: COLORS.muted, fontFamily: FONTS.sans }}>{totalLabels} bands</span>
+          </div>
+        )}
+
+        {/* Stickers: product + qty inline */}
+        {printMode === 'stickers' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, flexWrap: 'wrap' }}>
+            <select
+              value={selectedProductId}
+              onChange={(e) => setSelectedProductId(e.target.value)}
+              style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px', fontFamily: FONTS.sans, minWidth: '180px' }}
+            >
+              <option value="">— Select product —</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>{p.name} ({p.base_type})</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min={1}
+              max={200}
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, Math.min(200, parseInt(e.target.value) || 1)))}
+              style={{ width: '60px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px', fontFamily: FONTS.sans, boxSizing: 'border-box' }}
+            />
+            <button
+              onClick={addToQueue}
+              disabled={!selectedProductId}
+              style={{
+                padding: '6px 14px',
+                background: selectedProductId ? COLORS.brand : '#9CA3AF',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: selectedProductId ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontFamily: FONTS.sans,
+              }}
+            >
+              <Plus size={14} /> Add
+            </button>
+            {batches.length > 0 && (
+              <span style={{ fontSize: '12px', color: COLORS.muted, fontFamily: FONTS.sans }}>{totalLabels} label{totalLabels !== 1 ? 's' : ''} · {pages.length} page{pages.length !== 1 ? 's' : ''}</span>
+            )}
+          </div>
+        )}
+
+        {/* Print button — pushed to right */}
         <button
           onClick={() => window.print()}
           disabled={totalLabels === 0}
           style={{
-            background: totalLabels === 0 ? 'rgba(255,255,255,0.3)' : 'white',
-            color: COLORS.brand,
+            marginLeft: 'auto',
+            background: totalLabels === 0 ? '#E5E7EB' : COLORS.brand,
+            color: totalLabels === 0 ? '#9CA3AF' : 'white',
             border: 'none',
-            padding: '10px 20px',
-            borderRadius: '8px',
-            fontWeight: 800,
+            padding: '7px 16px',
+            borderRadius: '7px',
+            fontWeight: 700,
             cursor: totalLabels === 0 ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            fontSize: '14px',
+            gap: '6px',
+            fontSize: '13px',
+            fontFamily: FONTS.sans,
           }}
         >
-          <Printer size={18} /> Print ({totalLabels})
+          <Printer size={15} /> Print ({totalLabels})
         </button>
       </div>
 
       <div style={{ maxWidth: '860px', margin: '0 auto' }}>
-        {/* Configuration Panel */}
-        <div
-          className="no-print"
-          style={{
-            background: 'white',
-            borderRadius: '12px',
-            padding: '20px',
-            marginBottom: '20px',
-            border: '1px solid #E5E7EB',
-          }}
-        >
-          {printMode === 'bands' ? (
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '14px', color: COLORS.brand, marginBottom: '14px' }}>
-                Configure Wrapper Bands
-              </div>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
-                <div style={{ flex: '0 1 150px' }}>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: COLORS.muted, marginBottom: '4px' }}>
-                    Number of Pages
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={bandPages}
-                    onChange={(e) => setBandPages(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #D1D5DB',
-                      fontSize: '14px',
-                      fontFamily: FONTS.sans,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                <div style={{ fontSize: '13px', color: COLORS.muted, paddingBottom: '10px' }}>
-                  Each page contains 8 generic wrapper bands with cutting guidelines.
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
+
+        {/* Sticker batch list — compact */}
+        {printMode === 'stickers' && batches.length > 0 && (
+          <div className="no-print" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+            {batches.map((batch) => (
               <div
+                key={batch.id}
                 style={{
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  color: COLORS.brand,
-                  marginBottom: '14px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'white',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '20px',
+                  padding: '4px 10px 4px 6px',
+                  fontSize: '12px',
+                  fontFamily: FONTS.sans,
                 }}
               >
-                Add Labels to Queue
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '12px',
-                  flexWrap: 'wrap',
-                  alignItems: 'flex-end',
-                }}
-              >
-                <div style={{ flex: '2 1 200px' }}>
-                  <label
-                    style={{
-                      display: 'block',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      color: COLORS.muted,
-                      marginBottom: '4px',
-                    }}
-                  >
-                    Product
-                  </label>
-                  <select
-                    value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: '8px',
-                      border: '1px solid #D1D5DB',
-                      fontSize: '14px',
-                      fontFamily: FONTS.sans,
-                    }}
-                  >
-                    <option value="">— Select a product —</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.base_type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ flex: '0 1 100px' }}>
-                  <label
-                    style={{
-                      display: 'block',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      color: COLORS.muted,
-                      marginBottom: '4px',
-                    }}
-                  >
-                    Qty
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={200}
-                    value={quantity}
-                    onChange={(e) =>
-                      setQuantity(
-                        Math.max(1, Math.min(200, parseInt(e.target.value) || 1)),
-                      )
-                    }
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: '8px',
-                      border: '1px solid #D1D5DB',
-                      fontSize: '14px',
-                      fontFamily: FONTS.sans,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-
-                <button
-                  onClick={addToQueue}
-                  disabled={!selectedProductId}
-                  style={{
-                    padding: '8px 16px',
-                    background: selectedProductId ? COLORS.brand : '#9CA3AF',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                    cursor: selectedProductId ? 'pointer' : 'not-allowed',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    whiteSpace: 'nowrap',
-                    height: '38px',
-                  }}
-                >
-                  <Plus size={16} /> Add
+                <span style={{ background: COLORS.brand, color: 'white', borderRadius: '12px', padding: '1px 7px', fontWeight: 800, fontSize: '11px' }}>{batch.qty}</span>
+                <span style={{ fontWeight: 600, color: COLORS.text }}>{batch.product_name}</span>
+                <button onClick={() => removeBatch(batch.id)} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: '0', lineHeight: 1, display: 'flex' }}>
+                  <Trash2 size={12} />
                 </button>
               </div>
-            </>
-          )}
-        </div>
-
-        {/* Print list — only for stickers */}
-        {printMode === 'stickers' && batches.length > 0 && (
-          <div
-            className="no-print"
-            style={{
-              background: 'white',
-              borderRadius: '12px',
-              padding: '16px 20px',
-              marginBottom: '20px',
-              border: '1px solid #E5E7EB',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '12px',
-              }}
-            >
-              <div
-                style={{
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  color: COLORS.brand,
-                }}
-              >
-                Print list — {totalLabels} label{totalLabels !== 1 ? 's' : ''}{' '}
-                across {pages.length} A4 page{pages.length !== 1 ? 's' : ''}
-              </div>
-              <button
-                onClick={clearAll}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#EF4444',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <Trash2 size={13} /> Clear all
-              </button>
-            </div>
-            <div
-              style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
-            >
-              {batches.map((batch) => (
-                <div
-                  key={batch.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '8px 12px',
-                    background: '#F9FAFB',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '28px',
-                        height: '28px',
-                        borderRadius: '6px',
-                        background: COLORS.brand,
-                        color: 'white',
-                        fontSize: '13px',
-                        fontWeight: 800,
-                      }}
-                    >
-                      {batch.qty}
-                    </span>
-                    <span style={{ fontWeight: 600, color: COLORS.text }}>
-                      {batch.product_name}
-                    </span>
-                    <span style={{ fontSize: '11px', color: COLORS.muted }}>
-                      {batch.base_type}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => removeBatch(batch.id)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#9CA3AF',
-                      cursor: 'pointer',
-                      padding: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
+            ))}
+            <button onClick={clearAll} style={{ background: 'none', border: '1px solid #FCA5A5', color: '#EF4444', borderRadius: '20px', padding: '4px 10px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: FONTS.sans }}>
+              Clear all
+            </button>
           </div>
         )}
 
