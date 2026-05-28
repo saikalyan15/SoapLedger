@@ -29,6 +29,13 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+const TEXTURE_LABELS = {
+  'smooth': 'Smooth',
+  'mildly-textured': 'Mildly Textured',
+  'textured': 'Textured',
+  'loofah': 'Loofah',
+};
+
 export default function ProductView({ products, allOils = [] }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -48,6 +55,7 @@ export default function ProductView({ products, allOils = [] }) {
     texture: '',
   });
   const [selectedOils, setSelectedOils] = useState([]);
+  const [isOilsExpanded, setIsOilsExpanded] = useState(false);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -138,8 +146,8 @@ export default function ProductView({ products, allOils = [] }) {
     });
     const linked = Array.isArray(product.linked_oils) ? product.linked_oils : [];
     setSelectedOils(linked.map(o => ({ essential_oil_id: o.id, is_default: o.is_default })));
+    setIsOilsExpanded(false);
     setIsFormOpen(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCancel = () => {
@@ -147,6 +155,7 @@ export default function ProductView({ products, allOils = [] }) {
     setEditingProduct(null);
     setFormData({ ingredients: '', slug: '', slugManuallyEdited: false, texture: '' });
     setSelectedOils([]);
+    setIsOilsExpanded(false);
   };
 
   const handleSortChange = (id, newVal) => {
@@ -367,8 +376,14 @@ export default function ProductView({ products, allOils = [] }) {
             ))}
           </div>
         </div>
-      ) : !isFeaturedMode && isFormOpen ? (
-        <div className="bg-[#FAFDF9] border border-[#D8F3DC] rounded-[14px] p-[20px] md:p-[32px] mb-[32px] shadow-[0_2px_12px_rgba(27,67,50,0.08)]">
+      ) : null}
+
+      {isFormOpen && !isSortMode && !isFeaturedMode && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/50 overflow-y-auto flex items-start justify-center p-[16px] md:p-[32px]"
+          onClick={(e) => { if (e.target === e.currentTarget) handleCancel(); }}
+        >
+        <div className="bg-[#FAFDF9] border border-[#D8F3DC] rounded-[14px] p-[20px] md:p-[32px] shadow-[0_8px_40px_rgba(27,67,50,0.18)] w-full max-w-[720px] my-[32px]">
           <h2 className="font-serif text-[20px] md:text-[22px] text-[#1B4332] mb-[20px] md:mb-[24px] mt-0">
             {editingProduct ? 'Edit Product' : 'Add New Product'}
           </h2>
@@ -512,10 +527,27 @@ export default function ProductView({ products, allOils = [] }) {
 
               {/* Essential Oils Multi-Select */}
               <div style={{ gridColumn: '1 / -1' }}>
-                  <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[10px] flex items-center gap-[6px]">
-                    <Droplets size={13} />
-                    Essential Oils for this Product
-                  </label>
+                  <div className="flex items-center justify-between mb-[10px]">
+                    <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] flex items-center gap-[6px]">
+                      <Droplets size={13} />
+                      Essential Oils for this Product
+                      {selectedOils.length > 0 && (
+                        <span className="normal-case tracking-normal font-normal text-[#9CA3AF]">
+                          ({selectedOils.length} selected)
+                        </span>
+                      )}
+                    </label>
+                    {allOils.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsOilsExpanded(v => !v)}
+                        className="font-sans text-[11px] font-semibold text-[#1B4332] underline bg-transparent border-none cursor-pointer p-0"
+                      >
+                        {isOilsExpanded ? 'Collapse' : 'Edit'}
+                      </button>
+                    )}
+                  </div>
+
                   {allOils.length === 0 ? (
                     <div className="border border-dashed border-[#E5E7EB] rounded-[8px] px-[14px] py-[14px] bg-[#FAFAFA] text-center">
                       <p className="font-sans text-[13px] text-[#9CA3AF] m-0">
@@ -524,7 +556,7 @@ export default function ProductView({ products, allOils = [] }) {
                         first, then come back to link them.
                       </p>
                     </div>
-                  ) : (
+                  ) : isOilsExpanded ? (
                   <div className="border border-[#E5E7EB] rounded-[8px] bg-white divide-y divide-[#F3F4F6] max-h-[220px] overflow-y-auto">
                     {allOils.map((oil) => {
                       const isChecked = selectedOils.some(o => o.essential_oil_id === oil.id);
@@ -579,8 +611,26 @@ export default function ProductView({ products, allOils = [] }) {
                       );
                     })}
                   </div>
+                  ) : (
+                    <div className="border border-[#E5E7EB] rounded-[8px] px-[14px] py-[10px] bg-white min-h-[42px] flex flex-wrap gap-[6px] items-center">
+                      {selectedOils.length === 0 ? (
+                        <span className="font-sans text-[13px] text-[#9CA3AF]">No oils selected</span>
+                      ) : selectedOils.map((sel) => {
+                        const oil = allOils.find(o => o.id === sel.essential_oil_id);
+                        if (!oil) return null;
+                        return (
+                          <span
+                            key={sel.essential_oil_id}
+                            className={`inline-flex items-center gap-[4px] font-sans text-[12px] px-[8px] py-[3px] rounded-[20px] ${sel.is_default ? 'bg-[#D8F3DC] text-[#1B4332] font-semibold' : 'bg-[#F3F4F6] text-[#6B7280]'}`}
+                          >
+                            {sel.is_default && <Star size={10} fill="#1B4332" />}
+                            {oil.name}
+                          </span>
+                        );
+                      })}
+                    </div>
                   )}
-                  {allOils.length > 0 && selectedOils.length > 0 && !selectedOils.some(o => o.is_default) && (
+                  {isOilsExpanded && selectedOils.length > 0 && !selectedOils.some(o => o.is_default) && (
                     <p className="font-sans text-[12px] text-[#D97706] mt-[6px] m-0">
                       No default oil selected — tap "Set default" on one oil.
                     </p>
@@ -690,7 +740,8 @@ export default function ProductView({ products, allOils = [] }) {
             </div>
           </form>
         </div>
-      ) : null}
+        </div>
+      )}
 
       {!isSortMode && !isFeaturedMode && !isReportMode && (
         <div className="space-y-[32px] md:space-y-[40px]">
@@ -737,20 +788,11 @@ export default function ProductView({ products, allOils = [] }) {
                           {product.notes}
                         </div>
                       )}
-                      {Array.isArray(product.linked_oils) && product.linked_oils.length > 0 && (() => {
-                        const defaultOil = product.linked_oils.find(o => o.is_default);
-                        const extraCount = product.linked_oils.length - (defaultOil ? 1 : 0);
-                        return (
-                          <div className="flex items-center gap-[5px] mt-[4px]">
-                            <Droplets size={12} className="text-[#1B4332] opacity-50 flex-shrink-0" />
-                            <span className="font-sans text-[12px] text-[#6B7280]">
-                              {defaultOil
-                                ? defaultOil.name + (extraCount > 0 ? ` +${extraCount} more` : '')
-                                : `${product.linked_oils.length} oil${product.linked_oils.length > 1 ? 's' : ''} linked`}
-                            </span>
-                          </div>
-                        );
-                      })()}
+                      <div className="flex items-center gap-[5px] mt-[4px]">
+                        <span className="font-sans text-[12px] text-[#6B7280]">
+                          {TEXTURE_LABELS[product.texture] ?? 'Smooth'}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="flex flex-col md:flex-row md:items-center gap-[12px]" onClick={e => e.stopPropagation()}>
