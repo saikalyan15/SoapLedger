@@ -44,6 +44,7 @@ export async function GET(request) {
       is_featured: p.is_featured,
       category: p.category || p.base_type,
       display_order: p.display_order || 0,
+      texture: p.texture || null,
     }));
 
     return NextResponse.json(formattedProducts, {

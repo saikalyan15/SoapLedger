@@ -45,6 +45,7 @@ export default function ProductView({ products, allOils = [] }) {
     ingredients: '',
     slug: '',
     slugManuallyEdited: false,
+    texture: '',
   });
   const [selectedOils, setSelectedOils] = useState([]);
 
@@ -133,6 +134,7 @@ export default function ProductView({ products, allOils = [] }) {
       ingredients: product.ingredients || '',
       slug: product.slug || '',
       slugManuallyEdited: true, // editing existing — don't auto-overwrite slug
+      texture: product.texture || '',
     });
     const linked = Array.isArray(product.linked_oils) ? product.linked_oils : [];
     setSelectedOils(linked.map(o => ({ essential_oil_id: o.id, is_default: o.is_default })));
@@ -143,7 +145,7 @@ export default function ProductView({ products, allOils = [] }) {
   const handleCancel = () => {
     setIsFormOpen(false);
     setEditingProduct(null);
-    setFormData({ ingredients: '', slug: '', slugManuallyEdited: false });
+    setFormData({ ingredients: '', slug: '', slugManuallyEdited: false, texture: '' });
     setSelectedOils([]);
   };
 
@@ -610,6 +612,23 @@ export default function ProductView({ products, allOils = [] }) {
                 />
               </div>
 
+              <div>
+                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
+                  Texture
+                </label>
+                <select
+                  name="texture"
+                  value={formData.texture || ''}
+                  onChange={handleChange}
+                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
+                >
+                  <option value="">— unset (smooth) —</option>
+                  <option value="smooth">Smooth — plain lather, no exfoliants</option>
+                  <option value="mildly-textured">Mildly Textured — fine particles (oats, rice flour)</option>
+                  <option value="textured">Textured — visible grit (neem powder, marigold petals)</option>
+                  <option value="loofah">Loofah — embedded loofah, strong exfoliation</option>
+                </select>
+              </div>
 
               {/* Status Toggles */}
               <div className="flex flex-wrap gap-[20px] md:col-span-2 mt-[8px]">
