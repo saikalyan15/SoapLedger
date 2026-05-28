@@ -672,7 +672,7 @@ export default function ProductView({ products, allOils = [] }) {
                   onChange={handleChange}
                   className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
                 >
-                  <option value="">— unset (smooth) —</option>
+                  <option value="">— unset (mixed) —</option>
                   <option value="smooth">Smooth — plain lather, no exfoliants</option>
                   <option value="mildly-textured">Mildly Textured — fine particles (oats, rice flour)</option>
                   <option value="textured">Textured — visible grit (neem powder, marigold petals)</option>
@@ -790,7 +790,7 @@ export default function ProductView({ products, allOils = [] }) {
                       )}
                       <div className="flex items-center gap-[5px] mt-[4px]">
                         <span className="font-sans text-[12px] text-[#6B7280]">
-                          {TEXTURE_LABELS[product.texture] ?? 'Smooth'}
+                          {TEXTURE_LABELS[product.texture] ?? 'Mixed'}
                         </span>
                       </div>
                     </div>
