@@ -393,8 +393,8 @@ export default function CustomLabelsClient({ products }) {
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
-            justify-content: space-between !important;
-            padding: 6mm 0 3mm !important;
+            justify-content: flex-start !important;
+            padding: 8mm 0 0 !important;
             margin: 0 auto !important;
             box-shadow: none !important;
             border-radius: 0 !important;
@@ -404,7 +404,8 @@ export default function CustomLabelsClient({ products }) {
             box-sizing: border-box !important;
             page-break-after: always;
             break-after: page;
-            gap: 0 !important;
+            gap: 1mm !important;
+            overflow: hidden !important;
           }
           .band-page-sheet:last-child {
             page-break-after: avoid;
@@ -667,7 +668,7 @@ export default function CustomLabelsClient({ products }) {
                 borderRadius: '4px',
                 boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
                 marginBottom: '32px',
-                padding: printMode === 'stickers' ? '10mm' : '15mm 0',
+                padding: printMode === 'stickers' ? '10mm' : '8mm 0 0',
                 display: printMode === 'stickers' ? 'grid' : 'flex',
 
                 gridTemplateColumns:
