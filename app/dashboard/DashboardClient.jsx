@@ -67,8 +67,10 @@ const ChartCard = ({ title, subtitle, children, loading, empty, icon: Icon, isMo
   </div>
 );
 
-// Delta card for "This Month" — shows value + change vs last month
-const DeltaCard = ({ label, value, delta, deltaLabel, color, format = 'currency', loading, isMobile }) => {
+// Delta card for "This Month" — only shows MoM delta after day 6 to avoid
+// misleading "₹X less" comparisons against a full previous month.
+const DeltaCard = ({ label, value, delta, dayOfMonth, color, format = 'currency', loading, isMobile }) => {
+  const showDelta = dayOfMonth >= 7;
   const isPositive = delta > 0;
   const isZero = delta === 0 || delta == null;
   const deltaColor = isZero ? '#6B7280' : isPositive ? '#16A34A' : '#DC2626';
@@ -82,11 +84,15 @@ const DeltaCard = ({ label, value, delta, deltaLabel, color, format = 'currency'
         {loading ? <Loader2 size={24} className="animate-spin" style={{ color: '#E5E7EB' }} /> : value}
       </div>
       {!loading && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <DeltaIcon size={14} color={deltaColor} />
-          <span style={{ fontSize: '12px', fontWeight: 700, color: deltaColor }}>{isZero ? 'same' : `${formattedDelta} ${isPositive ? 'more' : 'less'}`}</span>
-          <span style={{ fontSize: '11px', color: '#9CA3AF' }}>{deltaLabel}</span>
-        </div>
+        showDelta ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <DeltaIcon size={14} color={deltaColor} />
+            <span style={{ fontSize: '12px', fontWeight: 700, color: deltaColor }}>{isZero ? 'same as' : `${formattedDelta} ${isPositive ? 'more than'  : 'less than'}`}</span>
+            <span style={{ fontSize: '11px', color: '#9CA3AF' }}>last month</span>
+          </div>
+        ) : (
+          <div style={{ fontSize: '11px', color: '#9CA3AF' }}>day {dayOfMonth} — month in progress</div>
+        )
       )}
     </div>
   );
@@ -186,8 +192,7 @@ const DashboardClient = ({
   const { this_month: tm, last_month: lm } = snapshot;
   const dayOfMonth  = new Date().getDate();
   const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-  const paceRevenue = lm.revenue > 0 ? (tm.revenue / lm.revenue) * 100 : null;
-  const paceBar     = Math.min((dayOfMonth / daysInMonth) * 100, 100);
+  const paceBar = Math.min((dayOfMonth / daysInMonth) * 100, 100);
 
   const totalActionable = actionable.reduce((s, r) => s + r.count, 0);
 
@@ -240,32 +245,35 @@ const DashboardClient = ({
         <SectionHeader title="This Month" icon={ShoppingBag} accentColor="#1B4332" status={salesStatus.status} statusLabel={salesStatus.label} statusNote={salesStatus.note} />
 
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
-          <DeltaCard label="Revenue" value={fmtCurrency(tm.revenue)} delta={tm.revenue - lm.revenue} deltaLabel="vs last month" color="#1B4332" format="currency" loading={false} isMobile={isMobile} />
-          <DeltaCard label="Orders" value={fmtNum(tm.orders)} delta={tm.orders - lm.orders} deltaLabel="vs last month" color="#1B4332" format="number" loading={false} isMobile={isMobile} />
-          <DeltaCard label="Soaps Sold" value={fmtNum(tm.soaps)} delta={tm.soaps - lm.soaps} deltaLabel="vs last month" color="#1B4332" format="number" loading={false} isMobile={isMobile} />
+          <DeltaCard label="Revenue"    value={fmtCurrency(tm.revenue)} delta={tm.revenue - lm.revenue} dayOfMonth={dayOfMonth} color="#1B4332" format="currency" loading={false} isMobile={isMobile} />
+          <DeltaCard label="Orders"     value={fmtNum(tm.orders)}       delta={tm.orders  - lm.orders}  dayOfMonth={dayOfMonth} color="#1B4332" format="number"   loading={false} isMobile={isMobile} />
+          <DeltaCard label="Soaps Sold" value={fmtNum(tm.soaps)}        delta={tm.soaps   - lm.soaps}   dayOfMonth={dayOfMonth} color="#1B4332" format="number"   loading={false} isMobile={isMobile} />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
           {/* Monthly pace card */}
           <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '20px 24px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Monthly Pace</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '10px' }}>
-              <div>
-                <span style={{ fontSize: '22px', fontWeight: 800, color: '#111827', fontFamily: 'DM Serif Display, serif' }}>{fmtCurrency(tm.revenue)}</span>
-                <span style={{ fontSize: '13px', color: '#6B7280', marginLeft: '6px' }}>day {dayOfMonth} of {daysInMonth}</span>
-              </div>
-              <span style={{ fontSize: '13px', color: '#6B7280' }}>last month: {fmtCurrency(lm.revenue)}</span>
+            <div style={{ fontSize: '11px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Month Progress</div>
+            <div style={{ marginBottom: '10px' }}>
+              <span style={{ fontSize: '22px', fontWeight: 800, color: '#111827', fontFamily: 'DM Serif Display, serif' }}>{fmtCurrency(tm.revenue)}</span>
+              <span style={{ fontSize: '13px', color: '#6B7280', marginLeft: '8px' }}>so far</span>
             </div>
-            <div style={{ height: '8px', background: '#F3F4F6', borderRadius: '4px', overflow: 'hidden', marginBottom: '8px' }}>
-              <div style={{ height: '100%', width: `${paceBar}%`, background: '#D1FAE5', borderRadius: '4px', position: 'relative' }}>
+            {/* Day-of-month progress bar */}
+            <div style={{ height: '6px', background: '#F3F4F6', borderRadius: '3px', overflow: 'hidden', marginBottom: '10px' }}>
+              <div style={{ height: '100%', width: `${paceBar}%`, background: '#D1FAE5', borderRadius: '3px', position: 'relative' }}>
                 <div style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: '3px', background: '#1B4332', borderRadius: '2px' }} />
               </div>
             </div>
-            <div style={{ fontSize: '12px', color: '#6B7280' }}>
-              {lm.revenue > 0
-                ? `On pace for ${fmtCurrency(Math.round(tm.revenue / dayOfMonth * daysInMonth))} — ${paceRevenue >= 100 ? 'ahead of' : 'behind'} last month`
-                : 'First month tracking'}
+            {/* Context — no projection, just reference points */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280' }}>
+              <span>Day {dayOfMonth} of {daysInMonth}</span>
+              <span>Last month <strong style={{ color: '#374151' }}>{fmtCurrency(lm.revenue)}</strong></span>
             </div>
+            {projection.avgMonthlyRevenue > 0 && (
+              <div style={{ marginTop: '8px', fontSize: '12px', color: '#6B7280' }}>
+                6-month avg <strong style={{ color: '#374151' }}>{fmtCurrency(projection.avgMonthlyRevenue)}</strong>
+              </div>
+            )}
           </div>
 
           {/* Actionable orders */}
@@ -370,7 +378,7 @@ const DashboardClient = ({
             {reorderCandidates.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: '#9CA3AF', fontSize: '13px' }}>No customers due yet</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '420px', overflowY: 'auto' }}>
                 {reorderCandidates.map((c) => {
                   const isOverdue = c.overdue_pct >= 100;
                   const dotColor = c.overdue_pct >= 130 ? '#DC2626' : c.overdue_pct >= 100 ? '#D97706' : '#6B21A8';
