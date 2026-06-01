@@ -656,12 +656,12 @@ const DashboardClient = ({ initialRevenue, initialCustomers, initialProducts, in
               <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>{projection.runRateNote}</div>
             </div>
             <div style={{ padding: '12px 16px', background: '#F0FDF4', borderRadius: '12px', border: '1px solid #DCFCE7', flex: 1 }}>
-              <div style={{ fontSize: '11px', color: '#166534', textTransform: 'uppercase', marginBottom: '4px' }}>At Current Run Rate</div>
+              <div style={{ fontSize: '11px', color: '#166534', textTransform: 'uppercase', marginBottom: '4px' }}>Projected Break-Even</div>
               <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 700, color: '#1B4332' }}>
                 {projection.flatBreakEvenMonth}
               </div>
               <div style={{ fontSize: '11px', color: '#166534', marginTop: '2px' }}>
-                {fmtCurrency(projection.monthlyContribution)}/mo surplus closing {fmtCurrency(projection.gapToClose)} gap
+                {fmtCurrency(projection.avgMonthlyRevenue)}/mo avg · {fmtCurrency(projection.monthlyContribution)}/mo surplus closing {fmtCurrency(projection.gapToClose)} gap
               </div>
             </div>
           </div>
