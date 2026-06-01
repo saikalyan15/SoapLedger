@@ -1,8 +1,7 @@
-import { 
-  getRevenueKPIs, 
-  getRepeatCustomerRate, 
-  getProductPerformance, 
-  getOperationsMetrics, 
+import {
+  getRevenueKPIs,
+  getRepeatCustomerRate,
+  getProductPerformance,
   getAvgOrderValueTrend,
   getCostPriceTrend,
   getMonthlySurplusDeficit,
@@ -16,13 +15,12 @@ export default async function DashboardPage() {
   const range = { from: null, to: null }; // default all time
 
   const [
-    revenue, customers, products, operations, avgTrend, costTrend, 
+    revenue, customers, products, avgTrend, costTrend,
     profitability, projection, production, orderTrend
   ] = await Promise.all([
     getRevenueKPIs(range),
     getRepeatCustomerRate(range),
     getProductPerformance(range),
-    getOperationsMetrics(range),
     getAvgOrderValueTrend(range),
     getCostPriceTrend(range),
     getMonthlySurplusDeficit(),
@@ -37,7 +35,6 @@ export default async function DashboardPage() {
         initialRevenue={revenue}
         initialCustomers={customers}
         initialProducts={products}
-        initialOperations={operations}
         initialAvgTrend={avgTrend}
         initialCostTrend={costTrend}
         initialProfitability={profitability}
