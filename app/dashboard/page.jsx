@@ -2,31 +2,36 @@ import {
   getRevenueKPIs,
   getRepeatCustomerRate,
   getProductPerformance,
-  getAvgOrderValueTrend,
   getCostPriceTrend,
   getMonthlySurplusDeficit,
   getBreakEvenProjection,
-  getMonthlyProductionData,
-  getMonthlyOrderTrend
+  getMonthlyOrderTrend,
+  getThisMonthSnapshot,
+  getActionableOrders,
+  getTopCustomers,
+  getReorderCandidates,
 } from '@/lib/queries/dashboard';
 import DashboardClient from './DashboardClient';
 
 export default async function DashboardPage() {
-  const range = { from: null, to: null }; // default all time
+  const range = { from: null, to: null };
 
   const [
-    revenue, customers, products, avgTrend, costTrend,
-    profitability, projection, production, orderTrend
+    revenue, customers, products, costTrend,
+    profitability, projection, orderTrend,
+    snapshot, actionable, topCustomers, reorderCandidates,
   ] = await Promise.all([
     getRevenueKPIs(range),
     getRepeatCustomerRate(range),
     getProductPerformance(range),
-    getAvgOrderValueTrend(range),
     getCostPriceTrend(range),
     getMonthlySurplusDeficit(),
     getBreakEvenProjection(),
-    getMonthlyProductionData(range),
-    getMonthlyOrderTrend(range)
+    getMonthlyOrderTrend(range),
+    getThisMonthSnapshot(),
+    getActionableOrders(),
+    getTopCustomers(),
+    getReorderCandidates(),
   ]);
 
   return (
@@ -35,12 +40,14 @@ export default async function DashboardPage() {
         initialRevenue={revenue}
         initialCustomers={customers}
         initialProducts={products}
-        initialAvgTrend={avgTrend}
         initialCostTrend={costTrend}
         initialProfitability={profitability}
         initialProjection={projection}
-        initialProduction={production}
         initialOrderTrend={orderTrend}
+        initialSnapshot={snapshot}
+        initialActionable={actionable}
+        initialTopCustomers={topCustomers}
+        initialReorderCandidates={reorderCandidates}
       />
     </div>
   );
