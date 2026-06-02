@@ -197,11 +197,21 @@ const DashboardClient = ({
   const totalActionable = actionable.reduce((s, r) => s + r.count, 0);
 
   // ── Traffic lights ──────────────────────────────────────────────────────────
-  const momChange = lm.revenue > 0 ? (tm.revenue - lm.revenue) / lm.revenue : null;
-  const salesStatus = momChange == null ? { status: 'green', label: 'Tracking', note: '' }
-    : momChange >= -0.05 ? { status: 'green', label: 'Growing',   note: `${momChange >= 0 ? '+' : ''}${fmt(momChange * 100, 1)}% MoM` }
-    : momChange >= -0.30 ? { status: 'amber', label: 'Slowing',   note: `${fmt(momChange * 100, 1)}% MoM` }
-    :                      { status: 'red',   label: 'Declining', note: `${fmt(momChange * 100, 1)}% MoM` };
+  // Sales trend: use last two COMPLETE months from orderTrend so a partial
+  // current month never influences the signal.
+  const salesStatus = (() => {
+    const complete = orderTrend.filter(m => {
+      const d = new Date(m.sort_month || m.month);
+      return d < new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    });
+    const prev = complete[complete.length - 2];
+    const last = complete[complete.length - 1];
+    if (!prev || !last || prev.total_order_value === 0) return { status: 'green', label: 'Tracking', note: 'Building history' };
+    const change = (last.total_order_value - prev.total_order_value) / prev.total_order_value;
+    if (change >= -0.05) return { status: 'green', label: 'Growing',   note: `${change >= 0 ? '+' : ''}${fmt(change * 100, 1)}% last 2 months` };
+    if (change >= -0.30) return { status: 'amber', label: 'Slowing',   note: `${fmt(change * 100, 1)}% last 2 months` };
+    return                      { status: 'red',   label: 'Declining', note: `${fmt(change * 100, 1)}% last 2 months` };
+  })();
 
   const repeatRate = customers.repeat_rate;
   const customerStatus = repeatRate >= 40 ? { status: 'green', label: 'Healthy',     note: `${fmt(repeatRate, 1)}% repeat` }
