@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { MessageCircle, Copy, Check, Phone, ChevronDown, ChevronUp, Calendar, Clock } from 'lucide-react';
+import { MessageCircle, Copy, Check, Phone, ChevronDown, ChevronUp, Calendar, Clock, Share2 } from 'lucide-react';
 import { formatPhoneForDisplay } from '@/lib/utils/phone';
-import { logOutreachAction, markNotReadyAction, markOrderedAction } from './actions';
+import { logOutreachAction, logReferralOutreachAction, markNotReadyAction, markOrderedAction } from './actions';
 
 const BRAND = 'Healing Soil';
 
@@ -22,6 +22,24 @@ const MESSAGE_VARIANTS = [
     label: 'Warm',
     build: (name, products) =>
       `Hello ${name}! 🌸 We hope you've been enjoying your ${products}. It's been around a month, so your soaps are likely coming to an end. We'd love to have your next batch ready for you — just say the word and we'll take care of it! Thank you for your continued support. 💚 – ${BRAND}`,
+  },
+];
+
+const REFERRAL_VARIANTS = [
+  {
+    label: 'Simple ask',
+    build: (name) =>
+      `Hi ${name}! Hope you're enjoying the soap. If you know someone who'd like to try it, feel free to share our page: https://healingsoil.in — we'd really appreciate it. 🌿`,
+  },
+  {
+    label: 'Review + share',
+    build: (name) =>
+      `Hi ${name}! Hope the soap is working well for you. If you're happy with it, we'd love a quick review — and if you know someone else who might enjoy it, do share healingsoil.in with them. Means a lot to a small brand. 💚`,
+  },
+  {
+    label: 'WhatsApp share',
+    build: (name) =>
+      `Hi ${name}! How's the soap going? If you have friends or family who'd like to try natural handmade soap, here's a link they can use: https://healingsoil.in — no pressure at all, just grateful when word spreads organically!`,
   },
 ];
 
@@ -236,7 +254,86 @@ function CustomerCard({ c, isScheduled = false }) {
   );
 }
 
-export default function OutreachView({ dueNow, scheduled }) {
+function ReferralCard({ c }) {
+  const [showMessages, setShowMessages] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [done, setDone] = useState(false);
+
+  const waLink = (phone) => `https://wa.me/${phone.replace(/\D/g, '')}`;
+
+  const handleLog = () => startTransition(async () => {
+    await logReferralOutreachAction(c.id);
+    setDone(true);
+  });
+
+  if (done) {
+    return (
+      <div style={{ background: '#F0FFF4', border: '1px solid #A7F3D0', borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <Check size={16} color="#065F46" />
+        <span style={{ fontSize: '14px', color: '#065F46', fontWeight: 600 }}>{c.name} — referral ask logged.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #E5E7EB', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', opacity: isPending ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ flex: 1 }}>
+          <span style={{ fontSize: '16px', fontWeight: 700, color: '#111827' }}>{c.name}</span>
+          <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '3px' }}>
+            <Phone size={11} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+            {formatPhoneForDisplay(c.phone)}
+          </div>
+          <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '4px' }}>
+            Ordered <strong>{Math.round(c.days_since_order)} days ago</strong>
+            {' · '}{c.products_ordered}
+          </div>
+          <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '2px' }}>
+            ~{c.expected_days - c.days_since_order} days of soap remaining
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <a href={waLink(c.phone)} target="_blank" rel="noreferrer"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', background: '#25D366', color: 'white', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
+            <MessageCircle size={15} /> WhatsApp
+          </a>
+          <button onClick={() => setShowMessages(v => !v)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', border: '1px solid #7C3AED', background: 'white', color: '#7C3AED', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+            <Copy size={14} /> Messages {showMessages ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </button>
+        </div>
+      </div>
+
+      {showMessages && (
+        <div style={{ marginTop: '14px', borderTop: '1px solid #F3F4F6', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {REFERRAL_VARIANTS.map((v) => {
+            const text = v.build(c.name);
+            return (
+              <div key={v.label} style={{ background: '#FAF5FF', borderRadius: '8px', padding: '10px 12px', border: '1px solid #E9D8FD' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{v.label}</span>
+                  <CopyButton text={text} />
+                </div>
+                <p style={{ margin: 0, fontSize: '13px', color: '#374151', lineHeight: 1.6 }}>{text}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{ marginTop: '14px', borderTop: '1px solid #F3F4F6', paddingTop: '12px' }}>
+        <button onClick={handleLog} disabled={isPending}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', background: '#7C3AED', color: 'white', border: 'none', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+          <Check size={14} /> Mark Asked
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function OutreachView({ dueNow, scheduled, referralCandidates = [] }) {
   return (
     <div style={{ maxWidth: '860px', margin: '0 auto', padding: '32px 24px', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
 
@@ -270,16 +367,38 @@ export default function OutreachView({ dueNow, scheduled }) {
         )}
       </div>
 
+      {/* Referral Ask — mid-cycle customers */}
+      <div style={{ marginBottom: '36px' }}>
+        <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#7C3AED', margin: '0 0 6px 0', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ background: '#7C3AED', color: 'white', borderRadius: '50%', width: '22px', height: '22px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800 }}>
+            {referralCandidates.length}
+          </span>
+          Referral Ask
+        </h2>
+        <p style={{ margin: '0 0 14px 0', color: '#9CA3AF', fontSize: '13px' }}>
+          Active customers (14+ days in, soap still running). Ask them to share your page with someone who might like it.
+        </p>
+        {referralCandidates.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#9CA3AF', fontSize: '14px', background: 'white', borderRadius: '12px', border: '1px dashed #E9D8FD' }}>
+            No mid-cycle customers right now.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {referralCandidates.map(c => <ReferralCard key={c.id} c={c} />)}
+          </div>
+        )}
+      </div>
+
       {/* Scheduled Follow-ups */}
       <div>
-        <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#7C3AED', margin: '0 0 14px 0', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ background: '#7C3AED', color: 'white', borderRadius: '50%', width: '22px', height: '22px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800 }}>
+        <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#6B7280', margin: '0 0 14px 0', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ background: '#6B7280', color: 'white', borderRadius: '50%', width: '22px', height: '22px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800 }}>
             {scheduled.length}
           </span>
           Scheduled Follow-ups
         </h2>
         {scheduled.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: '#9CA3AF', fontSize: '14px', background: 'white', borderRadius: '12px', border: '1px dashed #E9D8FD' }}>
+          <div style={{ textAlign: 'center', padding: '40px 0', color: '#9CA3AF', fontSize: '14px', background: 'white', borderRadius: '12px', border: '1px dashed #E5E7EB' }}>
             No follow-ups scheduled.
           </div>
         ) : (
