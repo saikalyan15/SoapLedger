@@ -14,6 +14,7 @@ import {
   Archive,
   ArchiveRestore,
   ChevronRight,
+  Download,
   LayoutList,
   Pencil,
   Plus,
@@ -67,6 +68,57 @@ export default function ProductView({ products, allOils = [] }) {
     } else {
       alert(`Error refreshing products: ${result.error}`);
     }
+  };
+
+  const handleExportCSV = () => {
+    const SITE_URL = 'https://healingsoil.in';
+    const BRAND = 'Healing Soil';
+
+    const csvEscape = (val) => {
+      const str = val == null ? '' : String(val);
+      return str.includes(',') || str.includes('"') || str.includes('\n')
+        ? `"${str.replace(/"/g, '""')}"`
+        : str;
+    };
+
+    const headers = [
+      'id', 'title', 'description', 'availability', 'condition',
+      'price', 'link', 'image_link', 'brand', 'google_product_category',
+      'sale_price', 'additional_image_link',
+    ];
+
+    const rows = activeProducts.map((p) => {
+      const price = p.unit_price
+        ? `${parseFloat(p.unit_price).toFixed(2)} INR`
+        : '';
+      const availability = p.in_stock ? 'in stock' : 'out of stock';
+      const link = p.slug ? `${SITE_URL}/shop/${p.slug}` : SITE_URL;
+      const description = p.short_description || p.name;
+
+      return [
+        p.slug || p.id,
+        p.name,
+        description,
+        availability,
+        'new',
+        price,
+        link,
+        p.image_url || '',
+        BRAND,
+        'Health & Beauty > Personal Care > Skin Care',
+        '',
+        '',
+      ].map(csvEscape).join(',');
+    });
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `healing-soil-meta-catalog-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const buildSlug = (name) =>
@@ -220,6 +272,13 @@ export default function ProductView({ products, allOils = [] }) {
           </p>
         </div>
         <div className="flex gap-[8px] md:gap-[12px]">
+          <button
+            onClick={handleExportCSV}
+            className="font-sans text-[14px] font-semibold px-[16px] py-[10px] md:py-[12px] rounded-[10px] cursor-pointer flex items-center gap-[8px] tracking-[0.01em] shadow-[0_2px_8px_rgba(0,0,0,0.05)] bg-white text-[#4B5563] border border-[#E5E7EB] hover:bg-[#F9FAFB]"
+          >
+            <Download size={16} />
+            {isMobile ? 'Export' : 'Meta Export'}
+          </button>
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
