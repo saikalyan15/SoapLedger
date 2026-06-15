@@ -769,6 +769,19 @@ export default function ProductView({ products, allOils = [] }) {
 
                 <div className="flex items-center gap-[10px]">
                   <input
+                    id="is_gift"
+                    name="is_gift"
+                    type="checkbox"
+                    defaultChecked={editingProduct?.is_gift}
+                    className="w-[18px] h-[18px] accent-[#1B4332]"
+                  />
+                  <label htmlFor="is_gift" className="font-sans text-[14px] text-[#1A1A1A]">
+                    Show in Gifts
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-[10px]">
+                  <input
                     id="is_seasonal"
                     name="is_seasonal"
                     type="checkbox"
@@ -831,6 +844,11 @@ export default function ProductView({ products, allOils = [] }) {
                         {product.is_featured && (
                           <span className="bg-[#EEF2FF] text-[#4338CA] px-[6px] py-[1px] rounded text-[10px] font-bold uppercase">
                             Featured
+                          </span>
+                        )}
+                        {product.is_gift && (
+                          <span className="bg-[#FDF2F8] text-[#BE185D] px-[6px] py-[1px] rounded text-[10px] font-bold uppercase">
+                            Gift
                           </span>
                         )}
                         <span className="bg-[#F3F4F6] text-[#6B7280] px-[6px] py-[1px] rounded text-[10px] font-bold">
