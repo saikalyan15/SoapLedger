@@ -178,14 +178,14 @@ const LabelsClient = ({ labels, orderInfo }) => {
             <div className="selection-overlay no-print">
               {selectedIds.has(-1) ? <CheckSquare size={20} fill={COLORS.brand} color="white" /> : <Square size={20} color={COLORS.muted} />}
             </div>
+            {/* Big TO banner */}
+            <div style={{ border: '2.5px solid black', color: 'black', fontSize: '30px', fontWeight: 800, letterSpacing: '0.18em', textAlign: 'center', padding: '6px 0', borderRadius: '4px', marginBottom: '10px' }}>
+              TO
+            </div>
             {/* Brand row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', paddingBottom: '6px', marginBottom: '8px' }}>
               <img src="/logo/healing-soil-v2.1.png" style={{ width: '18mm', height: 'auto' }} />
               <div style={{ fontSize: '14px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name}</div>
-            </div>
-            {/* Big DELIVER TO banner */}
-            <div style={{ border: '2.5px solid black', color: 'black', fontSize: '26px', fontWeight: 800, letterSpacing: '0.12em', textAlign: 'center', padding: '6px 0', borderRadius: '4px', marginBottom: '12px' }}>
-              DELIVER TO
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
               <div style={{ fontSize: '22px', fontWeight: 800, color: 'black', marginBottom: '6px', lineHeight: 1 }}>{orderInfo.customer_name}</div>
@@ -205,13 +205,13 @@ const LabelsClient = ({ labels, orderInfo }) => {
             <div className="selection-overlay no-print">
               {selectedIds.has(-2) ? <CheckSquare size={18} fill={COLORS.brand} color="white" /> : <Square size size={18} color={COLORS.muted} />}
             </div>
+            {/* FROM banner */}
+            <div style={{ border: '1.5px solid black', color: 'black', fontSize: '20px', fontWeight: 800, letterSpacing: '0.16em', textAlign: 'center', padding: '3px 0', borderRadius: '3px', marginBottom: '8px' }}>
+              FROM
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', paddingBottom: '4px', marginBottom: '6px' }}>
               <img src="/logo/healing-soil-v2.1.png" style={{ width: '11mm', height: 'auto' }} />
               <div style={{ fontSize: '10px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name}</div>
-            </div>
-            {/* FROM banner */}
-            <div style={{ border: '1.5px solid black', color: 'black', fontSize: '15px', fontWeight: 800, letterSpacing: '0.1em', textAlign: 'center', padding: '3px 0', borderRadius: '3px', marginBottom: '8px' }}>
-              FROM (Return Address)
             </div>
             <div style={{ fontSize: '20px', fontWeight: 800, color: 'black', lineHeight: 1.1 }}>{businessConfig.returnAddress.name}</div>
             <div style={{ fontSize: '13px', lineHeight: 1.3, color: 'black', marginTop: '4px', fontWeight: 500 }}>
