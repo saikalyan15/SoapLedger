@@ -178,23 +178,25 @@ const LabelsClient = ({ labels, orderInfo }) => {
             <div className="selection-overlay no-print">
               {selectedIds.has(-1) ? <CheckSquare size={20} fill={COLORS.brand} color="white" /> : <Square size={20} color={COLORS.muted} />}
             </div>
-            {/* Big TO banner */}
-            <div style={{ border: '2.5px solid black', color: 'black', fontSize: '30px', fontWeight: 800, letterSpacing: '0.18em', textAlign: 'center', padding: '6px 0', borderRadius: '4px', marginBottom: '10px' }}>
-              TO
-            </div>
-            {/* Brand row */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', paddingBottom: '4px' }}>
-              <img src="/logo/healing-soil-v2.1.png" style={{ width: '18mm', height: 'auto' }} />
-              <div style={{ fontSize: '14px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name}</div>
-            </div>
-            <div style={{ marginBottom: '10px' }}><WavyDivider color="black" opacity={0.6} /></div>
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: 'black', marginBottom: '6px', lineHeight: 1 }}>{orderInfo.customer_name}</div>
-              <div style={{ fontSize: '14px', lineHeight: 1.5, color: 'black', fontWeight: 500, marginBottom: '8px' }}>
-                {orderInfo.customer_address}
+            <div style={{ display: 'flex', gap: '5mm', height: '100%', alignItems: 'stretch' }}>
+              {/* Rotated TO side tab */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1.5px solid black', paddingRight: '4mm' }}>
+                <div style={{ transform: 'rotate(-90deg)', fontSize: '40px', fontWeight: 800, letterSpacing: '0.22em', color: 'black', whiteSpace: 'nowrap', lineHeight: 1 }}>TO</div>
               </div>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: 'black' }}>
-                PH: {formatPhoneForDisplay(orderInfo.customer_phone)}
+              {/* Content */}
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', paddingBottom: '4px' }}>
+                  <img src="/logo/healing-soil-v2.1.png" style={{ width: '18mm', height: 'auto' }} />
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name}</div>
+                </div>
+                <div style={{ marginBottom: '10px' }}><WavyDivider color="black" opacity={0.6} /></div>
+                <div style={{ fontSize: '22px', fontWeight: 800, color: 'black', marginBottom: '6px', lineHeight: 1 }}>{orderInfo.customer_name}</div>
+                <div style={{ fontSize: '14px', lineHeight: 1.5, color: 'black', fontWeight: 500, marginBottom: '8px' }}>
+                  {orderInfo.customer_address}
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: 'black' }}>
+                  PH: {formatPhoneForDisplay(orderInfo.customer_phone)}
+                </div>
               </div>
             </div>
           </div>
@@ -206,24 +208,29 @@ const LabelsClient = ({ labels, orderInfo }) => {
             <div className="selection-overlay no-print">
               {selectedIds.has(-2) ? <CheckSquare size={18} fill={COLORS.brand} color="white" /> : <Square size size={18} color={COLORS.muted} />}
             </div>
-            {/* FROM banner */}
-            <div style={{ border: '1.5px solid black', color: 'black', fontSize: '20px', fontWeight: 800, letterSpacing: '0.16em', textAlign: 'center', padding: '3px 0', borderRadius: '3px', marginBottom: '8px' }}>
-              FROM
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', paddingBottom: '3px' }}>
-              <img src="/logo/healing-soil-v2.1.png" style={{ width: '11mm', height: 'auto' }} />
-              <div style={{ fontSize: '10px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name}</div>
-            </div>
-            <div style={{ marginBottom: '6px' }}><WavyDivider color="black" opacity={0.6} /></div>
-            <div style={{ fontSize: '20px', fontWeight: 800, color: 'black', lineHeight: 1.1 }}>{businessConfig.returnAddress.name}</div>
-            <div style={{ fontSize: '13px', lineHeight: 1.3, color: 'black', marginTop: '4px', fontWeight: 500 }}>
-              {businessConfig.returnAddress.line1}<br />
-              {businessConfig.returnAddress.line2}<br />
-              {businessConfig.returnAddress.line3}<br />
-              {businessConfig.returnAddress.cityStateZip}
-            </div>
-            <div style={{ fontSize: '15px', fontWeight: 800, marginTop: 'auto', color: 'black' }}>
-              M: {businessConfig.returnAddress.phone}
+            <div style={{ display: 'flex', gap: '3mm', height: '100%', alignItems: 'stretch' }}>
+              {/* Rotated FROM side tab */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1.5px solid black', paddingRight: '3mm' }}>
+                <div style={{ transform: 'rotate(-90deg)', fontSize: '24px', fontWeight: 800, letterSpacing: '0.18em', color: 'black', whiteSpace: 'nowrap', lineHeight: 1 }}>FROM</div>
+              </div>
+              {/* Content */}
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', paddingBottom: '3px' }}>
+                  <img src="/logo/healing-soil-v2.1.png" style={{ width: '11mm', height: 'auto' }} />
+                  <div style={{ fontSize: '10px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name}</div>
+                </div>
+                <div style={{ marginBottom: '6px' }}><WavyDivider color="black" opacity={0.6} /></div>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: 'black', lineHeight: 1.1 }}>{businessConfig.returnAddress.name}</div>
+                <div style={{ fontSize: '13px', lineHeight: 1.3, color: 'black', marginTop: '4px', fontWeight: 500 }}>
+                  {businessConfig.returnAddress.line1}<br />
+                  {businessConfig.returnAddress.line2}<br />
+                  {businessConfig.returnAddress.line3}<br />
+                  {businessConfig.returnAddress.cityStateZip}
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: 800, marginTop: 'auto', color: 'black' }}>
+                  M: {businessConfig.returnAddress.phone}
+                </div>
+              </div>
             </div>
           </div>
 
