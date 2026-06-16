@@ -178,12 +178,16 @@ const LabelsClient = ({ labels, orderInfo }) => {
             <div className="selection-overlay no-print">
               {selectedIds.has(-1) ? <CheckSquare size={20} fill={COLORS.brand} color="white" /> : <Square size={20} color={COLORS.muted} />}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', borderBottom: '1.5px dashed black', paddingBottom: '6px', marginBottom: '12px' }}>
+            {/* Brand row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', paddingBottom: '6px', marginBottom: '8px' }}>
               <img src="/logo/healing-soil-v2.1.png" style={{ width: '18mm', height: 'auto' }} />
-              <div style={{ fontSize: '14px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name} — TO</div>
+              <div style={{ fontSize: '14px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name}</div>
+            </div>
+            {/* Big DELIVER TO banner */}
+            <div style={{ border: '2.5px solid black', color: 'black', fontSize: '26px', fontWeight: 800, letterSpacing: '0.12em', textAlign: 'center', padding: '6px 0', borderRadius: '4px', marginBottom: '12px' }}>
+              DELIVER TO
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <div style={{ fontSize: '13px', color: COLORS.text, textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>Ship To:</div>
               <div style={{ fontSize: '22px', fontWeight: 800, color: 'black', marginBottom: '6px', lineHeight: 1 }}>{orderInfo.customer_name}</div>
               <div style={{ fontSize: '14px', lineHeight: 1.5, color: 'black', fontWeight: 500, marginBottom: '8px' }}>
                 {orderInfo.customer_address}
@@ -201,9 +205,13 @@ const LabelsClient = ({ labels, orderInfo }) => {
             <div className="selection-overlay no-print">
               {selectedIds.has(-2) ? <CheckSquare size={18} fill={COLORS.brand} color="white" /> : <Square size size={18} color={COLORS.muted} />}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', borderBottom: '1.5px dashed #CCC', paddingBottom: '4px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', paddingBottom: '4px', marginBottom: '6px' }}>
               <img src="/logo/healing-soil-v2.1.png" style={{ width: '11mm', height: 'auto' }} />
-              <div style={{ fontSize: '10px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name} — FROM</div>
+              <div style={{ fontSize: '10px', fontWeight: 800, color: COLORS.brand }}>{businessConfig.brand.name}</div>
+            </div>
+            {/* FROM banner */}
+            <div style={{ border: '1.5px solid black', color: 'black', fontSize: '15px', fontWeight: 800, letterSpacing: '0.1em', textAlign: 'center', padding: '3px 0', borderRadius: '3px', marginBottom: '8px' }}>
+              FROM (Return Address)
             </div>
             <div style={{ fontSize: '20px', fontWeight: 800, color: 'black', lineHeight: 1.1 }}>{businessConfig.returnAddress.name}</div>
             <div style={{ fontSize: '13px', lineHeight: 1.3, color: 'black', marginTop: '4px', fontWeight: 500 }}>
