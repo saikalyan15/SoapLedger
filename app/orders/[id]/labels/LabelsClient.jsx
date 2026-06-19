@@ -85,6 +85,12 @@ const LabelsClient = ({ labels, orderInfo }) => {
           display: flex; flex-direction: column; cursor: pointer; position: relative; box-sizing: border-box;
         }
 
+        .addr-tag {
+          display: inline-block; background: #1B4332; color: #ffffff !important;
+          font-weight: 800; letter-spacing: 0.18em; border-radius: 4px;
+          -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
+
         .selection-overlay { position: absolute; top: 2px; right: 2px; z-index: 10; background: white; border-radius: 4px; }
         .deselected { opacity: 0.2 !important; }
 
@@ -103,6 +109,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
           
           * { color: #000000 !important; border-color: #000000 !important; }
           .address-label div { background: none !important; }
+          .addr-tag { background: #1B4332 !important; color: #ffffff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
       `}</style>
 
@@ -185,7 +192,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
             </div>
             {/* TO heading with rule */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0 12px 0' }}>
-              <span style={{ fontSize: '30px', fontWeight: 800, color: 'black', letterSpacing: '0.14em', lineHeight: 1 }}>TO</span>
+              <span className="addr-tag" style={{ fontSize: '22px', padding: '3px 16px' }}>TO</span>
               <div style={{ flex: 1, borderTop: '2.5px solid black' }} />
             </div>
             {/* Recipient */}
@@ -212,7 +219,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
             </div>
             {/* FROM heading with rule */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '7px', margin: '2px 0 8px 0' }}>
-              <span style={{ fontSize: '18px', fontWeight: 800, color: 'black', letterSpacing: '0.12em', lineHeight: 1 }}>FROM</span>
+              <span className="addr-tag" style={{ fontSize: '13px', padding: '2px 10px' }}>FROM</span>
               <div style={{ flex: 1, borderTop: '2px solid black' }} />
             </div>
             {/* Sender */}
