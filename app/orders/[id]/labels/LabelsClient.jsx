@@ -181,7 +181,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
             <div style={{ display: 'flex', gap: '5mm', height: '100%', alignItems: 'stretch' }}>
               {/* Rotated TO side tab */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1.5px solid black', paddingRight: '4mm' }}>
-                <div style={{ transform: 'rotate(-90deg)', fontSize: '40px', fontWeight: 800, letterSpacing: '0.22em', color: 'black', whiteSpace: 'nowrap', lineHeight: 1 }}>TO</div>
+                <div style={{ transform: 'rotate(-45deg)', fontSize: '34px', fontWeight: 800, letterSpacing: '0.12em', color: 'black', whiteSpace: 'nowrap', lineHeight: 1 }}>TO</div>
               </div>
               {/* Content */}
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
@@ -211,7 +211,7 @@ const LabelsClient = ({ labels, orderInfo }) => {
             <div style={{ display: 'flex', gap: '3mm', height: '100%', alignItems: 'stretch' }}>
               {/* Rotated FROM side tab */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1.5px solid black', paddingRight: '3mm' }}>
-                <div style={{ transform: 'rotate(-90deg)', fontSize: '24px', fontWeight: 800, letterSpacing: '0.18em', color: 'black', whiteSpace: 'nowrap', lineHeight: 1 }}>FROM</div>
+                <div style={{ transform: 'rotate(-45deg)', fontSize: '20px', fontWeight: 800, letterSpacing: '0.08em', color: 'black', whiteSpace: 'nowrap', lineHeight: 1 }}>FROM</div>
               </div>
               {/* Content */}
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
