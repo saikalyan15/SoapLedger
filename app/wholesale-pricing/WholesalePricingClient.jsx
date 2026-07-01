@@ -23,6 +23,46 @@ const TABS = [
   { id: 'custom', label: 'Custom / Event' },
 ];
 
+const PRICING_COMBINATIONS = {
+  quote: {
+    title: 'Quotation Builder',
+    formula: 'Uses the selected pricing combination below, then calculates line total = quoted unit price x quantity.',
+    rationale: 'Use this when an enquiry arrives and you need a clean PDF-ready quote instead of sending the full price grid.',
+  },
+  standard: {
+    title: 'Standard Wholesale',
+    formula: 'Per SKU: retail x 75% at MOQ 50, retail x 70% at MOQ 100, retail x 65% at MOQ 150. Unit prices round to nearest ₹5.',
+    rationale: 'Best for single-variety wholesale because each product must independently meet the MOQ, keeping batching and inventory planning simple.',
+  },
+  mixed: {
+    title: 'Mixed Assortment',
+    formula: 'Same unit discounts as standard wholesale, but MOQ is met by total units across products.',
+    rationale: 'Best for retailers who want variety. It supports discovery orders while still protecting production volume.',
+  },
+  bulk: {
+    title: 'Bulk / Unlabelled',
+    formula: 'Retail x 70% at MOQ 50, retail x 65% at MOQ 100, retail x 60% at MOQ 150. Unit prices round to nearest ₹5.',
+    rationale: 'Best when soaps do not need retail labels or custom packaging. Lower finishing effort allows a deeper discount.',
+  },
+  private: {
+    title: 'Private Label',
+    formula: 'Quote-based: product wholesale base + sleeve/box/artwork/setup + any formula or fragrance change cost.',
+    rationale: 'Packaging runs, artwork proofing, sleeves, boxes, stamping, and formula changes can vary widely, so exact pricing should not be automated from retail alone.',
+  },
+  custom: {
+    title: 'Custom / Event',
+    formula: 'Standard wholesale base + event-specific add-ons such as tags, ribbons, boxes, inserts, stamps, fragrance, or rush work.',
+    rationale: 'Best for weddings, corporate gifting, hotels, and seasonal orders where presentation and deadline affect labour and material cost.',
+  },
+};
+
+const QUOTE_MODE_LABELS = {
+  standard: 'Standard Wholesale',
+  mixed: 'Mixed Assortment',
+  bulk: 'Bulk / Unlabelled',
+  custom: 'Custom / Event',
+};
+
 const BASE_COLOURS = {
   Glycerine: '#1B4332',
   'Goat Milk': '#2D6A4F',
@@ -147,9 +187,53 @@ function PriceCell({ retailPrice, tier }) {
   );
 }
 
+function ScrollFrame({ children }) {
+  return (
+    <div>
+      <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '6px', fontWeight: 700 }}>
+        Scroll horizontally to see all columns
+      </div>
+      <div
+        style={{
+          overflowX: 'scroll',
+          overflowY: 'hidden',
+          maxWidth: '100%',
+          paddingBottom: '10px',
+          scrollbarColor: '#9CA3AF #F3F4F6',
+          scrollbarWidth: 'thin',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function PricingGuidance({ mode, compact = false }) {
+  const guidance = PRICING_COMBINATIONS[mode] || PRICING_COMBINATIONS.standard;
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fit, minmax(240px, 1fr))',
+      gap: '10px',
+      marginBottom: compact ? '14px' : '18px',
+    }}>
+      <div style={{ border: '1px solid #D1FAE5', borderRadius: '8px', background: '#F0FDF4', padding: '12px 14px' }}>
+        <div style={{ fontSize: '11px', color: '#047857', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{guidance.title}</div>
+        <div style={{ fontSize: '13px', color: '#064E3B', lineHeight: 1.5, marginTop: '4px' }}>{guidance.formula}</div>
+      </div>
+      <div style={{ border: '1px solid #FDE68A', borderRadius: '8px', background: '#FFFBEB', padding: '12px 14px' }}>
+        <div style={{ fontSize: '11px', color: '#92400E', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Rationale</div>
+        <div style={{ fontSize: '13px', color: '#78350F', lineHeight: 1.5, marginTop: '4px' }}>{guidance.rationale}</div>
+      </div>
+    </div>
+  );
+}
+
 function PricingTable({ products, tiers, mode }) {
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <ScrollFrame>
       <table style={{ width: '100%', minWidth: '980px', borderCollapse: 'collapse', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
         <thead>
           <tr>
@@ -195,7 +279,7 @@ function PricingTable({ products, tiers, mode }) {
           })}
         </tbody>
       </table>
-    </div>
+    </ScrollFrame>
   );
 }
 
@@ -211,8 +295,8 @@ function SummaryCard({ label, value, note }) {
 
 function GuidanceTable({ rows }) {
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+    <ScrollFrame>
+      <table style={{ width: '100%', minWidth: '980px', borderCollapse: 'collapse', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
         <thead>
           <tr>
             <th style={th}>Combination</th>
@@ -234,7 +318,7 @@ function GuidanceTable({ rows }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollFrame>
   );
 }
 
@@ -337,12 +421,7 @@ function QuotationBuilder({ products }) {
     };
   });
   const quoteTotal = pricedLines.reduce((sum, item) => sum + item.lineTotal, 0);
-  const quoteModeLabel = {
-    standard: 'Standard Wholesale',
-    mixed: 'Mixed Assortment',
-    bulk: 'Bulk / Unlabelled',
-    custom: 'Custom / Event',
-  }[quoteMode];
+  const quoteModeLabel = QUOTE_MODE_LABELS[quoteMode];
   const belowMoq = pricedLines.some((item) => item.discount === 0);
 
   return (
@@ -417,6 +496,8 @@ function QuotationBuilder({ products }) {
               </select>
             </div>
           </div>
+
+          <PricingGuidance mode={quoteMode} compact />
 
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
             <button onClick={loadAllVarietiesPreset} style={{ minHeight: '36px', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '7px 11px', background: '#FFFFFF', color: '#374151', fontWeight: 700, cursor: 'pointer' }}>
@@ -496,7 +577,8 @@ function QuotationBuilder({ products }) {
           </div>
         </div>
 
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '18px' }}>
+        <div style={{ overflowX: 'auto', marginBottom: '18px' }}>
+        <table style={{ width: '100%', minWidth: '760px', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
               <th style={th}>Product</th>
@@ -534,6 +616,7 @@ function QuotationBuilder({ products }) {
             </tr>
           </tfoot>
         </table>
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
           <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#4B5563', lineHeight: 1.55 }}>
@@ -645,13 +728,15 @@ export default function WholesalePricingClient({ products }) {
       <div style={{
         display: 'flex',
         gap: '4px',
-        overflowX: 'auto',
+        overflowX: 'scroll',
         background: '#F9FAFB',
         border: '1px solid #E5E7EB',
         borderRadius: '8px',
         padding: '4px',
         width: '100%',
-        marginBottom: '20px',
+        marginBottom: '12px',
+        scrollbarColor: '#9CA3AF #F3F4F6',
+        scrollbarWidth: 'thin',
       }}>
         {TABS.map((item) => (
           <button key={item.id} style={tabStyle(tab === item.id)} onClick={() => setTab(item.id)}>
@@ -659,6 +744,8 @@ export default function WholesalePricingClient({ products }) {
           </button>
         ))}
       </div>
+
+      <PricingGuidance mode={tab} />
 
       {tab === 'standard' && (
         <PricingTable products={products} tiers={STANDARD_TIERS} mode="standard" />
