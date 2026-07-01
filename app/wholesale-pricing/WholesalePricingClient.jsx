@@ -76,6 +76,25 @@ const EXCLUDED_WHOLESALE_BASE_TYPES = new Set([
   'Loofah',
 ]);
 
+const FIFTY_GRAM_IMAGE_BASE = '/50g-soap-squares/images';
+const AVAILABLE_FIFTY_GRAM_IMAGES = new Set([
+  'ginger-rosemary-glycerin',
+  'ginger-rosemary-goat-milk',
+  'honey-kesar-haldi-sheabutter',
+  'honey-oats-glycerin',
+  'honey-oats-goatmilk',
+  'kesar-gulab-sheabutter',
+  'kesar-haldi-goatmilk',
+  'marigold-glycerine',
+  'neem-tulsi-glycerine',
+  'neem-tulsi-goatmilk',
+  'orange-glycerine',
+  'orange-goatmilk',
+  'pomegranate-glycerin',
+  'pomegranate-goatmilk',
+  'red-rose',
+]);
+
 const BASE_COLOURS = {
   Glycerine: '#1B4332',
   'Goat Milk': '#2D6A4F',
@@ -156,6 +175,13 @@ function getWholesaleVariantPrice(product) {
 
 function getProductImage(product) {
   const imageUrl = String(product?.image_url || '').trim();
+  const fileName = imageUrl.split('/').pop() || '';
+  const slug = fileName.replace(/\.[^.]+$/, '');
+
+  if (AVAILABLE_FIFTY_GRAM_IMAGES.has(slug)) {
+    return `${FIFTY_GRAM_IMAGE_BASE}/${slug}-50g.png`;
+  }
+
   if (!imageUrl || imageUrl.includes('coming-soon')) return '/logo/profile-cream.png';
   return imageUrl;
 }
