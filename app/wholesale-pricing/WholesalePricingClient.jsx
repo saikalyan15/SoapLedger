@@ -14,15 +14,6 @@ const BULK_TIERS = [
   { qty: 150, discount: 0.40 },
 ];
 
-const TABS = [
-  { id: 'quote', label: 'Quotation Builder' },
-  { id: 'standard', label: 'Standard Wholesale' },
-  { id: 'mixed', label: 'Mixed Assortment' },
-  { id: 'bulk', label: 'Bulk / Unlabelled' },
-  { id: 'private', label: 'Private Label' },
-  { id: 'custom', label: 'Custom / Event' },
-];
-
 const PRICING_COMBINATIONS = {
   quote: {
     title: 'Quotation Builder',
@@ -62,25 +53,6 @@ const QUOTE_MODE_LABELS = {
   bulk: 'Bulk / Unlabelled',
   custom: 'Custom / Event',
 };
-
-const FIFTY_GRAM_IMAGE_BASE = '/50g-soap-squares/images';
-const AVAILABLE_FIFTY_GRAM_IMAGES = new Set([
-  'ginger-rosemary-glycerin',
-  'ginger-rosemary-goat-milk',
-  'honey-kesar-haldi-sheabutter',
-  'honey-oats-glycerin',
-  'honey-oats-goatmilk',
-  'kesar-gulab-sheabutter',
-  'kesar-haldi-goatmilk',
-  'marigold-glycerine',
-  'neem-tulsi-glycerine',
-  'neem-tulsi-goatmilk',
-  'orange-glycerine',
-  'orange-goatmilk',
-  'pomegranate-glycerin',
-  'pomegranate-goatmilk',
-  'red-rose',
-]);
 
 const BASE_COLOURS = {
   Glycerine: '#1B4332',
@@ -159,19 +131,6 @@ function getWholesaleVariantPrice(product) {
   return roundToNearestFive(retailPrice);
 }
 
-function getProductImage(product) {
-  const imageUrl = String(product?.image_url || '').trim();
-  const fileName = imageUrl.split('/').pop() || '';
-  const slug = fileName.replace(/\.[^.]+$/, '');
-
-  if (AVAILABLE_FIFTY_GRAM_IMAGES.has(slug)) {
-    return `${FIFTY_GRAM_IMAGE_BASE}/${slug}-50g.png`;
-  }
-
-  if (!imageUrl || imageUrl.includes('coming-soon')) return '/logo/profile-cream.png';
-  return imageUrl;
-}
-
 function getQuoteUnitPrice(product, mode, lineQuantity, totalQuantity) {
   const retailPrice = getWholesaleVariantPrice(product);
   const tiers = mode === 'bulk' ? BULK_TIERS : STANDARD_TIERS;
@@ -209,38 +168,6 @@ function TypeBadge({ type }) {
     }}>
       {type}
     </span>
-  );
-}
-
-function StatusPill({ product }) {
-  const active = product.is_active && product.in_stock;
-  return (
-    <span style={{
-      display: 'inline-block',
-      padding: '2px 8px',
-      borderRadius: '99px',
-      fontSize: '11px',
-      fontWeight: 700,
-      color: active ? '#047857' : '#9CA3AF',
-      background: active ? '#ECFDF5' : '#F3F4F6',
-      border: active ? '1px solid #A7F3D0' : '1px solid #E5E7EB',
-    }}>
-      {active ? 'Active' : 'Inactive'}
-    </span>
-  );
-}
-
-function PriceCell({ retailPrice, tier }) {
-  const unitPrice = roundToNearestFive(Number(retailPrice || 0) * (1 - tier.discount));
-  const total = unitPrice * tier.qty;
-
-  return (
-    <td style={tdRight}>
-      <div style={{ fontWeight: 700, color: '#111827' }}>{fmtCurrency(unitPrice)}</div>
-      <div style={{ color: '#6B7280', fontSize: '11px', marginTop: '2px' }}>
-        {fmtCurrency(total)} total
-      </div>
-    </td>
   );
 }
 
@@ -288,58 +215,6 @@ function PricingGuidance({ mode, compact = false }) {
   );
 }
 
-function PricingTable({ products, tiers, mode }) {
-  return (
-    <ScrollFrame>
-      <table style={{ width: '100%', minWidth: '1080px', borderCollapse: 'collapse', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
-        <thead>
-          <tr>
-            <th style={th}>Product</th>
-            <th style={th}>Type</th>
-            <th style={thRight}>Wholesale Variant</th>
-            <th style={th}>Status</th>
-            <th style={thRight}>50g Retail Anchor</th>
-            {tiers.map((tier) => (
-              <th key={tier.qty} style={thRight}>
-                MOQ {tier.qty}
-                <span style={{ display: 'block', fontSize: '10px', color: '#9CA3AF', marginTop: '2px' }}>
-                  {Math.round(tier.discount * 100)}% off
-                </span>
-              </th>
-            ))}
-            <th style={th}>Rationale</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((product) => {
-            const retailPrice = getWholesaleVariantPrice(product);
-            const muted = !product.is_active;
-            return (
-              <tr key={product.id} style={{ background: muted ? '#FAFAFA' : '#FFFFFF' }}>
-                <td style={{ ...td, minWidth: '230px', fontWeight: 700, color: muted ? '#9CA3AF' : '#111827', whiteSpace: 'normal' }}>
-                  {product.name}
-                </td>
-                <td style={td}><TypeBadge type={product.base_type || 'Other'} /></td>
-                <td style={tdRight}>50g</td>
-                <td style={td}><StatusPill product={product} /></td>
-                <td style={{ ...tdRight, fontWeight: 700 }}>{fmtCurrency(retailPrice)}</td>
-                {tiers.map((tier) => (
-                  <PriceCell key={tier.qty} retailPrice={retailPrice} tier={tier} />
-                ))}
-                <td style={{ ...td, minWidth: '240px', whiteSpace: 'normal', color: '#4B5563', lineHeight: 1.45 }}>
-                  {mode === 'bulk'
-                    ? 'Lower packaging and labelling effort allows a deeper discount.'
-                    : '50g equivalent retail anchor with stronger discount at larger production quantities.'}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </ScrollFrame>
-  );
-}
-
 function BaseTypePriceMatrix({ products }) {
   const rows = Object.values(products.reduce((groups, product) => {
     const type = product.base_type || 'Other';
@@ -348,7 +223,6 @@ function BaseTypePriceMatrix({ products }) {
       products: [],
       retailAnchors: [],
       standard: Object.fromEntries(STANDARD_TIERS.map((tier) => [tier.qty, []])),
-      bulk: Object.fromEntries(BULK_TIERS.map((tier) => [tier.qty, []])),
     };
 
     const retailAnchor = getWholesaleVariantPrice(product);
@@ -357,33 +231,32 @@ function BaseTypePriceMatrix({ products }) {
     for (const tier of STANDARD_TIERS) {
       groups[type].standard[tier.qty].push(roundToNearestFive(retailAnchor * (1 - tier.discount)));
     }
-    for (const tier of BULK_TIERS) {
-      groups[type].bulk[tier.qty].push(roundToNearestFive(retailAnchor * (1 - tier.discount)));
-    }
     return groups;
   }, {})).sort((a, b) => a.baseType.localeCompare(b.baseType));
 
   return (
     <div style={{ marginBottom: '24px' }}>
       <div style={{ marginBottom: '10px' }}>
-        <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: '#1B4332' }}>Base type price matrix</h2>
+        <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: '#1B4332' }}>Wholesale price report</h2>
         <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px' }}>
-          Retail anchor and wholesale prices for each eligible 50g soap base type.
+          Standard wholesale prices by soap base type and order quantity for eligible 50g variants.
         </p>
       </div>
       <ScrollFrame>
-        <table style={{ width: '100%', minWidth: '980px', borderCollapse: 'collapse', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+        <table style={{ width: '100%', minWidth: '760px', borderCollapse: 'collapse', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
           <thead>
             <tr>
               <th style={th}>Base Type</th>
               <th style={thRight}>Variants</th>
               <th style={thRight}>50g Retail Anchor</th>
-              <th style={thRight}>Standard 50</th>
-              <th style={thRight}>Standard 100</th>
-              <th style={thRight}>Standard 150</th>
-              <th style={thRight}>Bulk 50</th>
-              <th style={thRight}>Bulk 100</th>
-              <th style={thRight}>Bulk 150</th>
+              {STANDARD_TIERS.map((tier) => (
+                <th key={tier.qty} style={thRight}>
+                  Qty {tier.qty}
+                  <span style={{ display: 'block', fontSize: '10px', color: '#9CA3AF', marginTop: '2px' }}>
+                    {Math.round(tier.discount * 100)}% off
+                  </span>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -396,9 +269,6 @@ function BaseTypePriceMatrix({ products }) {
                 <td style={{ ...tdRight, fontWeight: 800, color: '#111827' }}>{formatPriceRange(row.retailAnchors)}</td>
                 {STANDARD_TIERS.map((tier) => (
                   <td key={`standard-${tier.qty}`} style={tdRight}>{formatPriceRange(row.standard[tier.qty])}</td>
-                ))}
-                {BULK_TIERS.map((tier) => (
-                  <td key={`bulk-${tier.qty}`} style={tdRight}>{formatPriceRange(row.bulk[tier.qty])}</td>
                 ))}
               </tr>
             ))}
@@ -416,69 +286,6 @@ function SummaryCard({ label, value, note }) {
       <div style={{ fontSize: '24px', color: '#111827', fontWeight: 800, marginTop: '4px' }}>{value}</div>
       <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '3px', lineHeight: 1.4 }}>{note}</div>
     </div>
-  );
-}
-
-function GuidanceTable({ rows }) {
-  return (
-    <ScrollFrame>
-      <table style={{ width: '100%', minWidth: '980px', borderCollapse: 'collapse', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
-        <thead>
-          <tr>
-            <th style={th}>Combination</th>
-            <th style={th}>Indicative MOQ</th>
-            <th style={th}>Pricing Basis</th>
-            <th style={th}>Use When</th>
-            <th style={th}>Rationale</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.combination}>
-              <td style={{ ...td, fontWeight: 700, color: '#111827', whiteSpace: 'normal' }}>{row.combination}</td>
-              <td style={td}>{row.moq}</td>
-              <td style={{ ...td, whiteSpace: 'normal' }}>{row.pricing}</td>
-              <td style={{ ...td, whiteSpace: 'normal' }}>{row.use}</td>
-              <td style={{ ...td, whiteSpace: 'normal', minWidth: '260px', lineHeight: 1.45 }}>{row.rationale}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollFrame>
-  );
-}
-
-function ProductAnnexure({ products }) {
-  return (
-    <section style={{ pageBreakBefore: 'always', marginTop: '24px' }}>
-      <div style={{ borderBottom: '2px solid #1B4332', paddingBottom: '10px', marginBottom: '14px' }}>
-        <div style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332', fontSize: '28px', lineHeight: 1 }}>
-          Annexure: 50g Soap Catalogue
-        </div>
-        <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '5px', lineHeight: 1.45 }}>
-          Product photos are for buyer reference only. Actual colour, texture, botanical distribution, and finish may differ slightly because every soap is handmade in small batches.
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-        {products.map((product) => (
-          <div key={product.id} style={{ border: '1px solid #E5E7EB', borderRadius: '8px', overflow: 'hidden', background: '#FFFFFF', breakInside: 'avoid' }}>
-            <div style={{ width: '100%', aspectRatio: '1 / 1', background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={getProductImage(product)}
-                alt={product.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
-            </div>
-            <div style={{ padding: '9px 10px' }}>
-              <div style={{ fontSize: '12px', fontWeight: 900, color: '#111827', lineHeight: 1.35 }}>{product.name}</div>
-              <div style={{ fontSize: '10px', color: '#6B7280', marginTop: '3px' }}>{product.base_type || 'Other'} · 50g wholesale variant</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -949,23 +756,20 @@ function QuotationBuilder({ products }) {
         </table>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '14px' }}>
           <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#4B5563', lineHeight: 1.55 }}>
-            <strong style={{ color: '#111827' }}>Pricing rationale:</strong> The quote uses eligible 50g soap variants only. The 50g retail anchor is prorated from catalogue weight and rounded to nearest ₹5 before discounts. Mixed assortment and bulk quotations apply the tier by total enquiry quantity; standard wholesale applies the tier per SKU.
+            <strong style={{ color: '#111827' }}>Payment terms:</strong> 100% advance payment required before order processing.
           </div>
           <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#4B5563', lineHeight: 1.55 }}>
             <strong style={{ color: '#111827' }}>Notes:</strong> {notes || 'Prices are indicative and subject to final confirmation.'}
           </div>
         </div>
-
-        <ProductAnnexure products={activeProducts} />
       </div>
     </div>
   );
 }
 
 export default function WholesalePricingClient({ products }) {
-  const [tab, setTab] = useState('quote');
   const wholesaleProducts = useMemo(() => products.filter(isWholesaleEligible), [products]);
 
   const excludedCount = products.length - wholesaleProducts.length;
@@ -973,68 +777,6 @@ export default function WholesalePricingClient({ products }) {
     if (!wholesaleProducts.length) return 0;
     return wholesaleProducts.reduce((sum, p) => sum + getWholesaleVariantPrice(p), 0) / wholesaleProducts.length;
   }, [wholesaleProducts]);
-
-  const tabStyle = (active) => ({
-    padding: '8px 14px',
-    borderRadius: '6px',
-    border: 'none',
-    cursor: 'pointer',
-    fontFamily: 'Plus Jakarta Sans, sans-serif',
-    fontSize: '13px',
-    fontWeight: active ? 700 : 500,
-    background: active ? '#1B4332' : 'transparent',
-    color: active ? '#FFFFFF' : '#6B7280',
-    transition: 'all 0.15s',
-    whiteSpace: 'nowrap',
-  });
-
-  const privateLabelRows = [
-    {
-      combination: 'Retail sleeve only',
-      moq: '150+ units',
-      pricing: 'Standard wholesale base plus sleeve/artwork setup',
-      use: 'Retailers who want their brand on an existing Healing Soil formula.',
-      rationale: 'Sleeves require print coordination, proofing, and label application, so setup should not be absorbed into standard wholesale price.',
-    },
-    {
-      combination: 'Custom box packaging',
-      moq: '250+ units',
-      pricing: 'Quote-based using product price, box cost, artwork, and packing labour',
-      use: 'Boutiques, hotels, and premium gifting partners.',
-      rationale: 'Boxes change both material cost and packing time, and suppliers commonly require higher print quantities.',
-    },
-    {
-      combination: 'Formula or fragrance variation',
-      moq: '300+ units',
-      pricing: 'Quote-based with sampling and batch-change charge',
-      use: 'Brands that need a distinctive fragrance, colour, additive, or positioning.',
-      rationale: 'Formula changes add testing, batch risk, procurement variance, and separate production planning.',
-    },
-  ];
-
-  const customRows = [
-    {
-      combination: 'Wedding or event favour',
-      moq: '50+ units',
-      pricing: 'Standard wholesale base plus custom tag, sleeve, or ribbon cost',
-      use: 'Small events where personalization is mostly packaging.',
-      rationale: 'Base soap can stay standard while finishing labour and packaging are charged separately.',
-    },
-    {
-      combination: 'Corporate gifting',
-      moq: '100+ units',
-      pricing: 'Standard wholesale base plus gift box, insert, and branding setup',
-      use: 'Companies ordering seasonal hampers or client gifts.',
-      rationale: 'The soap price should remain transparent while gift presentation is priced as an add-on.',
-    },
-    {
-      combination: 'Hotel or amenity supply',
-      moq: '150+ units',
-      pricing: 'Standard or bulk base depending on label requirement',
-      use: 'Hotels, stays, spas, and wellness spaces that need repeatable supply.',
-      rationale: 'Amenity buyers often value simple packaging and consistent reorder pricing more than retail presentation.',
-    },
-  ];
 
   return (
     <div>
@@ -1061,55 +803,25 @@ export default function WholesalePricingClient({ products }) {
       <BaseTypePriceMatrix products={wholesaleProducts} />
 
       <div style={{
-        display: 'flex',
-        gap: '4px',
-        overflowX: 'scroll',
+        marginTop: '24px',
+        marginBottom: '14px',
+        paddingTop: '20px',
+        borderTop: '1px solid #E5E7EB',
+      }}>
+        <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: '#1B4332' }}>Interested enquiry quote</h2>
+        <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px', lineHeight: 1.5 }}>
+          Use this only after a buyer expresses interest, when you need a product-level quote for mixed assortments, bulk/unlabelled orders, or custom/event work.
+        </p>
+      </div>
+
+      <div style={{
         background: '#F9FAFB',
         border: '1px solid #E5E7EB',
         borderRadius: '8px',
-        padding: '4px',
-        width: '100%',
-        marginBottom: '12px',
-        scrollbarColor: '#9CA3AF #F3F4F6',
-        scrollbarWidth: 'thin',
+        padding: '14px',
       }}>
-        {TABS.map((item) => (
-          <button key={item.id} style={tabStyle(tab === item.id)} onClick={() => setTab(item.id)}>
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      <PricingGuidance mode={tab} />
-
-      {tab === 'standard' && (
-        <PricingTable products={wholesaleProducts} tiers={STANDARD_TIERS} mode="standard" />
-      )}
-
-      {tab === 'quote' && (
         <QuotationBuilder products={products} />
-      )}
-
-      {tab === 'mixed' && (
-        <div>
-          <div style={{ fontSize: '13px', color: '#4B5563', lineHeight: 1.55, marginBottom: '14px' }}>
-            Mixed assortment uses the same unit prices as standard wholesale, but the MOQ can be reached across multiple products instead of 50, 100, or 150 units of a single SKU.
-          </div>
-          <PricingTable products={wholesaleProducts} tiers={STANDARD_TIERS} mode="mixed" />
-        </div>
-      )}
-
-      {tab === 'bulk' && (
-        <PricingTable products={wholesaleProducts} tiers={BULK_TIERS} mode="bulk" />
-      )}
-
-      {tab === 'private' && (
-        <GuidanceTable rows={privateLabelRows} />
-      )}
-
-      {tab === 'custom' && (
-        <GuidanceTable rows={customRows} />
-      )}
+      </div>
     </div>
   );
 }

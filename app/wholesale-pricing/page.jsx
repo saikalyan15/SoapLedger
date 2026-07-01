@@ -16,7 +16,7 @@ export default async function WholesalePricingPage() {
     <div style={{ padding: '32px 32px 64px', maxWidth: '1280px', margin: '0 auto' }}>
       <PageHeader
         title="Wholesale Pricing"
-        subtitle="Industry-style MOQ pricing combinations for handmade soap wholesale, private label, and event orders"
+        subtitle="Base type pricing by quantity, with a quote builder for interested wholesale enquiries"
       />
       <WholesalePricingClient products={products} />
     </div>
