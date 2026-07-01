@@ -6,7 +6,7 @@ import { useState } from 'react'
 import {
   LayoutDashboard, PlusCircle, ShoppingBag, Users,
   Package, Receipt, Settings, X, Tag, TrendingUp, Bell, BarChart2, Droplets, NotebookPen,
-  ChevronDown, BarChart3, Wrench
+  ChevronDown, BarChart3, Wrench, Percent
 } from 'lucide-react'
 
 const navItems = [
@@ -21,6 +21,7 @@ const navItems = [
     icon: BarChart3,
     children: [
       { label: 'SKU Report', href: '/sku-report', icon: BarChart2 },
+      { label: 'Wholesale Pricing', href: '/wholesale-pricing', icon: Percent },
       { label: 'Growth',     href: '/growth',     icon: TrendingUp },
       { label: 'Expenses',   href: '/expenses',   icon: Receipt },
     ],

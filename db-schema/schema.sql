@@ -20,6 +20,7 @@ CREATE TABLE products (
   unit_price    NUMERIC(10, 2) NOT NULL,
   is_active     BOOLEAN NOT NULL DEFAULT TRUE,
   is_seasonal   BOOLEAN NOT NULL DEFAULT FALSE,
+  is_wholesale_eligible BOOLEAN NOT NULL DEFAULT TRUE,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

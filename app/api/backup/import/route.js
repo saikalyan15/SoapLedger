@@ -50,8 +50,8 @@ export async function POST(request) {
 
       // products (no FK)
       ...products.map(r => sql`
-        INSERT INTO products (id, name, base_type, weight_grams, unit_price, is_active, is_seasonal, created_at, ingredients, slug, short_description, image_url, in_stock, is_featured, is_gift, category, price_range, display_order)
-        VALUES (${r.id}, ${r.name}, ${r.base_type}, ${r.weight_grams}, ${r.unit_price}, ${r.is_active}, ${r.is_seasonal}, ${r.created_at}, ${r.ingredients ?? null}, ${r.slug ?? null}, ${r.short_description ?? null}, ${r.image_url ?? null}, ${r.in_stock ?? true}, ${r.is_featured ?? false}, ${r.is_gift ?? false}, ${r.category ?? null}, ${r.price_range ?? null}, ${r.display_order ?? null})
+        INSERT INTO products (id, name, base_type, weight_grams, unit_price, is_active, is_seasonal, created_at, ingredients, slug, short_description, image_url, in_stock, is_wholesale_eligible, is_featured, is_gift, category, price_range, display_order)
+        VALUES (${r.id}, ${r.name}, ${r.base_type}, ${r.weight_grams}, ${r.unit_price}, ${r.is_active}, ${r.is_seasonal}, ${r.created_at}, ${r.ingredients ?? null}, ${r.slug ?? null}, ${r.short_description ?? null}, ${r.image_url ?? null}, ${r.in_stock ?? true}, ${r.is_wholesale_eligible ?? true}, ${r.is_featured ?? false}, ${r.is_gift ?? false}, ${r.category ?? null}, ${r.price_range ?? null}, ${r.display_order ?? null})
       `),
 
       // customers (no FK)
