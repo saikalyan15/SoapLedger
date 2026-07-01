@@ -63,19 +63,6 @@ const QUOTE_MODE_LABELS = {
   custom: 'Custom / Event',
 };
 
-const EXCLUDED_WHOLESALE_NAMES = new Set([
-  'Gift Soap Pouch – Set of 3',
-  'Kids Collection (Set of 4)',
-  'Soap Squares Discovery Box - Light',
-  'Soap Squares Discovery Box - Creamy',
-  'Soap Squares Discovery Box - Rich',
-]);
-
-const EXCLUDED_WHOLESALE_BASE_TYPES = new Set([
-  'Travel',
-  'Loofah',
-]);
-
 const FIFTY_GRAM_IMAGE_BASE = '/50g-soap-squares/images';
 const AVAILABLE_FIFTY_GRAM_IMAGES = new Set([
   'ginger-rosemary-glycerin',
@@ -157,8 +144,7 @@ function isWholesaleEligible(product) {
   return Boolean(
     product?.is_active &&
     product?.in_stock &&
-    !EXCLUDED_WHOLESALE_NAMES.has(product.name) &&
-    !EXCLUDED_WHOLESALE_BASE_TYPES.has(product.base_type)
+    product?.is_wholesale_eligible
   );
 }
 
@@ -1069,7 +1055,7 @@ export default function WholesalePricingClient({ products }) {
         lineHeight: 1.55,
       }}>
         <div style={{ fontWeight: 800, color: '#92400E', marginBottom: '6px' }}>Pricing rationale</div>
-        Wholesale quotes here are for regular 50g soap variants only. Gift pouches, kids sets, discovery boxes, travel soaps, and loofah soaps are excluded because they are bundles or specialty formats, not standard wholesale bars. The 50g retail anchor is prorated from the catalogue price by weight, then rounded to the nearest ₹5 before wholesale discounts are applied.
+        Wholesale quotes here are for regular 50g soap variants only. Products marked as not wholesale eligible are excluded from this report, so bundles, specialty formats, seasonal specials, travel soaps, and loofah soaps can be managed from the product catalogue instead of code. The 50g retail anchor is prorated from the catalogue price by weight, then rounded to the nearest ₹5 before wholesale discounts are applied.
       </div>
 
       <BaseTypePriceMatrix products={wholesaleProducts} />

@@ -135,48 +135,43 @@ export default function ProductView({ products, allOils = [] }) {
     }
   };
 
+  const buildSortList = () => {
+    const activeOnes = products
+      .filter((p) => p.is_active)
+      .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+
+    return activeOnes.map(p => ({
+      id: p.id,
+      name: p.name,
+      display_order: p.display_order || 0,
+      base_type: p.base_type
+    }));
+  };
+
+  const buildFeaturedList = () => {
+    const activeOnes = products.filter((p) => p.is_active);
+    const featured = activeOnes
+      .filter(p => p.is_featured)
+      .sort((a, b) => (a.featured_order ?? 999) - (b.featured_order ?? 999));
+    const rest = activeOnes
+      .filter(p => !p.is_featured)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return [...featured, ...rest].map((p, i) => ({
+      id: p.id,
+      name: p.name,
+      base_type: p.base_type,
+      is_featured: !!p.is_featured,
+      featured_order: p.is_featured ? (p.featured_order ?? i + 1) : null,
+    }));
+  };
+
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  // Initialize sort list when entering sort mode
-  useEffect(() => {
-    if (isSortMode) {
-      const activeOnes = products
-        .filter((p) => p.is_active)
-        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-      setSortList(activeOnes.map(p => ({
-        id: p.id,
-        name: p.name,
-        display_order: p.display_order || 0,
-        base_type: p.base_type
-      })));
-    }
-  }, [isSortMode, products]);
-
-  // Initialize featured list when entering featured mode
-  useEffect(() => {
-    if (isFeaturedMode) {
-      const activeOnes = products.filter((p) => p.is_active);
-      // Featured products first (sorted by featured_order), then rest alphabetically
-      const featured = activeOnes
-        .filter(p => p.is_featured)
-        .sort((a, b) => (a.featured_order ?? 999) - (b.featured_order ?? 999));
-      const rest = activeOnes
-        .filter(p => !p.is_featured)
-        .sort((a, b) => a.name.localeCompare(b.name));
-      setFeaturedList([...featured, ...rest].map((p, i) => ({
-        id: p.id,
-        name: p.name,
-        base_type: p.base_type,
-        is_featured: !!p.is_featured,
-        featured_order: p.is_featured ? (p.featured_order ?? i + 1) : null,
-      })));
-    }
-  }, [isFeaturedMode, products]);
 
   const activeProducts = products.filter((p) => p.is_active);
   const archivedProducts = products.filter((p) => !p.is_active);
@@ -288,7 +283,12 @@ export default function ProductView({ products, allOils = [] }) {
             {isRefreshing ? 'Refreshing...' : isMobile ? 'Refresh' : 'Refresh Products'}
           </button>
           <button
-            onClick={() => { setIsFeaturedMode(!isFeaturedMode); setIsSortMode(false); setIsReportMode(false); }}
+            onClick={() => {
+              if (!isFeaturedMode) setFeaturedList(buildFeaturedList());
+              setIsFeaturedMode(!isFeaturedMode);
+              setIsSortMode(false);
+              setIsReportMode(false);
+            }}
             className={`font-sans text-[14px] font-semibold px-[16px] py-[10px] md:py-[12px] rounded-[10px] cursor-pointer flex items-center gap-[8px] tracking-[0.01em] shadow-[0_2px_8px_rgba(0,0,0,0.05)] ${isFeaturedMode ? 'bg-[#4338CA] text-white border-none' : 'bg-white text-[#4B5563] border border-[#E5E7EB]'}`}
           >
             {isFeaturedMode ? <X size={16} /> : <Star size={16} />}
@@ -302,7 +302,12 @@ export default function ProductView({ products, allOils = [] }) {
             {isReportMode ? 'Cancel' : 'Report'}
           </button>
           <button
-            onClick={() => { setIsSortMode(!isSortMode); setIsFeaturedMode(false); setIsReportMode(false); }}
+            onClick={() => {
+              if (!isSortMode) setSortList(buildSortList());
+              setIsSortMode(!isSortMode);
+              setIsFeaturedMode(false);
+              setIsReportMode(false);
+            }}
             className={`font-sans text-[14px] font-semibold px-[16px] py-[10px] md:py-[12px] rounded-[10px] cursor-pointer flex items-center gap-[8px] tracking-[0.01em] shadow-[0_2px_8px_rgba(0,0,0,0.05)] ${isSortMode ? 'bg-[#111827] text-white border-none' : 'bg-white text-[#4B5563] border border-[#E5E7EB]'}`}
           >
             {isSortMode ? <X size={16} /> : <ArrowUpDown size={16} />}
@@ -691,7 +696,7 @@ export default function ProductView({ products, allOils = [] }) {
                   )}
                   {isOilsExpanded && selectedOils.length > 0 && !selectedOils.some(o => o.is_default) && (
                     <p className="font-sans text-[12px] text-[#D97706] mt-[6px] m-0">
-                      No default oil selected — tap "Set default" on one oil.
+                      No default oil selected — tap Set default on one oil.
                     </p>
                   )}
                 </div>
@@ -764,6 +769,19 @@ export default function ProductView({ products, allOils = [] }) {
                   />
                   <label htmlFor="is_featured" className="font-sans text-[14px] text-[#1A1A1A]">
                     Featured on Website
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-[10px]">
+                  <input
+                    id="is_wholesale_eligible"
+                    name="is_wholesale_eligible"
+                    type="checkbox"
+                    defaultChecked={editingProduct ? editingProduct.is_wholesale_eligible !== false : true}
+                    className="w-[18px] h-[18px] accent-[#1B4332]"
+                  />
+                  <label htmlFor="is_wholesale_eligible" className="font-sans text-[14px] text-[#1A1A1A]">
+                    Wholesale Eligible
                   </label>
                 </div>
 
@@ -849,6 +867,11 @@ export default function ProductView({ products, allOils = [] }) {
                         {product.is_gift && (
                           <span className="bg-[#FDF2F8] text-[#BE185D] px-[6px] py-[1px] rounded text-[10px] font-bold uppercase">
                             Gift
+                          </span>
+                        )}
+                        {product.is_wholesale_eligible === false && (
+                          <span className="bg-[#FEF3C7] text-[#92400E] px-[6px] py-[1px] rounded text-[10px] font-bold uppercase">
+                            No Wholesale
                           </span>
                         )}
                         <span className="bg-[#F3F4F6] text-[#6B7280] px-[6px] py-[1px] rounded text-[10px] font-bold">
