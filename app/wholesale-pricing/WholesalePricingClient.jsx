@@ -71,6 +71,11 @@ const EXCLUDED_WHOLESALE_NAMES = new Set([
   'Soap Squares Discovery Box - Rich',
 ]);
 
+const EXCLUDED_WHOLESALE_BASE_TYPES = new Set([
+  'Travel',
+  'Loofah',
+]);
+
 const BASE_COLOURS = {
   Glycerine: '#1B4332',
   'Goat Milk': '#2D6A4F',
@@ -112,6 +117,12 @@ const tdRight = { ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' 
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN');
 const fmtCurrency = (n) => `₹${fmt(Math.round(Number(n || 0)))}`;
 const roundToNearestFive = (value) => Math.round(Number(value || 0) / 5) * 5;
+const formatPriceRange = (prices) => {
+  const unique = [...new Set(prices.map((price) => Math.round(Number(price || 0))))].sort((a, b) => a - b);
+  if (!unique.length) return '—';
+  if (unique.length === 1) return fmtCurrency(unique[0]);
+  return `${fmtCurrency(unique[0])} - ${fmtCurrency(unique[unique.length - 1])}`;
+};
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const futureIso = (days) => {
   const date = new Date();
@@ -127,7 +138,8 @@ function isWholesaleEligible(product) {
   return Boolean(
     product?.is_active &&
     product?.in_stock &&
-    !EXCLUDED_WHOLESALE_NAMES.has(product.name)
+    !EXCLUDED_WHOLESALE_NAMES.has(product.name) &&
+    !EXCLUDED_WHOLESALE_BASE_TYPES.has(product.base_type)
   );
 }
 
@@ -140,6 +152,12 @@ function getWholesaleVariantPrice(product) {
   }
 
   return roundToNearestFive(retailPrice);
+}
+
+function getProductImage(product) {
+  const imageUrl = String(product?.image_url || '').trim();
+  if (!imageUrl || imageUrl.includes('coming-soon')) return '/logo/profile-cream.png';
+  return imageUrl;
 }
 
 function getQuoteUnitPrice(product, mode, lineQuantity, totalQuantity) {
@@ -310,6 +328,75 @@ function PricingTable({ products, tiers, mode }) {
   );
 }
 
+function BaseTypePriceMatrix({ products }) {
+  const rows = Object.values(products.reduce((groups, product) => {
+    const type = product.base_type || 'Other';
+    if (!groups[type]) groups[type] = {
+      baseType: type,
+      products: [],
+      retailAnchors: [],
+      standard: Object.fromEntries(STANDARD_TIERS.map((tier) => [tier.qty, []])),
+      bulk: Object.fromEntries(BULK_TIERS.map((tier) => [tier.qty, []])),
+    };
+
+    const retailAnchor = getWholesaleVariantPrice(product);
+    groups[type].products.push(product);
+    groups[type].retailAnchors.push(retailAnchor);
+    for (const tier of STANDARD_TIERS) {
+      groups[type].standard[tier.qty].push(roundToNearestFive(retailAnchor * (1 - tier.discount)));
+    }
+    for (const tier of BULK_TIERS) {
+      groups[type].bulk[tier.qty].push(roundToNearestFive(retailAnchor * (1 - tier.discount)));
+    }
+    return groups;
+  }, {})).sort((a, b) => a.baseType.localeCompare(b.baseType));
+
+  return (
+    <div style={{ marginBottom: '24px' }}>
+      <div style={{ marginBottom: '10px' }}>
+        <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: '#1B4332' }}>Base type price matrix</h2>
+        <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px' }}>
+          Retail anchor and wholesale prices for each eligible 50g soap base type.
+        </p>
+      </div>
+      <ScrollFrame>
+        <table style={{ width: '100%', minWidth: '980px', borderCollapse: 'collapse', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+          <thead>
+            <tr>
+              <th style={th}>Base Type</th>
+              <th style={thRight}>Variants</th>
+              <th style={thRight}>50g Retail Anchor</th>
+              <th style={thRight}>Standard 50</th>
+              <th style={thRight}>Standard 100</th>
+              <th style={thRight}>Standard 150</th>
+              <th style={thRight}>Bulk 50</th>
+              <th style={thRight}>Bulk 100</th>
+              <th style={thRight}>Bulk 150</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.baseType}>
+                <td style={{ ...td, fontWeight: 800, color: '#111827' }}>
+                  <TypeBadge type={row.baseType} />
+                </td>
+                <td style={tdRight}>{fmt(row.products.length)}</td>
+                <td style={{ ...tdRight, fontWeight: 800, color: '#111827' }}>{formatPriceRange(row.retailAnchors)}</td>
+                {STANDARD_TIERS.map((tier) => (
+                  <td key={`standard-${tier.qty}`} style={tdRight}>{formatPriceRange(row.standard[tier.qty])}</td>
+                ))}
+                {BULK_TIERS.map((tier) => (
+                  <td key={`bulk-${tier.qty}`} style={tdRight}>{formatPriceRange(row.bulk[tier.qty])}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </ScrollFrame>
+    </div>
+  );
+}
+
 function SummaryCard({ label, value, note }) {
   return (
     <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '14px 16px', background: '#FFFFFF' }}>
@@ -346,6 +433,40 @@ function GuidanceTable({ rows }) {
         </tbody>
       </table>
     </ScrollFrame>
+  );
+}
+
+function ProductAnnexure({ products }) {
+  return (
+    <section style={{ pageBreakBefore: 'always', marginTop: '24px' }}>
+      <div style={{ borderBottom: '2px solid #1B4332', paddingBottom: '10px', marginBottom: '14px' }}>
+        <div style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332', fontSize: '28px', lineHeight: 1 }}>
+          Annexure: 50g Soap Catalogue
+        </div>
+        <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '5px', lineHeight: 1.45 }}>
+          Product photos are for buyer reference only. Actual colour, texture, botanical distribution, and finish may differ slightly because every soap is handmade in small batches.
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+        {products.map((product) => (
+          <div key={product.id} style={{ border: '1px solid #E5E7EB', borderRadius: '8px', overflow: 'hidden', background: '#FFFFFF', breakInside: 'avoid' }}>
+            <div style={{ width: '100%', aspectRatio: '1 / 1', background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getProductImage(product)}
+                alt={product.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+            </div>
+            <div style={{ padding: '9px 10px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 900, color: '#111827', lineHeight: 1.35 }}>{product.name}</div>
+              <div style={{ fontSize: '10px', color: '#6B7280', marginTop: '3px' }}>{product.base_type || 'Other'} · 50g wholesale variant</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -824,6 +945,8 @@ function QuotationBuilder({ products }) {
             <strong style={{ color: '#111827' }}>Notes:</strong> {notes || 'Prices are indicative and subject to final confirmation.'}
           </div>
         </div>
+
+        <ProductAnnexure products={activeProducts} />
       </div>
     </div>
   );
@@ -920,8 +1043,10 @@ export default function WholesalePricingClient({ products }) {
         lineHeight: 1.55,
       }}>
         <div style={{ fontWeight: 800, color: '#92400E', marginBottom: '6px' }}>Pricing rationale</div>
-        Wholesale quotes here are for 50g soap variants only. Gift pouches, kids sets, and discovery boxes are excluded because they are bundles, not individual wholesale bars. The 50g retail anchor is prorated from the catalogue price by weight, then rounded to the nearest ₹5 before wholesale discounts are applied.
+        Wholesale quotes here are for regular 50g soap variants only. Gift pouches, kids sets, discovery boxes, travel soaps, and loofah soaps are excluded because they are bundles or specialty formats, not standard wholesale bars. The 50g retail anchor is prorated from the catalogue price by weight, then rounded to the nearest ₹5 before wholesale discounts are applied.
       </div>
+
+      <BaseTypePriceMatrix products={wholesaleProducts} />
 
       <div style={{
         display: 'flex',
