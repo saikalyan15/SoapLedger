@@ -95,12 +95,6 @@ const tdRight = { ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' 
 const fmt = (n) => Number(n || 0).toLocaleString('en-IN');
 const fmtCurrency = (n) => `₹${fmt(Math.round(Number(n || 0)))}`;
 const roundToNearestFive = (value) => Math.round(Number(value || 0) / 5) * 5;
-const formatPriceRange = (prices) => {
-  const unique = [...new Set(prices.map((price) => Math.round(Number(price || 0))))].sort((a, b) => a - b);
-  if (!unique.length) return '—';
-  if (unique.length === 1) return fmtCurrency(unique[0]);
-  return `${fmtCurrency(unique[0])} - ${fmtCurrency(unique[unique.length - 1])}`;
-};
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const futureIso = (days) => {
   const date = new Date();
@@ -234,41 +228,38 @@ function BaseTypePriceMatrix({ products }) {
     const type = product.base_type || 'Other';
     if (!groups[type]) groups[type] = {
       baseType: type,
-      products: [],
       retailAnchors: [],
-      standard: Object.fromEntries(STANDARD_TIERS.map((tier) => [tier.qty, []])),
     };
 
-    const retailAnchor = getWholesaleVariantPrice(product);
-    groups[type].products.push(product);
-    groups[type].retailAnchors.push(retailAnchor);
-    for (const tier of STANDARD_TIERS) {
-      groups[type].standard[tier.qty].push(roundToNearestFive(retailAnchor * (1 - tier.discount)));
-    }
+    groups[type].retailAnchors.push(getWholesaleVariantPrice(product));
     return groups;
-  }, {})).sort((a, b) => a.baseType.localeCompare(b.baseType));
+  }, {})).map((row) => {
+    const retailAnchor = Math.max(...row.retailAnchors);
+    return {
+      baseType: row.baseType,
+      prices: Object.fromEntries(STANDARD_TIERS.map((tier) => [
+        tier.qty,
+        roundToNearestFive(retailAnchor * (1 - tier.discount)),
+      ])),
+    };
+  }).sort((a, b) => a.baseType.localeCompare(b.baseType));
 
   return (
     <div style={{ marginBottom: '24px' }}>
       <div style={{ marginBottom: '10px' }}>
         <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: '#1B4332' }}>Wholesale price report</h2>
         <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px' }}>
-          Standard wholesale prices by soap base type and order quantity for eligible 50g variants.
+          Wholesale prices by soap base type and order quantity.
         </p>
       </div>
       <ScrollFrame>
-        <table style={{ width: '100%', minWidth: '760px', borderCollapse: 'collapse', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+        <table style={{ width: '100%', minWidth: '620px', borderCollapse: 'collapse', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
           <thead>
             <tr>
               <th style={th}>Base Type</th>
-              <th style={thRight}>Variants</th>
-              <th style={thRight}>50g Retail Anchor</th>
               {STANDARD_TIERS.map((tier) => (
                 <th key={tier.qty} style={thRight}>
                   Qty {tier.qty}
-                  <span style={{ display: 'block', fontSize: '10px', color: '#9CA3AF', marginTop: '2px' }}>
-                    {Math.round(tier.discount * 100)}% off
-                  </span>
                 </th>
               ))}
             </tr>
@@ -279,10 +270,8 @@ function BaseTypePriceMatrix({ products }) {
                 <td style={{ ...td, fontWeight: 800, color: '#111827' }}>
                   <TypeBadge type={row.baseType} />
                 </td>
-                <td style={tdRight}>{fmt(row.products.length)}</td>
-                <td style={{ ...tdRight, fontWeight: 800, color: '#111827' }}>{formatPriceRange(row.retailAnchors)}</td>
                 {STANDARD_TIERS.map((tier) => (
-                  <td key={`standard-${tier.qty}`} style={tdRight}>{formatPriceRange(row.standard[tier.qty])}</td>
+                  <td key={`standard-${tier.qty}`} style={{ ...tdRight, fontWeight: 800, color: '#111827' }}>{fmtCurrency(row.prices[tier.qty])}</td>
                 ))}
               </tr>
             ))}
@@ -790,12 +779,6 @@ function QuotationBuilder({ products }) {
 export default function WholesalePricingClient({ products }) {
   const wholesaleProducts = useMemo(() => products.filter(isWholesaleEligible), [products]);
 
-  const excludedCount = products.length - wholesaleProducts.length;
-  const retailAverage = useMemo(() => {
-    if (!wholesaleProducts.length) return 0;
-    return wholesaleProducts.reduce((sum, p) => sum + getWholesaleVariantPrice(p), 0) / wholesaleProducts.length;
-  }, [wholesaleProducts]);
-
   return (
     <div>
       <div className="wholesale-report-print-area" style={{ background: '#FFFFFF' }}>
@@ -817,24 +800,41 @@ export default function WholesalePricingClient({ products }) {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-          <SummaryCard label="50g Variants" value={fmt(wholesaleProducts.length)} note={`${excludedCount} catalogue products excluded`} />
-          <SummaryCard label="Average 50g Anchor" value={fmtCurrency(retailAverage)} note="Used only as an overview benchmark" />
-          <SummaryCard label="Minimum MOQ" value="50" note="First wholesale tier in this report" />
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: '18px',
+          alignItems: 'flex-start',
+          borderBottom: '2px solid #1B4332',
+          paddingBottom: '14px',
+          marginBottom: '18px',
+          flexWrap: 'wrap',
+        }}>
+          <div>
+            <div style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332', fontSize: '32px', lineHeight: 1 }}>
+              Healing Soil
+            </div>
+            <div style={{ color: '#6B7280', fontSize: '13px', marginTop: '4px' }}>
+              Handmade soap wholesale price list
+            </div>
+          </div>
+          <div style={{ textAlign: 'right', color: '#374151', fontSize: '12px', lineHeight: 1.7 }}>
+            <div><strong>Minimum order:</strong> 50 units</div>
+            <div><strong>Payment terms:</strong> 100% advance payment before order processing</div>
+          </div>
         </div>
 
         <div style={{
-          background: '#FFFBEB',
-          border: '1px solid #FDE68A',
+          background: '#F0FDF4',
+          border: '1px solid #D1FAE5',
           borderRadius: '8px',
-          padding: '16px',
+          padding: '12px 14px',
           marginBottom: '20px',
-          color: '#78350F',
+          color: '#064E3B',
           fontSize: '13px',
           lineHeight: 1.55,
         }}>
-          <div style={{ fontWeight: 800, color: '#92400E', marginBottom: '6px' }}>Pricing rationale</div>
-          Wholesale quotes here are for regular 50g soap variants only. Products marked as not wholesale eligible are excluded from this report, so bundles, specialty formats, seasonal specials, travel soaps, and loofah soaps can be managed from the product catalogue instead of code. The 50g retail anchor is prorated from the catalogue price by weight, then rounded to the nearest ₹5 before wholesale discounts are applied.
+          Prices are for 50g handmade soap wholesale orders. Shipping, gift packaging, private label packaging, custom stamping, and event add-ons are quoted separately where applicable.
         </div>
 
         <BaseTypePriceMatrix products={wholesaleProducts} />
