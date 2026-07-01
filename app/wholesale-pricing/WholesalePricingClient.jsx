@@ -14,6 +14,45 @@ const BULK_TIERS = [
   { qty: 150, discount: 0.40 },
 ];
 
+const PACKAGING_OPTIONS = {
+  standard: {
+    label: 'Standard labelled wrap',
+    unitCost: 8,
+    shippingUnitCost: 6,
+    retailBox: 'Wrap/band only; no individual box',
+    description: 'Basic wholesale-ready labelled wrap or belly band, plus carton and shipping buffer.',
+  },
+  kraftBox: {
+    label: 'Individual kraft soap box',
+    unitCost: 15,
+    shippingUnitCost: 8,
+    retailBox: '90 x 62 x 25 mm',
+    description: 'Retail shelf box for 50g bars, plus carton and shipping buffer.',
+  },
+  giftBox: {
+    label: 'Gift box / event finish',
+    unitCost: 30,
+    shippingUnitCost: 10,
+    retailBox: 'Single: 90 x 65 x 30 mm; 4-bar set: 130 x 95 x 35 mm',
+    description: 'Event or premium presentation finish, plus carton and shipping buffer.',
+  },
+  unlabelled: {
+    label: 'Bulk unlabelled',
+    unitCost: 3,
+    shippingUnitCost: 6,
+    retailBox: 'No retail box',
+    description: 'Low-cost protective packing for bulk/unlabelled buyer orders, plus carton and shipping buffer.',
+  },
+};
+
+const SHIPPING_BOXES = [
+  { min: 1, max: 24, label: 'Small shipper', dimensions: '9 x 6 x 3 in / 23 x 15 x 8 cm' },
+  { min: 25, max: 50, label: 'Half-case shipper', dimensions: '12 x 9 x 4 in / 30 x 23 x 10 cm' },
+  { min: 51, max: 100, label: 'Case shipper', dimensions: '12 x 9 x 6 in / 30 x 23 x 15 cm' },
+  { min: 101, max: 200, label: 'Large case shipper', dimensions: '15 x 12 x 8 in / 38 x 30 x 20 cm' },
+  { min: 201, max: Infinity, label: 'Multi-carton order', dimensions: 'Split into 12 x 9 x 6 in or 15 x 12 x 8 in cartons' },
+];
+
 const PRICING_COMBINATIONS = {
   quote: {
     title: 'Quotation Builder',
@@ -37,12 +76,12 @@ const PRICING_COMBINATIONS = {
   },
   private: {
     title: 'Private Label',
-    formula: 'Quote-based: product wholesale base + sleeve/box/artwork/setup + any formula or fragrance change cost.',
+    formula: 'Quote-based: product wholesale base + packaging profile + sleeve/box/artwork/setup + any formula or fragrance change cost.',
     rationale: 'Packaging runs, artwork proofing, sleeves, boxes, stamping, and formula changes can vary widely, so exact pricing should not be automated from retail alone.',
   },
   custom: {
     title: 'Custom / Event',
-    formula: 'Standard wholesale base + event-specific add-ons such as tags, ribbons, boxes, inserts, stamps, fragrance, or rush work.',
+    formula: 'Standard wholesale base + packaging profile + event-specific add-ons such as tags, ribbons, boxes, inserts, stamps, fragrance, or rush work.',
     rationale: 'Best for weddings, corporate gifting, hotels, and seasonal orders where presentation and deadline affect labour and material cost.',
   },
 };
@@ -158,6 +197,10 @@ function getQuoteUnitPrice(product, mode, lineQuantity, totalQuantity) {
     discount: tier.discount,
     tierLabel: `MOQ ${tier.qty}`,
   };
+}
+
+function getShippingBox(totalQuantity) {
+  return SHIPPING_BOXES.find((box) => totalQuantity >= box.min && totalQuantity <= box.max) || SHIPPING_BOXES[0];
 }
 
 function TypeBadge({ type }) {
@@ -340,10 +383,11 @@ function QuotationBuilder({ products }) {
   });
 
   const [quoteMode, setQuoteMode] = useState('mixed');
+  const [packagingMode, setPackagingMode] = useState('standard');
   const [customerName, setCustomerName] = useState('');
   const [quoteDate, setQuoteDate] = useState(todayIso);
   const [validUntil, setValidUntil] = useState(() => futureIso(7));
-  const [notes, setNotes] = useState('Prices are exclusive of shipping and any custom packaging, sleeve, stamp, or gift-box setup.');
+  const [notes, setNotes] = useState('Unit prices include the selected packaging and shipping buffer. Custom artwork, stamping, inserts, and rush work are quoted separately where applicable.');
   const [bulkQty, setBulkQty] = useState(50);
   const [bulkTotal, setBulkTotal] = useState(0);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -488,16 +532,24 @@ function QuotationBuilder({ products }) {
     .map((item) => ({ ...item, product: productById[item.productId] }))
     .filter((item) => item.product && item.quantity > 0);
   const totalQuantity = quoteLines.reduce((sum, item) => sum + item.quantity, 0);
+  const packaging = PACKAGING_OPTIONS[packagingMode] || PACKAGING_OPTIONS.standard;
   const pricedLines = quoteLines.map((item) => {
     const price = getQuoteUnitPrice(item.product, quoteMode, item.quantity, totalQuantity);
+    const fulfillmentUnitCost = packaging.unitCost + packaging.shippingUnitCost;
+    const quotedUnitPrice = price.unitPrice + fulfillmentUnitCost;
     return {
       ...item,
       ...price,
-      lineTotal: price.unitPrice * item.quantity,
+      fulfillmentUnitCost,
+      quotedUnitPrice,
+      lineTotal: quotedUnitPrice * item.quantity,
     };
   });
   const quoteTotal = pricedLines.reduce((sum, item) => sum + item.lineTotal, 0);
+  const baseSubtotal = pricedLines.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+  const fulfillmentTotal = pricedLines.reduce((sum, item) => sum + (item.fulfillmentUnitCost * item.quantity), 0);
   const quoteModeLabel = QUOTE_MODE_LABELS[quoteMode];
+  const shippingBox = getShippingBox(totalQuantity);
   const belowMoq = pricedLines.some((item) => item.discount === 0);
 
   return (
@@ -575,9 +627,24 @@ function QuotationBuilder({ products }) {
                 <option value="custom">Custom / Event</option>
               </select>
             </div>
+            <div>
+              <label style={labelStyle()}>Unit Price Includes</label>
+              <select value={packagingMode} onChange={(e) => setPackagingMode(e.target.value)} style={inputStyle()}>
+                {Object.entries(PACKAGING_OPTIONS).map(([key, option]) => (
+                  <option key={key} value={key}>{option.label} (+{fmtCurrency(option.unitCost + option.shippingUnitCost)} / unit)</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <PricingGuidance mode={quoteMode} compact />
+
+          <div style={{ border: '1px solid #DBEAFE', borderRadius: '8px', background: '#EFF6FF', padding: '12px 14px', marginBottom: '14px' }}>
+            <div style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Packaging and box sizing</div>
+            <div style={{ fontSize: '13px', color: '#1E3A8A', lineHeight: 1.5, marginTop: '4px' }}>
+              {packaging.description} Retail box: {packaging.retailBox}. Suggested shipper for this quote: {shippingBox.label}, {shippingBox.dimensions}. This adds {fmtCurrency(packaging.unitCost + packaging.shippingUnitCost)} into each quoted unit price.
+            </div>
+          </div>
 
           <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', background: '#F9FAFB', padding: '12px', marginBottom: '14px' }}>
             <div style={{ fontSize: '12px', fontWeight: 900, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
@@ -688,7 +755,14 @@ function QuotationBuilder({ products }) {
           <h3 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '22px', color: '#1B4332', marginBottom: '10px' }}>Quote summary</h3>
           <SummaryCard label="Total Quantity" value={fmt(totalQuantity)} note={quoteMode === 'standard' ? 'Tier applied per product line' : 'Tier applied by total quote quantity'} />
           <div style={{ height: '10px' }} />
-          <SummaryCard label="Quote Total" value={fmtCurrency(quoteTotal)} note={`${quoteModeLabel || 'Wholesale'} pricing`} />
+          <SummaryCard label="Base Subtotal" value={fmtCurrency(baseSubtotal)} note={`${quoteModeLabel || 'Wholesale'} pricing before built-in packing and shipping`} />
+          <div style={{ height: '10px' }} />
+          <SummaryCard label="Built Into Unit Prices" value={fmtCurrency(fulfillmentTotal)} note={`${packaging.label}, packing carton, and shipping buffer`} />
+          <div style={{ height: '10px' }} />
+          <SummaryCard label="Quote Total" value={fmtCurrency(quoteTotal)} note="Quoted unit prices already include packing and shipping buffer" />
+          <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '8px', background: '#EFF6FF', color: '#1E3A8A', fontSize: '12px', lineHeight: 1.45 }}>
+            Suggested shipper: <strong>{shippingBox.label}</strong>, {shippingBox.dimensions}.
+          </div>
           {belowMoq && (
             <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '8px', background: '#FEF2F2', color: '#991B1B', fontSize: '12px', lineHeight: 1.45 }}>
               One or more lines are below MOQ 50, so retail price is shown for those lines.
@@ -718,7 +792,7 @@ function QuotationBuilder({ products }) {
           <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px' }}>
             <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Quotation Total</div>
             <div style={{ fontSize: '22px', fontWeight: 900, color: '#1B4332', marginTop: '2px' }}>{fmtCurrency(quoteTotal)}</div>
-            <div style={{ fontSize: '12px', color: '#6B7280' }}>{fmt(totalQuantity)} total units</div>
+            <div style={{ fontSize: '12px', color: '#6B7280' }}>{fmt(totalQuantity)} total units; unit prices include packing and shipping buffer</div>
           </div>
         </div>
 
@@ -730,7 +804,7 @@ function QuotationBuilder({ products }) {
               <th style={th}>Type</th>
               <th style={thRight}>Qty</th>
               <th style={thRight}>50g Anchor</th>
-              <th style={thRight}>Wholesale</th>
+              <th style={thRight}>Quoted Unit</th>
               <th style={thRight}>Total</th>
             </tr>
           </thead>
@@ -742,9 +816,9 @@ function QuotationBuilder({ products }) {
                 <td style={tdRight}>{fmt(item.quantity)}</td>
                 <td style={tdRight}>{fmtCurrency(item.product.unit_price)}</td>
                 <td style={tdRight}>
-                  <div style={{ fontWeight: 800, color: '#111827' }}>{fmtCurrency(item.unitPrice)}</div>
+                  <div style={{ fontWeight: 800, color: '#111827' }}>{fmtCurrency(item.quotedUnitPrice)}</div>
                   <div style={{ fontSize: '10px', color: '#6B7280' }}>
-                    {item.discount > 0 ? `${Math.round(item.discount * 100)}% off - ${item.tierLabel}` : item.tierLabel}
+                    {item.discount > 0 ? `${Math.round(item.discount * 100)}% off - ${item.tierLabel}` : item.tierLabel}; packing/shipping included
                   </div>
                 </td>
                 <td style={{ ...tdRight, fontWeight: 900, color: '#1B4332' }}>{fmtCurrency(item.lineTotal)}</td>
@@ -766,6 +840,9 @@ function QuotationBuilder({ products }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '14px' }}>
           <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#4B5563', lineHeight: 1.55 }}>
             <strong style={{ color: '#111827' }}>Payment terms:</strong> 100% advance payment required before order processing.
+          </div>
+          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#4B5563', lineHeight: 1.55 }}>
+            <strong style={{ color: '#111827' }}>Fulfilment included in unit price:</strong> {packaging.label}, retail packaging: {packaging.retailBox}. Suggested shipper: {shippingBox.label}, {shippingBox.dimensions}. Confirm final carton after wrapping a sample batch.
           </div>
           <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#4B5563', lineHeight: 1.55 }}>
             <strong style={{ color: '#111827' }}>Notes:</strong> {notes || 'Prices are indicative and subject to final confirmation.'}
@@ -834,7 +911,7 @@ export default function WholesalePricingClient({ products }) {
           fontSize: '13px',
           lineHeight: 1.55,
         }}>
-          Prices are for 50g handmade soap wholesale orders. Shipping, gift packaging, private label packaging, custom stamping, and event add-ons are quoted separately where applicable.
+          Base prices are for 50g handmade soap wholesale orders before fulfilment buffer. Use the quotation builder below to bake packaging, carton, and shipping allowance into the quoted unit price. Recommended individual kraft box size for 50g bars is 90 x 62 x 25 mm; ship 50-unit wholesale cases in a 12 x 9 x 4 in carton, moving to 12 x 9 x 6 in cartons for 100 units.
         </div>
 
         <BaseTypePriceMatrix products={wholesaleProducts} />
