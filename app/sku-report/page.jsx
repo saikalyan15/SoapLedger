@@ -12,10 +12,19 @@ export default async function SkuReportPage() {
 
   return (
     <div style={{ padding: '32px 32px 64px', maxWidth: '1200px', margin: '0 auto' }}>
-      <PageHeader
-        title="SKU Report"
-        subtitle="Soap-wise sales numbers to plan your label print strategy"
-      />
+      <style>{`
+        @media print {
+          .sku-report-screen-header {
+            display: none !important;
+          }
+        }
+      `}</style>
+      <div className="sku-report-screen-header">
+        <PageHeader
+          title="SKU Report"
+          subtitle="Soap-wise sales numbers and customer-safe wholesale pricing"
+        />
+      </div>
       <SkuReportClient allTime={allTime} monthly={monthly} />
     </div>
   );

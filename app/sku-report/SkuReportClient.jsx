@@ -60,6 +60,7 @@ const tdRight = { ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' 
 
 export default function SkuReportClient({ allTime, monthly }) {
   const [tab, setTab] = useState('alltime');
+  const activeProducts = allTime.filter((row) => row.is_active);
 
   const totalQty = allTime.reduce((s, r) => s + r.total_qty, 0);
   const totalRevenue = allTime.reduce((s, r) => s + parseFloat(r.total_revenue), 0);
@@ -89,6 +90,92 @@ export default function SkuReportClient({ allTime, monthly }) {
 
   return (
     <div>
+      <style jsx>{`
+        .print-only {
+          display: none;
+        }
+
+        @media print {
+          .screen-report {
+            display: none !important;
+          }
+
+          .print-only {
+            display: block !important;
+          }
+
+          .wholesale-print {
+            color: #111827;
+            font-family: "Plus Jakarta Sans", Arial, sans-serif;
+          }
+
+          .wholesale-print table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+
+          .wholesale-print th,
+          .wholesale-print td {
+            border-bottom: 1px solid #E5E7EB;
+            padding: 10px 12px;
+            text-align: left;
+          }
+
+          .wholesale-print th {
+            background: #F9FAFB;
+            color: #374151;
+            font-size: 11px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+          }
+
+          .wholesale-print td {
+            font-size: 13px;
+          }
+        }
+      `}</style>
+
+      <div className="print-only wholesale-print">
+        <div style={{ marginBottom: '24px' }}>
+          <h1 style={{ margin: 0, color: '#1B4332', fontSize: '28px' }}>Healing Soil Wholesale Pricing</h1>
+          <p style={{ margin: '6px 0 0', color: '#4B5563', fontSize: '13px' }}>
+            Current product pricing for wholesale orders.
+          </p>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Type</th>
+              <th style={{ textAlign: 'right' }}>Unit Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            {activeProducts.map((row) => (
+              <tr key={row.id}>
+                <td>{row.name}</td>
+                <td>{row.base_type}</td>
+                <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                  ₹{fmt(row.unit_price)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div style={{ marginTop: '24px', border: '1px solid #D1D5DB', padding: '14px 16px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#374151', marginBottom: '6px' }}>
+            Payment Terms
+          </div>
+          <div style={{ fontSize: '14px', color: '#111827', fontWeight: 600 }}>
+            100% advance payment required before order processing.
+          </div>
+        </div>
+      </div>
+
+      <div className="screen-report">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
       {/* Tabs */}
       <div style={{
         display: 'flex',
@@ -98,11 +185,27 @@ export default function SkuReportClient({ allTime, monthly }) {
         borderRadius: '8px',
         padding: '4px',
         width: 'fit-content',
-        marginBottom: '24px',
       }}>
         <button style={tabStyle(tab === 'alltime')} onClick={() => setTab('alltime')}>All Time</button>
         <button style={tabStyle(tab === 'monthly')} onClick={() => setTab('monthly')}>Month on Month</button>
       </div>
+          <button
+            onClick={() => window.print()}
+            style={{
+              padding: '9px 18px',
+              borderRadius: '6px',
+              border: '1px solid #1B4332',
+              background: '#FFFFFF',
+              color: '#1B4332',
+              cursor: 'pointer',
+              fontFamily: 'Plus Jakarta Sans, sans-serif',
+              fontSize: '13px',
+              fontWeight: 700,
+            }}
+          >
+            Print Wholesale PDF
+          </button>
+        </div>
 
       {tab === 'alltime' && (
         <div style={{ overflowX: 'auto' }}>
@@ -230,6 +333,7 @@ export default function SkuReportClient({ allTime, monthly }) {
           </table>
         </div>
       )}
+      </div>
     </div>
   );
 }
