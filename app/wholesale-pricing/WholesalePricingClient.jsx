@@ -27,21 +27,21 @@ const PRICING_COMBINATIONS = {
   quote: {
     title: 'Quotation Builder',
     formula: 'Uses the selected pricing combination below, then calculates line total = quoted unit price x quantity.',
-    rationale: 'Use this when an enquiry arrives and you need a clean PDF-ready quote instead of sending the full price grid.',
+    rationale: 'Use this when an enquiry arrives and you need a clean PDF-ready quote for eligible 50g soap variants.',
   },
   standard: {
     title: 'Standard Wholesale',
-    formula: 'Per SKU: retail x 75% at MOQ 50, retail x 70% at MOQ 100, retail x 65% at MOQ 150. Unit prices round to nearest ₹5.',
+    formula: 'Per SKU: 50g retail anchor x 75% at MOQ 50, x 70% at MOQ 100, x 65% at MOQ 150. Unit prices round to nearest ₹5.',
     rationale: 'Best for single-variety wholesale because each product must independently meet the MOQ, keeping batching and inventory planning simple.',
   },
   mixed: {
     title: 'Mixed Assortment',
-    formula: 'Same unit discounts as standard wholesale, but MOQ is met by total units across products.',
+    formula: 'Same 50g unit discounts as standard wholesale, but MOQ is met by total units across products.',
     rationale: 'Best for retailers who want variety. It supports discovery orders while still protecting production volume.',
   },
   bulk: {
     title: 'Bulk / Unlabelled',
-    formula: 'Retail x 70% at MOQ 50, retail x 65% at MOQ 100, retail x 60% at MOQ 150. Unit prices round to nearest ₹5.',
+    formula: '50g retail anchor x 70% at MOQ 50, x 65% at MOQ 100, x 60% at MOQ 150. Unit prices round to nearest ₹5.',
     rationale: 'Best when soaps do not need retail labels or custom packaging. Lower finishing effort allows a deeper discount.',
   },
   private: {
@@ -62,6 +62,14 @@ const QUOTE_MODE_LABELS = {
   bulk: 'Bulk / Unlabelled',
   custom: 'Custom / Event',
 };
+
+const EXCLUDED_WHOLESALE_NAMES = new Set([
+  'Gift Soap Pouch – Set of 3',
+  'Kids Collection (Set of 4)',
+  'Soap Squares Discovery Box - Light',
+  'Soap Squares Discovery Box - Creamy',
+  'Soap Squares Discovery Box - Rich',
+]);
 
 const BASE_COLOURS = {
   Glycerine: '#1B4332',
@@ -115,8 +123,27 @@ function getApplicableTier(quantity, tiers) {
   return [...tiers].reverse().find((tier) => quantity >= tier.qty) || null;
 }
 
-function getQuoteUnitPrice(product, mode, lineQuantity, totalQuantity) {
+function isWholesaleEligible(product) {
+  return Boolean(
+    product?.is_active &&
+    product?.in_stock &&
+    !EXCLUDED_WHOLESALE_NAMES.has(product.name)
+  );
+}
+
+function getWholesaleVariantPrice(product) {
   const retailPrice = Number(product?.unit_price || 0);
+  const weight = Number(product?.weight_grams || 0);
+
+  if (weight > 0 && weight !== 50) {
+    return roundToNearestFive((retailPrice / weight) * 50);
+  }
+
+  return roundToNearestFive(retailPrice);
+}
+
+function getQuoteUnitPrice(product, mode, lineQuantity, totalQuantity) {
+  const retailPrice = getWholesaleVariantPrice(product);
   const tiers = mode === 'bulk' ? BULK_TIERS : STANDARD_TIERS;
   const basisQuantity = mode === 'mixed' || mode === 'bulk' ? totalQuantity : lineQuantity;
   const tier = getApplicableTier(basisQuantity, tiers);
@@ -174,7 +201,7 @@ function StatusPill({ product }) {
 }
 
 function PriceCell({ retailPrice, tier }) {
-  const unitPrice = roundToNearestFive(retailPrice * (1 - tier.discount));
+  const unitPrice = roundToNearestFive(Number(retailPrice || 0) * (1 - tier.discount));
   const total = unitPrice * tier.qty;
 
   return (
@@ -234,14 +261,14 @@ function PricingGuidance({ mode, compact = false }) {
 function PricingTable({ products, tiers, mode }) {
   return (
     <ScrollFrame>
-      <table style={{ width: '100%', minWidth: '980px', borderCollapse: 'collapse', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
+      <table style={{ width: '100%', minWidth: '1080px', borderCollapse: 'collapse', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
         <thead>
           <tr>
             <th style={th}>Product</th>
             <th style={th}>Type</th>
-            <th style={thRight}>Weight</th>
+            <th style={thRight}>Wholesale Variant</th>
             <th style={th}>Status</th>
-            <th style={thRight}>Retail</th>
+            <th style={thRight}>50g Retail Anchor</th>
             {tiers.map((tier) => (
               <th key={tier.qty} style={thRight}>
                 MOQ {tier.qty}
@@ -255,7 +282,7 @@ function PricingTable({ products, tiers, mode }) {
         </thead>
         <tbody>
           {products.map((product) => {
-            const retailPrice = Number(product.unit_price || 0);
+            const retailPrice = getWholesaleVariantPrice(product);
             const muted = !product.is_active;
             return (
               <tr key={product.id} style={{ background: muted ? '#FAFAFA' : '#FFFFFF' }}>
@@ -263,7 +290,7 @@ function PricingTable({ products, tiers, mode }) {
                   {product.name}
                 </td>
                 <td style={td}><TypeBadge type={product.base_type || 'Other'} /></td>
-                <td style={tdRight}>{product.weight_grams ? `${product.weight_grams}g` : 'Set'}</td>
+                <td style={tdRight}>50g</td>
                 <td style={td}><StatusPill product={product} /></td>
                 <td style={{ ...tdRight, fontWeight: 700 }}>{fmtCurrency(retailPrice)}</td>
                 {tiers.map((tier) => (
@@ -272,7 +299,7 @@ function PricingTable({ products, tiers, mode }) {
                 <td style={{ ...td, minWidth: '240px', whiteSpace: 'normal', color: '#4B5563', lineHeight: 1.45 }}>
                   {mode === 'bulk'
                     ? 'Lower packaging and labelling effort allows a deeper discount.'
-                    : 'Retail-anchored wholesale rate with stronger discount at larger production quantities.'}
+                    : '50g equivalent retail anchor with stronger discount at larger production quantities.'}
                 </td>
               </tr>
             );
@@ -347,18 +374,36 @@ function labelStyle() {
 }
 
 function QuotationBuilder({ products }) {
-  const activeProducts = products.filter((product) => product.is_active && product.in_stock);
+  const activeProducts = useMemo(() => products.filter(isWholesaleEligible), [products]);
   const productById = useMemo(() => {
     const map = {};
     for (const product of products) map[product.id] = product;
     return map;
   }, [products]);
+  const productsByType = useMemo(() => {
+    return activeProducts.reduce((groups, product) => {
+      const type = product.base_type || 'Other';
+      if (!groups[type]) groups[type] = [];
+      groups[type].push(product);
+      return groups;
+    }, {});
+  }, [activeProducts]);
+  const groupTypes = Object.keys(productsByType).sort((a, b) => {
+    const preferred = ['Glycerine', 'Goat Milk', 'Shea Butter'];
+    const ai = preferred.indexOf(a);
+    const bi = preferred.indexOf(b);
+    if (ai !== -1 || bi !== -1) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    return a.localeCompare(b);
+  });
 
   const [quoteMode, setQuoteMode] = useState('mixed');
   const [customerName, setCustomerName] = useState('');
   const [quoteDate, setQuoteDate] = useState(todayIso);
   const [validUntil, setValidUntil] = useState(() => futureIso(7));
   const [notes, setNotes] = useState('Prices are exclusive of shipping and any custom packaging, sleeve, stamp, or gift-box setup.');
+  const [bulkQty, setBulkQty] = useState(50);
+  const [bulkTotal, setBulkTotal] = useState(0);
+  const [selectedIds, setSelectedIds] = useState(new Set());
   const [items, setItems] = useState(() => activeProducts.slice(0, 1).map((product) => ({
     id: crypto.randomUUID(),
     productId: product.id,
@@ -385,6 +430,92 @@ function QuotationBuilder({ products }) {
 
   const removeLine = (id) => {
     setItems((current) => current.filter((item) => item.id !== id));
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const addProducts = (selectedProducts, quantity = 50) => {
+    setItems((current) => {
+      const existing = new Set(current.map((item) => item.productId));
+      const additions = selectedProducts
+        .filter((product) => !existing.has(product.id))
+        .map((product) => ({
+          id: crypto.randomUUID(),
+          productId: product.id,
+          quantity,
+        }));
+      return [...current, ...additions];
+    });
+  };
+
+  const removeByType = (type) => {
+    setItems((current) => {
+      const next = current.filter((item) => productById[item.productId]?.base_type !== type);
+      const nextIds = new Set(next.map((item) => item.id));
+      setSelectedIds((selected) => new Set([...selected].filter((id) => nextIds.has(id))));
+      return next;
+    });
+  };
+
+  const removeSelected = () => {
+    setItems((current) => current.filter((item) => !selectedIds.has(item.id)));
+    setSelectedIds(new Set());
+  };
+
+  const clearQuote = () => {
+    setItems([]);
+    setSelectedIds(new Set());
+  };
+
+  const toggleLine = (id) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllLines = () => {
+    setSelectedIds(new Set(items.map((item) => item.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const applyBulkQuantity = () => {
+    const quantity = Math.max(0, Number(bulkQty || 0));
+    setItems((current) => current.map((item) => (
+      selectedIds.size === 0 || selectedIds.has(item.id)
+        ? { ...item, quantity }
+        : item
+    )));
+  };
+
+  const distributeBulkTotal = () => {
+    const total = Math.max(0, Number(bulkTotal || 0));
+    const targetItems = selectedIds.size > 0
+      ? items.filter((item) => selectedIds.has(item.id))
+      : items;
+    if (!targetItems.length) return;
+
+    const baseQty = Math.floor(total / targetItems.length);
+    const remainder = total % targetItems.length;
+    const targetIds = new Set(targetItems.map((item) => item.id));
+
+    setItems((current) => {
+      let index = 0;
+      return current.map((item) => {
+        if (!targetIds.has(item.id)) return item;
+        const quantity = baseQty + (index < remainder ? 1 : 0);
+        index += 1;
+        return { ...item, quantity };
+      });
+    });
   };
 
   const loadAllVarietiesPreset = () => {
@@ -394,6 +525,7 @@ function QuotationBuilder({ products }) {
       productId: product.id,
       quantity: 50,
     })));
+    setSelectedIds(new Set());
   };
 
   const loadGlycerinePreset = () => {
@@ -406,6 +538,7 @@ function QuotationBuilder({ products }) {
       productId: product.id,
       quantity: 100,
     })));
+    setSelectedIds(new Set());
   };
 
   const quoteLines = items
@@ -499,23 +632,88 @@ function QuotationBuilder({ products }) {
 
           <PricingGuidance mode={quoteMode} compact />
 
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
-            <button onClick={loadAllVarietiesPreset} style={{ minHeight: '36px', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '7px 11px', background: '#FFFFFF', color: '#374151', fontWeight: 700, cursor: 'pointer' }}>
-              All active varieties x 50
-            </button>
-            <button onClick={loadGlycerinePreset} style={{ minHeight: '36px', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '7px 11px', background: '#FFFFFF', color: '#374151', fontWeight: 700, cursor: 'pointer' }}>
-              Neem Tulsi + Honey Oats x 100
-            </button>
-            <button onClick={addLine} style={{ minHeight: '36px', border: '1px solid #1B4332', borderRadius: '6px', padding: '7px 11px', background: '#F0FDF4', color: '#1B4332', fontWeight: 800, cursor: 'pointer' }}>
-              Add product
-            </button>
+          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', background: '#F9FAFB', padding: '12px', marginBottom: '14px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 900, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+              Fast add eligible 50g soap variants
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+              <button onClick={loadAllVarietiesPreset} style={{ minHeight: '36px', border: '1px solid #1B4332', borderRadius: '6px', padding: '7px 11px', background: '#F0FDF4', color: '#1B4332', fontWeight: 800, cursor: 'pointer' }}>
+                Replace with all varieties x 50
+              </button>
+              <button onClick={loadGlycerinePreset} style={{ minHeight: '36px', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '7px 11px', background: '#FFFFFF', color: '#374151', fontWeight: 700, cursor: 'pointer' }}>
+                Neem Tulsi + Honey Oats x 100
+              </button>
+              <button onClick={addLine} style={{ minHeight: '36px', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '7px 11px', background: '#FFFFFF', color: '#374151', fontWeight: 700, cursor: 'pointer' }}>
+                Add one line
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {groupTypes.map((type) => (
+                <button key={type} onClick={() => addProducts(productsByType[type], 50)} style={{ minHeight: '34px', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '6px 10px', background: '#FFFFFF', color: '#374151', fontWeight: 700, cursor: 'pointer' }}>
+                  Add all {type}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', background: '#FFFFFF', padding: '12px', marginBottom: '14px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 900, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+              Bulk edit selected lines
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '10px', alignItems: 'end' }}>
+              <div>
+                <label style={labelStyle()}>Set qty per selected line</label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input type="number" min="0" step="1" value={bulkQty} onChange={(e) => setBulkQty(e.target.value)} style={inputStyle()} />
+                  <button onClick={applyBulkQuantity} style={{ minHeight: '40px', border: '1px solid #1B4332', borderRadius: '6px', padding: '8px 10px', background: '#1B4332', color: '#FFFFFF', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    Apply
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label style={labelStyle()}>Distribute total units</label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input type="number" min="0" step="1" value={bulkTotal} onChange={(e) => setBulkTotal(e.target.value)} placeholder="e.g. 500" style={inputStyle()} />
+                  <button onClick={distributeBulkTotal} style={{ minHeight: '40px', border: '1px solid #1B4332', borderRadius: '6px', padding: '8px 10px', background: '#F0FDF4', color: '#1B4332', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    Split
+                  </button>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button onClick={selectAllLines} style={{ minHeight: '36px', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '7px 10px', background: '#FFFFFF', color: '#374151', fontWeight: 700, cursor: 'pointer' }}>
+                  Select all
+                </button>
+                <button onClick={clearSelection} style={{ minHeight: '36px', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '7px 10px', background: '#FFFFFF', color: '#374151', fontWeight: 700, cursor: 'pointer' }}>
+                  Clear selection
+                </button>
+                <button onClick={removeSelected} disabled={selectedIds.size === 0} style={{ minHeight: '36px', border: '1px solid #FCA5A5', borderRadius: '6px', padding: '7px 10px', background: selectedIds.size ? '#FEF2F2' : '#F3F4F6', color: selectedIds.size ? '#991B1B' : '#9CA3AF', fontWeight: 800, cursor: selectedIds.size ? 'pointer' : 'not-allowed' }}>
+                  Remove selected
+                </button>
+                <button onClick={clearQuote} style={{ minHeight: '36px', border: '1px solid #FCA5A5', borderRadius: '6px', padding: '7px 10px', background: '#FFFFFF', color: '#991B1B', fontWeight: 800, cursor: 'pointer' }}>
+                  Clear quote
+                </button>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
+              {groupTypes.map((type) => (
+                <button key={type} onClick={() => removeByType(type)} style={{ minHeight: '32px', border: '1px solid #FCA5A5', borderRadius: '6px', padding: '5px 9px', background: '#FEF2F2', color: '#991B1B', fontWeight: 700, cursor: 'pointer' }}>
+                  Remove {type}
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '8px', lineHeight: 1.45 }}>
+              Bulk actions apply to selected lines. If nothing is selected, quantity updates apply to all quote lines.
+            </div>
           </div>
 
           <div style={{ display: 'grid', gap: '10px' }}>
             {items.map((item) => (
-              <div key={item.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) 110px 44px', gap: '8px', alignItems: 'end' }}>
+              <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '32px minmax(220px, 1fr) 110px 44px', gap: '8px', alignItems: 'end', padding: '10px', border: selectedIds.has(item.id) ? '1px solid #1B4332' : '1px solid #E5E7EB', borderRadius: '8px', background: selectedIds.has(item.id) ? '#F0FDF4' : '#FFFFFF' }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '40px' }}>
+                  <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleLine(item.id)} />
+                </label>
                 <div>
-                  <label style={labelStyle()}>Product</label>
+                  <label style={labelStyle()}>50g Soap Variant</label>
                   <select value={item.productId} onChange={(e) => updateLine(item.id, 'productId', e.target.value)} style={inputStyle()}>
                     {activeProducts.map((product) => (
                       <option key={product.id} value={product.id}>{product.name}</option>
@@ -584,7 +782,7 @@ function QuotationBuilder({ products }) {
               <th style={th}>Product</th>
               <th style={th}>Type</th>
               <th style={thRight}>Qty</th>
-              <th style={thRight}>Retail</th>
+              <th style={thRight}>50g Anchor</th>
               <th style={thRight}>Wholesale</th>
               <th style={thRight}>Total</th>
             </tr>
@@ -620,7 +818,7 @@ function QuotationBuilder({ products }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
           <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#4B5563', lineHeight: 1.55 }}>
-            <strong style={{ color: '#111827' }}>Pricing rationale:</strong> Retail price is used as the anchor. Mixed assortment and bulk quotations apply the tier by total enquiry quantity; standard wholesale applies the tier per SKU.
+            <strong style={{ color: '#111827' }}>Pricing rationale:</strong> The quote uses eligible 50g soap variants only. The 50g retail anchor is prorated from catalogue weight and rounded to nearest ₹5 before discounts. Mixed assortment and bulk quotations apply the tier by total enquiry quantity; standard wholesale applies the tier per SKU.
           </div>
           <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#4B5563', lineHeight: 1.55 }}>
             <strong style={{ color: '#111827' }}>Notes:</strong> {notes || 'Prices are indicative and subject to final confirmation.'}
@@ -633,13 +831,13 @@ function QuotationBuilder({ products }) {
 
 export default function WholesalePricingClient({ products }) {
   const [tab, setTab] = useState('quote');
+  const wholesaleProducts = useMemo(() => products.filter(isWholesaleEligible), [products]);
 
-  const activeCount = products.filter(p => p.is_active && p.in_stock).length;
-  const inactiveCount = products.length - activeCount;
+  const excludedCount = products.length - wholesaleProducts.length;
   const retailAverage = useMemo(() => {
-    if (!products.length) return 0;
-    return products.reduce((sum, p) => sum + Number(p.unit_price || 0), 0) / products.length;
-  }, [products]);
+    if (!wholesaleProducts.length) return 0;
+    return wholesaleProducts.reduce((sum, p) => sum + getWholesaleVariantPrice(p), 0) / wholesaleProducts.length;
+  }, [wholesaleProducts]);
 
   const tabStyle = (active) => ({
     padding: '8px 14px',
@@ -706,8 +904,8 @@ export default function WholesalePricingClient({ products }) {
   return (
     <div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-        <SummaryCard label="Products" value={fmt(products.length)} note={`${activeCount} active, ${inactiveCount} inactive`} />
-        <SummaryCard label="Average Retail" value={fmtCurrency(retailAverage)} note="Used only as an overview benchmark" />
+        <SummaryCard label="50g Variants" value={fmt(wholesaleProducts.length)} note={`${excludedCount} catalogue products excluded`} />
+        <SummaryCard label="Average 50g Anchor" value={fmtCurrency(retailAverage)} note="Used only as an overview benchmark" />
         <SummaryCard label="Minimum MOQ" value="50" note="First wholesale tier in this report" />
       </div>
 
@@ -722,7 +920,7 @@ export default function WholesalePricingClient({ products }) {
         lineHeight: 1.55,
       }}>
         <div style={{ fontWeight: 800, color: '#92400E', marginBottom: '6px' }}>Pricing rationale</div>
-        Handmade soap wholesale commonly uses retail discounts or cost-plus pricing. This report uses retail as the anchor because SoapLedger does not store per-product COGS yet. MOQ tiers reward larger production quantities, mixed-SKU ordering helps retailers test variety, bulk/unlabelled pricing reduces packaging effort, and private label stays quote-based because artwork, sleeves, boxes, stamping, and formula changes materially affect cost.
+        Wholesale quotes here are for 50g soap variants only. Gift pouches, kids sets, and discovery boxes are excluded because they are bundles, not individual wholesale bars. The 50g retail anchor is prorated from the catalogue price by weight, then rounded to the nearest ₹5 before wholesale discounts are applied.
       </div>
 
       <div style={{
@@ -748,7 +946,7 @@ export default function WholesalePricingClient({ products }) {
       <PricingGuidance mode={tab} />
 
       {tab === 'standard' && (
-        <PricingTable products={products} tiers={STANDARD_TIERS} mode="standard" />
+        <PricingTable products={wholesaleProducts} tiers={STANDARD_TIERS} mode="standard" />
       )}
 
       {tab === 'quote' && (
@@ -760,12 +958,12 @@ export default function WholesalePricingClient({ products }) {
           <div style={{ fontSize: '13px', color: '#4B5563', lineHeight: 1.55, marginBottom: '14px' }}>
             Mixed assortment uses the same unit prices as standard wholesale, but the MOQ can be reached across multiple products instead of 50, 100, or 150 units of a single SKU.
           </div>
-          <PricingTable products={products} tiers={STANDARD_TIERS} mode="mixed" />
+          <PricingTable products={wholesaleProducts} tiers={STANDARD_TIERS} mode="mixed" />
         </div>
       )}
 
       {tab === 'bulk' && (
-        <PricingTable products={products} tiers={BULK_TIERS} mode="bulk" />
+        <PricingTable products={wholesaleProducts} tiers={BULK_TIERS} mode="bulk" />
       )}
 
       {tab === 'private' && (
