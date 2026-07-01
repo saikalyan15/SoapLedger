@@ -108,6 +108,20 @@ const futureIso = (days) => {
   return date.toISOString().slice(0, 10);
 };
 
+function printWholesaleSection(target) {
+  const root = document.documentElement;
+  root.dataset.wholesalePrintTarget = target;
+
+  const cleanup = () => {
+    delete root.dataset.wholesalePrintTarget;
+    window.removeEventListener('afterprint', cleanup);
+  };
+
+  window.addEventListener('afterprint', cleanup, { once: true });
+  window.print();
+  window.setTimeout(cleanup, 1000);
+}
+
 function getApplicableTier(quantity, tiers) {
   return [...tiers].reverse().find((tier) => quantity >= tier.qty) || null;
 }
@@ -501,21 +515,25 @@ function QuotationBuilder({ products }) {
     <div>
       <style jsx global>{`
         @media print {
-          body * {
+          html[data-wholesale-print-target] body * {
             visibility: hidden !important;
           }
-          .quotation-print-area,
-          .quotation-print-area * {
+          html[data-wholesale-print-target="quote"] .quotation-print-area,
+          html[data-wholesale-print-target="quote"] .quotation-print-area *,
+          html[data-wholesale-print-target="report"] .wholesale-report-print-area,
+          html[data-wholesale-print-target="report"] .wholesale-report-print-area * {
             visibility: visible !important;
           }
-          .quotation-print-area {
+          html[data-wholesale-print-target="quote"] .quotation-print-area,
+          html[data-wholesale-print-target="report"] .wholesale-report-print-area {
             position: absolute !important;
             inset: 0 auto auto 0 !important;
             width: 100% !important;
             padding: 22mm !important;
             background: #ffffff !important;
           }
-          .quotation-no-print {
+          html[data-wholesale-print-target] .quotation-no-print,
+          html[data-wholesale-print-target] .wholesale-no-print {
             display: none !important;
           }
         }
@@ -529,7 +547,7 @@ function QuotationBuilder({ products }) {
               <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px' }}>Build an enquiry quote, then print or save as PDF.</p>
             </div>
             <button
-              onClick={() => window.print()}
+              onClick={() => printWholesaleSection('quote')}
               disabled={pricedLines.length === 0}
               style={{
                 minHeight: '40px',
@@ -780,27 +798,47 @@ export default function WholesalePricingClient({ products }) {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-        <SummaryCard label="50g Variants" value={fmt(wholesaleProducts.length)} note={`${excludedCount} catalogue products excluded`} />
-        <SummaryCard label="Average 50g Anchor" value={fmtCurrency(retailAverage)} note="Used only as an overview benchmark" />
-        <SummaryCard label="Minimum MOQ" value="50" note="First wholesale tier in this report" />
-      </div>
+      <div className="wholesale-report-print-area" style={{ background: '#FFFFFF' }}>
+        <div className="wholesale-no-print" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+          <button
+            onClick={() => printWholesaleSection('report')}
+            style={{
+              minHeight: '40px',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '9px 14px',
+              background: '#1B4332',
+              color: '#FFFFFF',
+              fontWeight: 800,
+              cursor: 'pointer',
+            }}
+          >
+            Print / Save PDF
+          </button>
+        </div>
 
-      <div style={{
-        background: '#FFFBEB',
-        border: '1px solid #FDE68A',
-        borderRadius: '8px',
-        padding: '16px',
-        marginBottom: '20px',
-        color: '#78350F',
-        fontSize: '13px',
-        lineHeight: 1.55,
-      }}>
-        <div style={{ fontWeight: 800, color: '#92400E', marginBottom: '6px' }}>Pricing rationale</div>
-        Wholesale quotes here are for regular 50g soap variants only. Products marked as not wholesale eligible are excluded from this report, so bundles, specialty formats, seasonal specials, travel soaps, and loofah soaps can be managed from the product catalogue instead of code. The 50g retail anchor is prorated from the catalogue price by weight, then rounded to the nearest ₹5 before wholesale discounts are applied.
-      </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+          <SummaryCard label="50g Variants" value={fmt(wholesaleProducts.length)} note={`${excludedCount} catalogue products excluded`} />
+          <SummaryCard label="Average 50g Anchor" value={fmtCurrency(retailAverage)} note="Used only as an overview benchmark" />
+          <SummaryCard label="Minimum MOQ" value="50" note="First wholesale tier in this report" />
+        </div>
 
-      <BaseTypePriceMatrix products={wholesaleProducts} />
+        <div style={{
+          background: '#FFFBEB',
+          border: '1px solid #FDE68A',
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '20px',
+          color: '#78350F',
+          fontSize: '13px',
+          lineHeight: 1.55,
+        }}>
+          <div style={{ fontWeight: 800, color: '#92400E', marginBottom: '6px' }}>Pricing rationale</div>
+          Wholesale quotes here are for regular 50g soap variants only. Products marked as not wholesale eligible are excluded from this report, so bundles, specialty formats, seasonal specials, travel soaps, and loofah soaps can be managed from the product catalogue instead of code. The 50g retail anchor is prorated from the catalogue price by weight, then rounded to the nearest ₹5 before wholesale discounts are applied.
+        </div>
+
+        <BaseTypePriceMatrix products={wholesaleProducts} />
+      </div>
 
       <div style={{
         marginTop: '24px',
