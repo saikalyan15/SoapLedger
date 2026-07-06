@@ -65,12 +65,11 @@ const OrderForm = ({ products, settings, initialData = null }) => {
           product_id: item.product_id,
           quantity: parseInt(item.quantity) || 0,
           unit_price: parseFloat(item.unit_price) || 0,
-          total_price: (parseInt(item.quantity) || 0) * (parseFloat(item.unit_price) || 0),
           shipmentIndex: sIndex !== -1 ? sIndex : 0
         };
       });
     }
-    return [{ product_id: '', quantity: 1, unit_price: 0, total_price: 0, shipmentIndex: 0 }];
+    return [{ product_id: '', quantity: 1, unit_price: 0, shipmentIndex: 0 }];
   });
 
   const [orderDate, setOrderDate] = useState(
@@ -80,6 +79,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   );
   const [status, setStatus] = useState(initialData?.order?.status || 'Order Placed');
   const [shipping, setShipping] = useState(Number(initialData?.order?.shipping_charge) || 0);
+  const [hasManualShipping, setHasManualShipping] = useState(false);
   const [packaging, setPackaging] = useState(Number(initialData?.order?.packaging_cost) || (settings?.default_packaging_cost || 0));
   const [customization, setCustomization] = useState(Number(initialData?.order?.customization_amount) || 0);
   const [discount, setDiscount] = useState(0);
@@ -89,7 +89,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   // Initial discount calculation for edit mode
   useEffect(() => {
     if (isEdit) {
-      const initialSubtotal = items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
+      const initialSubtotal = items.reduce((sum, item) => sum + ((parseInt(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0);
       const initialRevenue = Number(initialData?.order?.revenue || 0);
       const initialCustomization = Number(initialData?.order?.customization_amount) || 0;
       setDiscount(Math.max(0, initialSubtotal + shipping + initialCustomization - initialRevenue));
@@ -182,7 +182,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   };
 
   const addItem = () => {
-    setItems([...items, { product_id: '', quantity: 1, unit_price: 0, total_price: 0, shipmentIndex: 0 }]);
+    setItems([...items, { product_id: '', quantity: 1, unit_price: 0, shipmentIndex: 0 }]);
   };
 
   const removeItem = (index) => {
@@ -197,25 +197,27 @@ const OrderForm = ({ products, settings, initialData = null }) => {
       item.product_id = value;
       item.unit_price = product ? parseFloat(product.unit_price) : 0;
     } else if (field === 'quantity') {
-      item.quantity = parseInt(value) || 0;
+      // Keep the raw typed value (may be '' mid-edit) so clearing the field
+      // to retype a number doesn't flash the total down to 0. Parsed only
+      // where quantity is actually used (subtotal/discount calcs).
+      item.quantity = value;
     } else if (field === 'unit_price') {
-      item.unit_price = parseFloat(value) || 0;
+      item.unit_price = value;
     } else if (field === 'shipmentIndex') {
       item.shipmentIndex = parseInt(value);
     }
-    item.total_price = item.quantity * item.unit_price;
     newItems[index] = item;
     setItems(newItems);
   };
 
-  const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
-  const orderValue = Math.max(0, subtotal - parseFloat(discount || 0) + parseFloat(shipping || 0) + parseFloat(customization || 0));
+  const subtotal = items.reduce((sum, item) => sum + ((parseInt(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0);
 
-  useEffect(() => {
-    if (!isEdit) {
-      setShipping(subtotal >= (settings?.free_shipping_threshold || 1000) ? 0 : (settings?.shipping_charge_below || 100));
-    }
-  }, [subtotal, settings, isEdit]);
+  // Auto shipping is derived inline from subtotal (not via useEffect) so it
+  // lands on the same render as the subtotal change — a useEffect would run
+  // one render later, showing a stale total until it re-fires.
+  const autoShipping = subtotal >= (settings?.free_shipping_threshold || 1000) ? 0 : (settings?.shipping_charge_below || 100);
+  const effectiveShipping = (!isEdit && !hasManualShipping) ? autoShipping : parseFloat(shipping || 0);
+  const orderValue = Math.max(0, subtotal - parseFloat(discount || 0) + effectiveShipping + parseFloat(customization || 0));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -229,7 +231,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
     const orderData = {
       order_date: orderDate,
       status,
-      shipping_charge: parseFloat(shipping || 0),
+      shipping_charge: parseFloat(effectiveShipping || 0),
       packaging_cost: parseFloat(packaging || 0),
       customization_amount: parseFloat(customization || 0),
       order_value: parseFloat(orderValue || 0),
@@ -411,7 +413,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
         {/* Pricing Summary */}
         <div style={{ ...cardStyle, background: '#1B4332', color: '#FFFFFF' }}>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: '20px' }}>
-            <div><label style={{ ...labelStyle, color: '#FFFFFF' }}>Shipping (₹)</label><input type="number" value={shipping} onChange={(e) => setShipping(e.target.value)} style={{ ...inputBaseStyle, background: 'rgba(255,255,255,0.1)', color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.2)' }} /></div>
+            <div><label style={{ ...labelStyle, color: '#FFFFFF' }}>Shipping (₹)</label><input type="number" value={effectiveShipping} onChange={(e) => { setShipping(e.target.value); setHasManualShipping(true); }} style={{ ...inputBaseStyle, background: 'rgba(255,255,255,0.1)', color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.2)' }} /></div>
             <div><label style={{ ...labelStyle, color: '#FFFFFF' }}>Customization (₹)</label><input type="number" value={customization} onChange={(e) => setCustomization(e.target.value)} style={{ ...inputBaseStyle, background: 'rgba(255,255,255,0.1)', color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.2)' }} /></div>
             <div><label style={{ ...labelStyle, color: '#FFFFFF' }}>Discount (₹)</label><input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} style={{ ...inputBaseStyle, background: 'rgba(255,255,255,0.1)', color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.2)' }} /></div>
             <div style={{ textAlign: 'right' }}>

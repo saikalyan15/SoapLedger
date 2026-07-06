@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useTransition, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { 
   Plus, Settings, Search, X, Pencil, Trash2, ChevronDown, 
@@ -19,6 +20,7 @@ const PRESET_COLORS = [
 ];
 
 export default function ExpensesClient({ initialExpenses, initialCategories, summary, monthlyTrend = [] }) {
+  const router = useRouter();
   const [expenses, setExpenses] = useState(initialExpenses);
   const [categories, setCategories] = useState(initialCategories);
   const [isPending, startTransition] = useTransition();
@@ -271,7 +273,7 @@ export default function ExpensesClient({ initialExpenses, initialCategories, sum
                 isSelected={selectedIds.includes(exp.id)}
                 onSelect={() => toggleSelect(exp.id)}
                 onEdit={(exp) => { setEditingExpense(exp); setIsFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                onDelete={async (id) => { if(confirm('Delete expense?')) await deleteExpenseAction(id); }}
+                onDelete={async (id) => { if(confirm('Delete expense?')) { await deleteExpenseAction(id); router.refresh(); } }}
                 isMobile={isMobile}
               />
             ))}
@@ -374,6 +376,7 @@ function ExpenseRowCard({ expense, isSelected, onSelect, onEdit, onDelete, isMob
 }
 
 function ExpenseForm({ expense, categories, onClose, isMobile }) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [selectedCatId, setSelectedCatId] = useState(expense?.category_id || '');
@@ -407,6 +410,7 @@ function ExpenseForm({ expense, categories, onClose, isMobile }) {
       } else {
         await addExpenseAction(data.description, data.amount, data.expense_date, data.category_id, data.notes);
       }
+      router.refresh();
       onClose();
     } catch (err) {
       setError(err.message);
@@ -526,7 +530,8 @@ function ExpenseForm({ expense, categories, onClose, isMobile }) {
 }
 
 function BulkActionsBar({ selectedCount, ids, categories, onCancel, onSuccess, isMobile }) {
-  const [activeAction, setActiveAction] = useState(null); 
+  const router = useRouter();
+  const [activeAction, setActiveAction] = useState(null);
 
   return (
     <div className={`bg-[#F9F6F0] border border-[#E5E7EB] rounded-xl px-4 py-3 flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'} shadow-sm`}>
@@ -536,9 +541,9 @@ function BulkActionsBar({ selectedCount, ids, categories, onCancel, onSuccess, i
           <button onClick={onCancel} className="text-gray-500 font-semibold text-[13px]">Cancel</button>
         )}
       </div>
-      
+
       <div className={`flex items-center gap-4 ${isMobile ? 'flex-wrap' : ''}`}>
-        <button onClick={async () => { if(confirm(`Delete ${selectedCount}?`)) { await bulkDeleteExpensesAction(ids); onSuccess(); }}} className="text-[13px] font-semibold text-red-600 hover:underline flex items-center gap-1">
+        <button onClick={async () => { if(confirm(`Delete ${selectedCount}?`)) { await bulkDeleteExpensesAction(ids); router.refresh(); onSuccess(); }}} className="text-[13px] font-semibold text-red-600 hover:underline flex items-center gap-1">
           <Trash2 size={14} /> Delete
         </button>
         <button onClick={onCancel} className={`text-gray-500 font-semibold text-[13px] ${isMobile ? 'hidden' : 'block'}`}>Cancel</button>

@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 import { addCustomerAction, editCustomerAction, deleteCustomerAction } from '@/lib/actions/customers';
 import PageHeader from '@/components/PageHeader';
 import EmptyState from '@/components/EmptyState';
 
 const CustomersView = ({ customers: initialCustomers, stats }) => {
+  const router = useRouter();
   const [customers, setCustomers] = useState(initialCustomers);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
@@ -81,6 +83,7 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
     const result = await deleteCustomerAction(id);
     if (result.success) {
       setDeletingId(null);
+      router.refresh();
     } else {
       alert(result.error || 'Failed to delete customer');
     }
@@ -104,6 +107,7 @@ const CustomersView = ({ customers: initialCustomers, stats }) => {
     if (result.success) {
       setIsFormOpen(false);
       setEditingCustomer(null);
+      router.refresh();
     } else {
       setError(result.error);
     }

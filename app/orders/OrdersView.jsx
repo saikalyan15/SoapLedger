@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Eye, Pencil, Trash2, Check, X, Search, Plus, LayoutList, Calendar } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import StatusBadge from '@/components/StatusBadge';
@@ -9,6 +10,7 @@ import { deleteOrderAction } from '@/lib/actions/orders';
 import { ORDER_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
 
 const OrdersView = ({ orders }) => {
+  const router = useRouter();
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [isMobile, setIsMobile] = useState(false);
@@ -26,6 +28,7 @@ const OrdersView = ({ orders }) => {
     if (confirm('Are you sure you want to delete this order?')) {
       const result = await deleteOrderAction(id);
       if (!result.success) alert(result.error);
+      else router.refresh();
     }
   };
 

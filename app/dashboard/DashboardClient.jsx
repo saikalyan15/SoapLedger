@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useTransition } from 'react';
+import Link from 'next/link';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid, Legend, Cell, PieChart, Pie, AreaChart, Area,
@@ -105,11 +106,13 @@ const SectionHeader = ({ title, icon: Icon, accentColor, status, statusLabel, st
       <div style={{ width: '4px', height: '28px', borderRadius: '2px', background: accentColor, flexShrink: 0 }} />
       <Icon size={15} color={accentColor} />
       <span style={{ fontWeight: 800, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#111827' }}>{title}</span>
-      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', background: `${dot}15`, border: `1px solid ${dot}30`, padding: '4px 12px', borderRadius: '20px' }}>
-        <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: dot }} />
-        <span style={{ fontSize: '12px', fontWeight: 700, color: dot }}>{statusLabel}</span>
-        {statusNote && <span style={{ fontSize: '11px', color: '#6B7280' }}>· {statusNote}</span>}
-      </div>
+      {status && (
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', background: `${dot}15`, border: `1px solid ${dot}30`, padding: '4px 12px', borderRadius: '20px' }}>
+          <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: dot }} />
+          <span style={{ fontSize: '12px', fontWeight: 700, color: dot }}>{statusLabel}</span>
+          {statusNote && <span style={{ fontSize: '11px', color: '#6B7280' }}>· {statusNote}</span>}
+        </div>
+      )}
     </div>
   );
 };
@@ -135,7 +138,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 const DashboardClient = ({
   initialRevenue, initialCustomers, initialProducts, initialCostTrend,
   initialProfitability, initialProjection, initialOrderTrend,
-  initialSnapshot, initialActionable, initialTopCustomers, initialReorderCandidates,
+  initialSnapshot, initialActionable, initialTopCustomers, initialRepeatCustomers,
 }) => {
   const [filter, setFilter] = useState('All Time');
   const [isPending, startTransition] = useTransition();
@@ -149,11 +152,11 @@ const DashboardClient = ({
   const [projection, setProjection]     = useState(initialProjection);
   const [orderTrend, setOrderTrend]     = useState(initialOrderTrend);
 
-  // These three are always current-period — not affected by the date filter
-  const snapshot          = initialSnapshot;
-  const actionable        = initialActionable;
-  const topCustomers      = initialTopCustomers;
-  const reorderCandidates = initialReorderCandidates;
+  // These are always current-period — not affected by the date filter
+  const snapshot         = initialSnapshot;
+  const actionable       = initialActionable;
+  const topCustomers     = initialTopCustomers;
+  const repeatCustomers  = initialRepeatCustomers;
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -197,22 +200,6 @@ const DashboardClient = ({
   const totalActionable = actionable.reduce((s, r) => s + r.count, 0);
 
   // ── Traffic lights ──────────────────────────────────────────────────────────
-  // Sales trend: use last two COMPLETE months from orderTrend so a partial
-  // current month never influences the signal.
-  const salesStatus = (() => {
-    const complete = orderTrend.filter(m => {
-      const d = new Date(m.sort_month || m.month);
-      return d < new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    });
-    const prev = complete[complete.length - 2];
-    const last = complete[complete.length - 1];
-    if (!prev || !last || prev.total_order_value === 0) return { status: 'green', label: 'Tracking', note: 'Building history' };
-    const change = (last.total_order_value - prev.total_order_value) / prev.total_order_value;
-    if (change >= -0.05) return { status: 'green', label: 'Growing',   note: `${change >= 0 ? '+' : ''}${fmt(change * 100, 1)}% last 2 months` };
-    if (change >= -0.30) return { status: 'amber', label: 'Slowing',   note: `${fmt(change * 100, 1)}% last 2 months` };
-    return                      { status: 'red',   label: 'Declining', note: `${fmt(change * 100, 1)}% last 2 months` };
-  })();
-
   const repeatRate = customers.repeat_rate;
   const customerStatus = repeatRate >= 40 ? { status: 'green', label: 'Healthy',     note: `${fmt(repeatRate, 1)}% repeat` }
     : repeatRate >= 20  ? { status: 'amber', label: 'Building',    note: `${fmt(repeatRate, 1)}% repeat` }
@@ -252,7 +239,7 @@ const DashboardClient = ({
 
       {/* ─── THIS MONTH ──────────────────────────────────────── */}
       <div style={{ marginBottom: '40px' }}>
-        <SectionHeader title="This Month" icon={ShoppingBag} accentColor="#1B4332" status={salesStatus.status} statusLabel={salesStatus.label} statusNote={salesStatus.note} />
+        <SectionHeader title="This Month" icon={ShoppingBag} accentColor="#1B4332" />
 
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
           <DeltaCard label="Revenue"    value={fmtCurrency(tm.revenue)} delta={tm.revenue - lm.revenue} dayOfMonth={dayOfMonth} color="#1B4332" format="currency" loading={false} isMobile={isMobile} />
@@ -376,39 +363,36 @@ const DashboardClient = ({
         <SectionHeader title="Customers" icon={Users} accentColor="#6B21A8" status={customerStatus.status} statusLabel={customerStatus.label} statusNote={customerStatus.note} />
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
 
-          {/* Reorder radar */}
+          {/* Repeat customers */}
           <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '16px', padding: isMobile ? '20px' : '28px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: 0, fontFamily: 'DM Serif Display, serif' }}>Reorder Radar</h3>
-                <p style={{ fontSize: '12px', color: '#6B7280', margin: '3px 0 0 0' }}>Customers due or overdue to reorder</p>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: 0, fontFamily: 'DM Serif Display, serif' }}>Repeat Customers</h3>
+                <p style={{ fontSize: '12px', color: '#6B7280', margin: '3px 0 0 0' }}>Ordered more than once</p>
               </div>
-              {reorderCandidates.length > 0 && <div style={{ background: '#F5F3FF', color: '#6B21A8', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '12px' }}>{reorderCandidates.length} due</div>}
+              {repeatCustomers.length > 0 && <div style={{ background: '#F5F3FF', color: '#6B21A8', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '12px' }}>{repeatCustomers.length}</div>}
             </div>
-            {reorderCandidates.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#9CA3AF', fontSize: '13px' }}>No customers due yet</div>
+            {repeatCustomers.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#9CA3AF', fontSize: '13px' }}>No repeat customers yet</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '420px', overflowY: 'auto' }}>
-                {reorderCandidates.map((c) => {
-                  const isOverdue = c.overdue_pct >= 100;
-                  const dotColor = c.overdue_pct >= 130 ? '#DC2626' : c.overdue_pct >= 100 ? '#D97706' : '#6B21A8';
-                  return (
-                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: isOverdue ? '#FFF7F7' : '#FAFAFA', borderRadius: '10px', border: `1px solid ${isOverdue ? '#FEE2E2' : '#F3F4F6'}` }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: `${dotColor}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ fontSize: '13px', fontWeight: 800, color: dotColor }}>{c.name.charAt(0)}</span>
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '380px', overflowY: 'auto' }}>
+                  {repeatCustomers.map((c) => (
+                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#FAFAFA', borderRadius: '10px', border: '1px solid #F3F4F6' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#F5F3FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#6B21A8' }}>{c.name.charAt(0)}</span>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
-                        <div style={{ fontSize: '11px', color: '#6B7280' }}>{c.order_count} orders · last {c.days_since}d ago</div>
-                      </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: dotColor }}>{c.overdue_pct >= 100 ? 'Overdue' : 'Due soon'}</div>
-                        <div style={{ fontSize: '11px', color: '#9CA3AF' }}>avg {c.avg_reorder_days}d</div>
+                        <div style={{ fontSize: '11px', color: '#6B7280' }}>{c.order_count} orders · last {new Date(c.last_order_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+                <Link href="/repeat-customers" style={{ display: 'block', textAlign: 'center', marginTop: '14px', fontSize: '12px', fontWeight: 700, color: '#6B21A8', textDecoration: 'none' }}>
+                  View all &amp; soap history →
+                </Link>
+              </>
             )}
           </div>
 

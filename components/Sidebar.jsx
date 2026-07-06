@@ -22,6 +22,7 @@ const navItems = [
     children: [
       { label: 'SKU Report', href: '/sku-report', icon: BarChart2 },
       { label: 'Wholesale Pricing', href: '/wholesale-pricing', icon: Percent },
+      { label: 'Repeat Customers', href: '/repeat-customers', icon: Users },
       { label: 'Growth',     href: '/growth',     icon: TrendingUp },
       { label: 'Expenses',   href: '/expenses',   icon: Receipt },
     ],
