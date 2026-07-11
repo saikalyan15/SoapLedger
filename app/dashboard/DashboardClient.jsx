@@ -20,7 +20,7 @@ import {
   getCostPriceTrend,
   getMonthlySurplusDeficit,
   getBreakEvenProjection,
-  getMonthlyOrderTrend,
+  getTopExpenseCategories,
 } from '@/lib/queries/dashboard';
 
 // ── Formatters ────────────────────────────────────────────────────────────────
@@ -174,8 +174,9 @@ const CustomTooltip = ({ active, payload, label }) => {
 // ── Main component ────────────────────────────────────────────────────────────
 const DashboardClient = ({
   initialRevenue, initialCustomers, initialProducts, initialBaseTrend, initialCostTrend,
-  initialProfitability, initialProjection, initialOrderTrend,
+  initialProfitability, initialProjection, initialExpenseCats,
   initialSnapshot, initialActionable, initialTopCustomers, initialRepeatCustomers,
+  initialQuietCustomers,
 }) => {
   const [filter, setFilter] = useState('All Time');
   const [isPending, startTransition] = useTransition();
@@ -189,13 +190,14 @@ const DashboardClient = ({
   const [costTrend, setCostTrend]       = useState(initialCostTrend);
   const [profitability, setProfitability] = useState(initialProfitability);
   const [projection, setProjection]     = useState(initialProjection);
-  const [orderTrend, setOrderTrend]     = useState(initialOrderTrend);
+  const [expenseCats, setExpenseCats]   = useState(initialExpenseCats);
 
   // These are always current-period — not affected by the date filter
   const snapshot         = initialSnapshot;
   const actionable       = initialActionable;
   const topCustomers     = initialTopCustomers;
   const repeatCustomers  = initialRepeatCustomers;
+  const quietCustomers   = initialQuietCustomers;
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -220,11 +222,11 @@ const DashboardClient = ({
         getCostPriceTrend({ from, to: null }),
         getMonthlySurplusDeficit(),
         getBreakEvenProjection(),
-        getMonthlyOrderTrend({ from, to: null }),
-      ]).then(([rev, cust, prod, bTrend, cTrend, prof, proj, oTrend]) => {
+        getTopExpenseCategories({ from, to: null }),
+      ]).then(([rev, cust, prod, bTrend, cTrend, prof, proj, eCats]) => {
         setRevenue(rev); setCustomers(cust); setProducts(prod);
         setBaseTrend(bTrend); setCostTrend(cTrend); setProfitability(prof);
-        setProjection(proj); setOrderTrend(oTrend);
+        setProjection(proj); setExpenseCats(eCats);
       });
     });
   };
@@ -251,7 +253,13 @@ const DashboardClient = ({
   const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
   const paceBar = Math.min((dayOfMonth / daysInMonth) * 100, 100);
 
-  const totalActionable = actionable.reduce((s, r) => s + r.count, 0);
+  // "Needs attention" = statuses waiting on YOU right now. Dispatched and
+  // In Manufacturing are normal pipeline, not alarms — counting them would
+  // leave the banner permanently amber and train the eye to ignore it.
+  const ACTION_NOW_STATUSES = ['Awaiting Payment', 'Payment Confirmed', 'Ready to Dispatch'];
+  const totalActionable = actionable
+    .filter((r) => ACTION_NOW_STATUSES.includes(r.status))
+    .reduce((s, r) => s + r.count, 0);
 
   const filterScope = filter === 'All Time' ? 'All available records' : filter;
   const projectedRevenue = dayOfMonth >= 7 ? tm.revenue * (daysInMonth / dayOfMonth) : null;
@@ -333,10 +341,24 @@ const DashboardClient = ({
       <div style={{ marginBottom: '40px' }}>
         <SectionHeader title="This Month" icon={ShoppingBag} accentColor="#1B4332" />
 
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: '16px', marginBottom: '16px' }}>
           <DeltaCard label="Revenue"    value={fmtCurrency(tm.revenue)} delta={tm.revenue - paceComparison.revenue} dayOfMonth={dayOfMonth} color="#1B4332" format="currency" loading={false} isMobile={isMobile} />
           <DeltaCard label="Orders"     value={fmtNum(tm.orders)}       delta={tm.orders  - paceComparison.orders}  dayOfMonth={dayOfMonth} color="#1B4332" format="number"   loading={false} isMobile={isMobile} />
           <DeltaCard label="Soaps Sold" value={fmtNum(tm.soaps)}        delta={tm.soaps   - paceComparison.soaps}   dayOfMonth={dayOfMonth} color="#1B4332" format="number"   loading={false} isMobile={isMobile} />
+          {(() => {
+            const net = tm.revenue - tm.expenses;
+            const netColor = net >= 0 ? '#16A34A' : '#DC2626';
+            return (
+              <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '12px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: isMobile ? '14px 16px' : '20px 24px', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: netColor }} />
+                <div style={{ fontSize: '11px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Profit This Month</div>
+                <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: 800, color: netColor, fontFamily: 'DM Serif Display, serif', marginBottom: '6px' }}>
+                  {net >= 0 ? '+' : ''}{fmtCurrency(net)}
+                </div>
+                <div style={{ fontSize: '11px', color: '#9CA3AF' }}>earned {fmtCurrency(tm.revenue)} · spent {fmtCurrency(tm.expenses)}</div>
+              </div>
+            );
+          })()}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
@@ -369,8 +391,8 @@ const DashboardClient = ({
           {/* Actionable orders */}
           <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '12px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: '20px 24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Needs Action</div>
-              {totalActionable > 0 && <div style={{ background: '#FEF2F2', color: '#DC2626', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>{totalActionable} orders</div>}
+              <div style={{ fontSize: '11px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Orders in Progress</div>
+              {totalActionable > 0 && <div style={{ background: '#FEF2F2', color: '#DC2626', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>{totalActionable} need action</div>}
             </div>
             {actionable.length === 0 ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#16A34A', fontSize: '14px', fontWeight: 600, padding: '8px 0' }}>
@@ -391,6 +413,11 @@ const DashboardClient = ({
                     </Link>
                   );
                 })}
+              </div>
+            )}
+            {revenue.pending_revenue > 0 && (
+              <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #F0EBDF', fontSize: '12px', color: '#6B7280', lineHeight: 1.5 }}>
+                <strong style={{ color: '#92400E' }}>{fmtCurrency(revenue.pending_revenue)}</strong> sits in orders placed but not paid yet — not counted in revenue until the money arrives.
               </div>
             )}
           </div>
@@ -491,7 +518,37 @@ const DashboardClient = ({
         <MobileSectionToggle visible={isMobile} expanded={mobileSections.customers} onToggle={() => toggleMobileSection('customers')} label="Customers" statusText={`${fmt(repeatRate, 1)}% repeat`} />
         {(!isMobile || mobileSections.customers) && <>
         {!isMobile && <SectionHeader title="Customers" icon={Users} accentColor="#6B21A8" status={customerStatus.status} statusLabel={customerStatus.label} statusNote={customerStatus.note} />}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '20px' }}>
+
+          {/* Going quiet — repeat customers overdue for their next order */}
+          <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '16px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: isMobile ? '20px' : '28px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: 0, fontFamily: 'DM Serif Display, serif' }}>Going Quiet</h3>
+                <p style={{ fontSize: '12px', color: '#6B7280', margin: '3px 0 0 0' }}>Overdue for their next order — worth a message</p>
+              </div>
+              {quietCustomers.length > 0 && <div style={{ background: '#FFFBEB', color: '#92400E', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '12px' }}>{quietCustomers.length}</div>}
+            </div>
+            {quietCustomers.length === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#16A34A', fontSize: '13px', fontWeight: 600, padding: '16px 0' }}>
+                <CheckCircle size={16} /> No one's gone quiet
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {quietCustomers.map((c) => (
+                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#FFFBEB', borderRadius: '10px', border: '1px solid #FDE68A' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#92400E' }}>{c.name.charAt(0)}</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                      <div style={{ fontSize: '11px', color: '#92400E' }}>usually orders every {c.avg_gap_days} days — quiet for {c.days_quiet}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Repeat customers */}
           <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '16px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: isMobile ? '20px' : '28px' }}>
@@ -605,6 +662,7 @@ const DashboardClient = ({
           </div>
         </div>
 
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.7fr 1fr', gap: '20px' }}>
         <ChartCard title="Monthly Surplus / Deficit" subtitle="Revenue vs costs — are we making money each month?" loading={isPending} empty={profitability.length === 0} icon={DollarSign} isMobile={isMobile}>
           <div style={{ height: isMobile ? '280px' : '320px', width: '100%', minWidth: 0, minHeight: 0 }}>
             <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 900, height: 320 }}>
@@ -622,6 +680,41 @@ const DashboardClient = ({
             </ResponsiveContainer>
           </div>
         </ChartCard>
+
+        {/* Where the money goes — biggest spending categories */}
+        <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '16px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: isMobile ? '20px' : '28px' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: 0, fontFamily: 'DM Serif Display, serif' }}>Where the Money Goes</h3>
+            <p style={{ fontSize: '12px', color: '#6B7280', margin: '3px 0 0 0' }}>Biggest spending categories — {filterScope.toLowerCase()}</p>
+          </div>
+          {expenseCats.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: '#9CA3AF', fontSize: '13px' }}>No expenses recorded</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {expenseCats.map((cat) => {
+                const maxTotal = expenseCats[0].total;
+                return (
+                  <div key={cat.name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '5px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>
+                        {cat.name}
+                        {cat.type === 'one_time' && <span style={{ fontSize: '10px', fontWeight: 600, color: '#9CA3AF', marginLeft: '6px' }}>one-time</span>}
+                      </span>
+                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#374151' }}>{fmtCurrency(cat.total)}</span>
+                    </div>
+                    <div style={{ height: '6px', background: '#F0EBDF', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${(cat.total / maxTotal) * 100}%`, background: cat.type === 'recurring' ? '#2C6E9E' : '#9CA3AF', borderRadius: '3px' }} />
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px', lineHeight: 1.5 }}>
+                Blue bars repeat every month; grey were one-off purchases. Total spent: <strong style={{ color: '#374151' }}>{fmtCurrency(revenue.total_expenses)}</strong>.
+              </div>
+            </div>
+          )}
+        </div>
+        </div>
         </>}
       </div>
 
