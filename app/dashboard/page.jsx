@@ -2,6 +2,7 @@ import {
   getRevenueKPIs,
   getRepeatCustomerRate,
   getProductPerformance,
+  getMonthlyBaseRevenue,
   getCostPriceTrend,
   getMonthlySurplusDeficit,
   getBreakEvenProjection,
@@ -17,13 +18,14 @@ export default async function DashboardPage() {
   const range = { from: null, to: null };
 
   const [
-    revenue, customers, products, costTrend,
+    revenue, customers, products, baseTrend, costTrend,
     profitability, projection, orderTrend,
     snapshot, actionable, topCustomers, repeatCustomers,
   ] = await Promise.all([
     getRevenueKPIs(range),
     getRepeatCustomerRate(range),
     getProductPerformance(range),
+    getMonthlyBaseRevenue(range),
     getCostPriceTrend(range),
     getMonthlySurplusDeficit(),
     getBreakEvenProjection(),
@@ -40,6 +42,7 @@ export default async function DashboardPage() {
         initialRevenue={revenue}
         initialCustomers={customers}
         initialProducts={products}
+        initialBaseTrend={baseTrend}
         initialCostTrend={costTrend}
         initialProfitability={profitability}
         initialProjection={projection}
