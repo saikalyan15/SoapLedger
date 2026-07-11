@@ -39,7 +39,7 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div style={{ padding: '40px' }}>
+    <div className="dashboard-page" style={{ padding: '40px' }}>
       <DashboardClient
         initialRevenue={revenue}
         initialCustomers={customers}

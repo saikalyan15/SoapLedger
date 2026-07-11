@@ -269,6 +269,7 @@ button:focus-visible, a:focus-visible {
 }
 
 @media (max-width: 767px) {
+  .dashboard-page { padding: 0 !important; }
   .dashboard-filter { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
   .dashboard-filter::-webkit-scrollbar { display: none; }
   .dashboard-health-summary { align-items: flex-start; margin-top: -4px; padding: 15px; }
