@@ -337,6 +337,20 @@ const DashboardClient = ({
 
       <div className="dashboard-scope-note"><span>{filterScope}</span> applies to Products, customer rate, and period finance KPIs. This Month and customer lists remain current/lifetime views.</div>
 
+      <div className="dashboard-total-revenue" aria-live="polite" aria-busy={isPending}>
+        <div>
+          <div className="dashboard-total-revenue-label">Total Revenue</div>
+          <div className="dashboard-total-revenue-scope">{filterScope}</div>
+        </div>
+        <div className="dashboard-total-revenue-value">
+          {isPending ? <Loader2 size={26} className="animate-spin" aria-label="Updating total revenue" /> : fmtCurrency(revenue.total_revenue)}
+        </div>
+        <div className="dashboard-total-revenue-meta">
+          <span><strong>{fmtNum(revenue.orders_count)}</strong> orders</span>
+          <span><strong>{fmtCurrency(revenue.avg_order_value)}</strong> average order</span>
+        </div>
+      </div>
+
       {/* ─── THIS MONTH ──────────────────────────────────────── */}
       <div style={{ marginBottom: '40px' }}>
         <SectionHeader title="This Month" icon={ShoppingBag} accentColor="#1B4332" />
