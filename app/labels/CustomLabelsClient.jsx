@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Printer, Tag, Trash2 } from 'lucide-react';
+import { Layers, Plus, Printer, Tag, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 const BASE_LABELS = {
@@ -312,7 +312,10 @@ function SoapBand({ license }) {
 export default function CustomLabelsClient({ products, businessConfig }) {
   // Each batch: { id, product_name, base_type, weight_grams, ingredients, qty }
   const [batches, setBatches] = useState([]);
-  const [selectedProductId, setSelectedProductId] = useState('');
+  // Multi-select product checklist — lets you check/uncheck individual
+  // products (or Select All / Deselect All) before adding them together,
+  // instead of picking one product from a dropdown at a time.
+  const [checkedIds, setCheckedIds] = useState([]);
   const [quantity, setQuantity] = useState(1);
   const [printMode, setPrintMode] = useState('bands'); // 'stickers' | 'bands'
   const [bandPages, setBandPages] = useState(1);
@@ -320,21 +323,37 @@ export default function CustomLabelsClient({ products, businessConfig }) {
   // Stickers: 55x20mm, 3x14 grid. Mini: 40x18mm, 4x14 grid. Bands: 35mm height, 8 per sheet.
   const labelsPerPage = printMode === 'stickers' ? 42 : printMode === 'mini' ? 56 : 8;
 
-  const addToQueue = () => {
-    if (!selectedProductId) return;
-    const product = products.find((p) => p.id === selectedProductId);
-    if (!product) return;
-    setBatches((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        product_name: product.name,
-        base_type: product.base_type,
-        weight_grams: product.weight_grams,
-        ingredients: product.ingredients,
-        qty: quantity,
-      },
-    ]);
+  const allChecked = products.length > 0 && checkedIds.length === products.length;
+
+  const toggleProduct = (id) => {
+    setCheckedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
+
+  const toggleSelectAll = () => {
+    setCheckedIds(allChecked ? [] : products.map((p) => p.id));
+  };
+
+  // Adds every checked product to the queue in one click, using the shared
+  // quantity field as the count for each — covers single-add (check one),
+  // add-all (Select All), and everything in between (check a few).
+  const addSelectedToQueue = () => {
+    const existingIds = new Set(batches.map((b) => b.product_id));
+    const toAdd = products.filter((p) => checkedIds.includes(p.id) && !existingIds.has(p.id));
+    if (toAdd.length === 0) return;
+    const now = Date.now();
+    const newBatches = toAdd.map((p, i) => ({
+      id: now + i,
+      product_id: p.id,
+      product_name: p.name,
+      base_type: p.base_type,
+      weight_grams: p.weight_grams,
+      ingredients: p.ingredients,
+      qty: quantity,
+    }));
+    setBatches((prev) => [...prev, ...newBatches]);
+    setCheckedIds([]);
   };
 
   const removeBatch = (id) =>
@@ -677,19 +696,10 @@ export default function CustomLabelsClient({ products, businessConfig }) {
           </div>
         )}
 
-        {/* Stickers / Mini: product + qty inline */}
+        {/* Stickers / Mini: qty + add-selected inline */}
         {(printMode === 'stickers' || printMode === 'mini') && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, flexWrap: 'wrap' }}>
-            <select
-              value={selectedProductId}
-              onChange={(e) => setSelectedProductId(e.target.value)}
-              style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px', fontFamily: FONTS.sans, minWidth: '180px' }}
-            >
-              <option value="">— Select product —</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>{p.name} ({p.base_type})</option>
-              ))}
-            </select>
+            <label style={{ fontSize: '13px', color: COLORS.muted, fontFamily: FONTS.sans, whiteSpace: 'nowrap' }}>Qty each:</label>
             <input
               type="number"
               min={1}
@@ -699,24 +709,24 @@ export default function CustomLabelsClient({ products, businessConfig }) {
               style={{ width: '60px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px', fontFamily: FONTS.sans, boxSizing: 'border-box' }}
             />
             <button
-              onClick={addToQueue}
-              disabled={!selectedProductId}
+              onClick={addSelectedToQueue}
+              disabled={checkedIds.length === 0}
               style={{
                 padding: '6px 14px',
-                background: selectedProductId ? COLORS.brand : '#9CA3AF',
+                background: checkedIds.length > 0 ? COLORS.brand : '#9CA3AF',
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
                 fontWeight: 700,
                 fontSize: '13px',
-                cursor: selectedProductId ? 'pointer' : 'not-allowed',
+                cursor: checkedIds.length > 0 ? 'pointer' : 'not-allowed',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
                 fontFamily: FONTS.sans,
               }}
             >
-              <Plus size={14} /> Add
+              <Plus size={14} /> Add Selected{checkedIds.length > 0 ? ` (${checkedIds.length})` : ''}
             </button>
             {batches.length > 0 && (
               <span style={{ fontSize: '12px', color: COLORS.muted, fontFamily: FONTS.sans }}>{totalLabels} label{totalLabels !== 1 ? 's' : ''} · {pages.length} page{pages.length !== 1 ? 's' : ''}</span>
@@ -749,6 +759,57 @@ export default function CustomLabelsClient({ products, businessConfig }) {
       </div>
 
       <div style={{ maxWidth: '860px', margin: '0 auto' }}>
+
+        {/* Product checklist — check/uncheck individual products, or Select all / Deselect all */}
+        {(printMode === 'stickers' || printMode === 'mini') && (
+          <div className="no-print" style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: '0.03em', fontFamily: FONTS.sans }}>
+                Products {checkedIds.length > 0 ? `(${checkedIds.length} selected)` : ''}
+              </span>
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                style={{ background: 'none', border: 'none', color: COLORS.brand, fontWeight: 700, fontSize: '12px', cursor: 'pointer', fontFamily: FONTS.sans }}
+              >
+                {allChecked ? 'Deselect all' : 'Select all'}
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {products.map((p) => {
+                const checked = checkedIds.includes(p.id);
+                return (
+                  <label
+                    key={p.id}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '5px 10px 5px 8px',
+                      borderRadius: '20px',
+                      border: `1px solid ${checked ? COLORS.brand : '#E5E7EB'}`,
+                      background: checked ? '#D8F3DC' : 'white',
+                      fontSize: '12px',
+                      fontFamily: FONTS.sans,
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleProduct(p.id)}
+                      style={{ margin: 0, accentColor: COLORS.brand, cursor: 'pointer' }}
+                    />
+                    <span style={{ fontWeight: checked ? 700 : 500, color: checked ? COLORS.brand : COLORS.text }}>
+                      {p.name}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Sticker / Mini batch list — compact */}
         {(printMode === 'stickers' || printMode === 'mini') && batches.length > 0 && (
@@ -883,7 +944,7 @@ export default function CustomLabelsClient({ products, businessConfig }) {
             />
             {printMode === 'bands'
               ? 'Add pages to see the wrapper bands preview.'
-              : 'Select a product and add labels to see the A4 page preview.'}
+              : 'Check one or more products above, then Add Selected to see the A4 page preview.'}
           </div>
         )}
       </div>
