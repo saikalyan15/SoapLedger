@@ -142,7 +142,88 @@ function ProductLabel({ label, license }) {
   );
 }
 
-function SoapBand() {
+function MiniProductLabel({ label, license }) {
+  return (
+    <div className="mini-label">
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(255,255,255,0.82)',
+          zIndex: 0,
+          WebkitPrintColorAdjust: 'exact',
+          printColorAdjust: 'exact',
+        }}
+      />
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          padding: '0.4mm 1.5mm',
+          boxSizing: 'border-box',
+        }}
+      >
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: '6.5pt',
+            fontWeight: 800,
+            color: COLORS.brand,
+            lineHeight: 1.1,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {label.product_name}
+        </div>
+
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '4.2pt',
+              color: COLORS.text,
+              fontWeight: 500,
+              lineHeight: 1.15,
+              textAlign: 'center',
+              width: '100%',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {getFullIngredients(label.base_type, label.ingredients)}
+          </div>
+        </div>
+
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: '3.8pt',
+            fontWeight: 700,
+            color: COLORS.text,
+            letterSpacing: '0.03em',
+          }}
+        >
+          {license}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SoapBand({ license }) {
   return (
     <div className="soap-band-container">
       {/* Cutting guidelines — thin dashed line for print, text for screen */}
@@ -236,8 +317,8 @@ export default function CustomLabelsClient({ products, businessConfig }) {
   const [printMode, setPrintMode] = useState('bands'); // 'stickers' | 'bands'
   const [bandPages, setBandPages] = useState(1);
 
-  // 35mm height, 8 bands per A4 sheet
-  const labelsPerPage = printMode === 'stickers' ? 42 : 8;
+  // Stickers: 55x20mm, 3x14 grid. Mini: 40x18mm, 4x14 grid. Bands: 35mm height, 8 per sheet.
+  const labelsPerPage = printMode === 'stickers' ? 42 : printMode === 'mini' ? 56 : 8;
 
   const addToQueue = () => {
     if (!selectedProductId) return;
@@ -297,6 +378,22 @@ export default function CustomLabelsClient({ products, businessConfig }) {
         .product-label {
           width: 55mm;
           height: 20mm;
+          border: 1px dashed #ccc;
+          display: flex;
+          flex-direction: column;
+          position: relative;
+          box-sizing: border-box;
+          overflow: hidden;
+          background-image: url('/label-bg.png');
+          background-size: cover;
+          background-position: center;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        .mini-label {
+          width: 40mm;
+          height: 18mm;
           border: 1px dashed #ccc;
           display: flex;
           flex-direction: column;
@@ -388,6 +485,25 @@ export default function CustomLabelsClient({ products, businessConfig }) {
             break-after: auto;
           }
 
+          .mini-page-sheet {
+            display: grid !important;
+            grid-template-columns: repeat(4, 40mm) !important;
+            gap: 2mm !important;
+            padding: 8mm 22mm !important;
+            margin: 0 auto !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            page-break-after: always;
+            break-after: page;
+            width: 210mm !important;
+            height: 297mm !important;
+            box-sizing: border-box !important;
+          }
+          .mini-page-sheet:last-child {
+            page-break-after: auto;
+            break-after: auto;
+          }
+
           .band-page-sheet {
             display: flex !important;
             flex-direction: column !important;
@@ -422,6 +538,18 @@ export default function CustomLabelsClient({ products, businessConfig }) {
           .product-label {
             width: 55mm !important;
             height: 20mm !important;
+            border: 0.1mm dashed #000 !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          .mini-label {
+            width: 40mm !important;
+            height: 18mm !important;
             border: 0.1mm dashed #000 !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
@@ -507,6 +635,22 @@ export default function CustomLabelsClient({ products, businessConfig }) {
           >
             Label Prints
           </button>
+          <button
+            onClick={() => setPrintMode('mini')}
+            style={{
+              background: printMode === 'mini' ? COLORS.brand : 'transparent',
+              color: printMode === 'mini' ? 'white' : COLORS.muted,
+              border: 'none',
+              padding: '6px 14px',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: FONTS.sans,
+            }}
+          >
+            Mini Stickers
+          </button>
         </div>
 
         {/* Bands: page count inline */}
@@ -533,8 +677,8 @@ export default function CustomLabelsClient({ products, businessConfig }) {
           </div>
         )}
 
-        {/* Stickers: product + qty inline */}
-        {printMode === 'stickers' && (
+        {/* Stickers / Mini: product + qty inline */}
+        {(printMode === 'stickers' || printMode === 'mini') && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, flexWrap: 'wrap' }}>
             <select
               value={selectedProductId}
@@ -606,8 +750,8 @@ export default function CustomLabelsClient({ products, businessConfig }) {
 
       <div style={{ maxWidth: '860px', margin: '0 auto' }}>
 
-        {/* Sticker batch list — compact */}
-        {printMode === 'stickers' && batches.length > 0 && (
+        {/* Sticker / Mini batch list — compact */}
+        {(printMode === 'stickers' || printMode === 'mini') && batches.length > 0 && (
           <div className="no-print" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
             {batches.map((batch) => (
               <div
@@ -665,20 +809,30 @@ export default function CustomLabelsClient({ products, businessConfig }) {
 
             {/* A4 sheet — white card in browser, actual print page when printing */}
             <div
-              className={printMode === 'stickers' ? 'label-page-sheet' : 'band-page-sheet'}
+              className={
+                printMode === 'stickers'
+                  ? 'label-page-sheet'
+                  : printMode === 'mini'
+                  ? 'mini-page-sheet'
+                  : 'band-page-sheet'
+              }
               style={{
                 background: 'white',
                 borderRadius: '4px',
                 boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
                 marginBottom: '32px',
-                padding: printMode === 'stickers' ? '10mm' : '8mm 0 0',
-                display: printMode === 'stickers' ? 'grid' : 'flex',
-
+                padding:
+                  printMode === 'stickers' ? '10mm' : printMode === 'mini' ? '8mm 22mm' : '8mm 0 0',
+                display: printMode === 'bands' ? 'flex' : 'grid',
                 gridTemplateColumns:
-                  printMode === 'stickers' ? 'repeat(3, 60mm)' : 'none',
+                  printMode === 'stickers'
+                    ? 'repeat(3, 60mm)'
+                    : printMode === 'mini'
+                    ? 'repeat(4, 40mm)'
+                    : 'none',
                 flexDirection: printMode === 'bands' ? 'column' : 'row',
                 alignItems: 'center',
-                gap: printMode === 'stickers' ? '5mm' : '2mm',
+                gap: printMode === 'stickers' ? '5mm' : printMode === 'mini' ? '2mm' : '2mm',
                 width: '210mm',
                 height: 'auto',
                 minHeight: '297mm',
@@ -689,8 +843,10 @@ export default function CustomLabelsClient({ products, businessConfig }) {
               {page.map((label) =>
                 printMode === 'stickers' ? (
                   <ProductLabel key={label.uid} label={label} license={businessConfig.brand.license} />
+                ) : printMode === 'mini' ? (
+                  <MiniProductLabel key={label.uid} label={label} license={businessConfig.brand.license} />
                 ) : (
-                  <SoapBand key={label.uid} />
+                  <SoapBand key={label.uid} license={businessConfig.brand.license} />
                 ),
               )}
               {/* Final cutting guide for the bottom edge — screen-only text, print-only line */}
@@ -725,9 +881,9 @@ export default function CustomLabelsClient({ products, businessConfig }) {
                 margin: '0 auto 12px',
               }}
             />
-            {printMode === 'stickers' 
-              ? 'Select a product and add labels to see the A4 page preview.'
-              : 'Add pages to see the wrapper bands preview.'}
+            {printMode === 'bands'
+              ? 'Add pages to see the wrapper bands preview.'
+              : 'Select a product and add labels to see the A4 page preview.'}
           </div>
         )}
       </div>
