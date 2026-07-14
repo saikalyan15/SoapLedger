@@ -393,7 +393,9 @@ export default function CustomLabelsClient({ products, businessConfig }) {
             flex-direction: column !important;
             align-items: center !important;
             justify-content: flex-start !important;
-            padding: 8mm 0 0 !important;
+            /* 6mm top clears printer hardware margins; 8 x 35mm bands = 280mm,
+               leaving ~11mm at the bottom of the 297mm page */
+            padding: 6mm 0 0 !important;
             margin: 0 auto !important;
             box-shadow: none !important;
             border-radius: 0 !important;
@@ -403,7 +405,7 @@ export default function CustomLabelsClient({ products, businessConfig }) {
             box-sizing: border-box !important;
             page-break-after: always;
             break-after: page;
-            gap: 1mm !important;
+            gap: 0 !important;
             overflow: hidden !important;
           }
           .band-page-sheet:last-child {
@@ -411,8 +413,10 @@ export default function CustomLabelsClient({ products, businessConfig }) {
             break-after: avoid;
           }
 
+          /* Each band prints its own dashed border, which is the cut line —
+             the extra guide rows would push the stack past 297mm */
           .cutting-guide {
-            padding: 0 !important;
+            display: none !important;
           }
 
           .product-label {
