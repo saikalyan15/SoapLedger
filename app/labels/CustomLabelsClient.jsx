@@ -43,16 +43,106 @@ const WavyDivider = ({ color = COLORS.brand, opacity = 0.3 }) => (
   </svg>
 );
 
+// Some products' free-text ingredients were typed with an old habit of
+// spelling out "...and Glycerin soap base" at the end — now redundant since
+// the base is always injected as its own leading ingredient below.
+const REDUNDANT_BASE_PHRASE = /\b(?:and\s+)?(?:glycerine?|goat\s*milk|shea\s*butter|red\s*wine|loofah)\s+soap\s*base\b/gi;
+
+// Lists the base type as a plain ingredient (e.g. "Glycerine") rather than
+// "Glycerine Soap Base" — "Soap Base" was redundant clutter. Combined with
+// REDUNDANT_BASE_PHRASE above and the de-dupe pass below, this avoids
+// printing "Glycerine" (or "... Glycerin soap base") twice on one label.
 function getFullIngredients(baseType, additionalIngredients) {
   const base = BASE_LABELS[baseType];
-  const baseText = base ? `${base} Soap Base` : 'Soap Base';
-  if (!additionalIngredients?.trim()) return baseText;
-  return `${baseText}, ${additionalIngredients.trim()}`;
+  const cleanedAdditional = additionalIngredients
+    ?.replace(REDUNDANT_BASE_PHRASE, '')
+    .replace(/,\s*,/g, ',')
+    .replace(/,\s*$/, '')
+    .trim();
+  const combined = [base, cleanedAdditional].filter(Boolean).join(', ');
+  const seen = new Set();
+  return combined
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => {
+      if (!s || seen.has(s.toLowerCase())) return false;
+      seen.add(s.toLowerCase());
+      return true;
+    })
+    .join(', ');
 }
 
-function ProductLabel({ label, license }) {
+// Product names were authored with the base type baked in (e.g. "Neem Tulsi
+// Glycerin Soap"), but the base now always shows up as the first ingredient
+// (see getFullIngredients above) — so it's stripped from the title to avoid
+// saying it twice. \s* (not \s+) so it matches both "Shea Butter" and the
+// no-space "Sheabutter" some product names use; the trailing "e?" on
+// glycerine matches both "Glycerin" and "Glycerine" spellings.
+const BASE_NAME_PATTERNS = {
+  Glycerine: /\bglycerine?\b/gi,
+  'Goat Milk': /\bgoat\s*milk\b/gi,
+  'Shea Butter': /\bshea\s*butter\b/gi,
+  'Red Wine': /\bred\s*wine\b/gi,
+  Loofah: /\bloofah\b/gi,
+};
+
+function getDisplayName(productName, baseType) {
+  const pattern = BASE_NAME_PATTERNS[baseType];
+  if (!pattern || !productName) return productName;
+  const stripped = productName
+    .replace(pattern, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[\s\-–—:]+|[\s\-–—:]+$/g, '')
+    .trim();
+  // e.g. "Loofah Soaps" → "Soaps" — the base word was the product's actual
+  // identity, not decoration on top of it. Keep the original name whenever
+  // stripping it leaves nothing but a generic "Soap"/"Soaps".
+  if (!stripped || /^soaps?$/i.test(stripped)) return productName;
+  return stripped;
+}
+
+// Hover-to-reveal delete button rendered on top of a printed label, so a
+// single click removes that exact instance straight from the sheet
+// preview. Screen-only (no-print) — never appears in the printed output.
+function RemoveLabelButton({ onRemove }) {
+  return (
+    <button
+      type="button"
+      className="no-print remove-label-btn"
+      onClick={(e) => {
+        e.stopPropagation();
+        onRemove();
+      }}
+      title="Remove this label"
+      style={{
+        position: 'absolute',
+        top: '0.6mm',
+        right: '0.6mm',
+        zIndex: 2,
+        width: '3.2mm',
+        height: '3.2mm',
+        borderRadius: '50%',
+        border: 'none',
+        background: 'rgba(220,38,38,0.92)',
+        color: 'white',
+        fontSize: '2.4mm',
+        lineHeight: 1,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 0,
+      }}
+    >
+      ×
+    </button>
+  );
+}
+
+function ProductLabel({ label, license, onRemove }) {
   return (
     <div className="product-label">
+      {onRemove && <RemoveLabelButton onRemove={onRemove} />}
       {/* White overlay for readability over background image */}
       <div
         style={{
@@ -87,7 +177,7 @@ function ProductLabel({ label, license }) {
             marginBottom: '0.3mm',
           }}
         >
-          {label.product_name}
+          {getDisplayName(label.product_name, label.base_type)}
         </div>
 
         <WavyDivider opacity={0.3} />
@@ -142,44 +232,44 @@ function ProductLabel({ label, license }) {
   );
 }
 
-function MiniProductLabel({ label, license }) {
+function MiniProductLabel({ label, license, onRemove }) {
   return (
     <div className="mini-label">
+      {onRemove && <RemoveLabelButton onRemove={onRemove} />}
       <div
         style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(255,255,255,0.82)',
-          zIndex: 0,
-          WebkitPrintColorAdjust: 'exact',
-          printColorAdjust: 'exact',
-        }}
-      />
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 1,
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          padding: '0.4mm 1.5mm',
+          padding: '0.8mm 1mm',
           boxSizing: 'border-box',
         }}
       >
         <div
           style={{
-            textAlign: 'center',
-            fontSize: '6.5pt',
+            fontSize: '7.5pt',
             fontWeight: 800,
             color: COLORS.brand,
             lineHeight: 1.1,
-            whiteSpace: 'nowrap',
+            textAlign: 'center',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
-            textOverflow: 'ellipsis',
           }}
         >
-          {label.product_name}
+          {getDisplayName(label.product_name, label.base_type)}
         </div>
+
+        <div
+          style={{
+            width: '55%',
+            alignSelf: 'center',
+            borderBottom: `0.15mm solid ${COLORS.brand}`,
+            opacity: 0.3,
+            margin: '0.3mm 0',
+          }}
+        />
 
         <div
           style={{
@@ -191,12 +281,13 @@ function MiniProductLabel({ label, license }) {
         >
           <div
             style={{
-              fontSize: '4.2pt',
-              color: COLORS.text,
-              fontWeight: 500,
-              lineHeight: 1.15,
-              textAlign: 'center',
               width: '100%',
+              textAlign: 'center',
+              fontSize: '6pt',
+              fontWeight: 500,
+              color: COLORS.text,
+              lineHeight: 1.2,
+              letterSpacing: '0.03em',
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
@@ -205,18 +296,6 @@ function MiniProductLabel({ label, license }) {
           >
             {getFullIngredients(label.base_type, label.ingredients)}
           </div>
-        </div>
-
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: '3.8pt',
-            fontWeight: 700,
-            color: COLORS.text,
-            letterSpacing: '0.03em',
-          }}
-        >
-          {license}
         </div>
       </div>
     </div>
@@ -309,51 +388,81 @@ function SoapBand({ license }) {
   );
 }
 
-export default function CustomLabelsClient({ products, businessConfig }) {
-  // Each batch: { id, product_name, base_type, weight_grams, ingredients, qty }
+// These product lines don't get individual labels printed (gift/seasonal
+// bundles, kids sets, discovery boxes, and travel minis are packaged and
+// labeled differently) — keep them out of the label palette entirely.
+const EXCLUDED_FROM_LABELS = [/valentine/i, /\bkids\b/i, /discovery box/i, /\btravel\b/i, /gift.*pouch/i];
+
+export default function CustomLabelsClient({ products: allProducts, businessConfig }) {
+  const products = allProducts.filter(
+    (p) => !EXCLUDED_FROM_LABELS.some((re) => re.test(p.name)),
+  );
+
+  // Each batch: { id, product_id, product_name, base_type, weight_grams, ingredients, qty }
   const [batches, setBatches] = useState([]);
-  // Multi-select product checklist — lets you check/uncheck individual
-  // products (or Select All / Deselect All) before adding them together,
-  // instead of picking one product from a dropdown at a time.
-  const [checkedIds, setCheckedIds] = useState([]);
+  // Bulk-seed amount, used only by the "Add to all" button below the
+  // product palette — per-product fine-tuning happens by clicking a chip
+  // (add one) or the × on a printed label in the sheet (remove one).
   const [quantity, setQuantity] = useState(1);
   const [printMode, setPrintMode] = useState('bands'); // 'stickers' | 'bands'
   const [bandPages, setBandPages] = useState(1);
 
-  // Stickers: 55x20mm, 3x14 grid. Mini: 40x18mm, 4x14 grid. Bands: 35mm height, 8 per sheet.
-  const labelsPerPage = printMode === 'stickers' ? 42 : printMode === 'mini' ? 56 : 8;
+  // Stickers: 55x20mm, 3x14 grid (portrait). Mini: 38.1x14mm (widened from
+  // 0.5in to fit larger ingredient text), 7x14 grid (landscape, edge-to-edge).
+  // Bands: 35mm height, 8 per sheet.
+  const labelsPerPage = printMode === 'stickers' ? 42 : printMode === 'mini' ? 98 : 8;
 
-  const allChecked = products.length > 0 && checkedIds.length === products.length;
-
-  const toggleProduct = (id) => {
-    setCheckedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+  const bumpBatch = (prev, product, amount) => {
+    const idx = prev.findIndex((b) => b.product_id === product.id);
+    if (idx !== -1) {
+      const next = [...prev];
+      next[idx] = { ...next[idx], qty: next[idx].qty + amount };
+      return next;
+    }
+    return [
+      ...prev,
+      {
+        id: `${product.id}-${Date.now()}`,
+        product_id: product.id,
+        product_name: product.name,
+        base_type: product.base_type,
+        weight_grams: product.weight_grams,
+        ingredients: product.ingredients,
+        qty: amount,
+      },
+    ];
   };
 
-  const toggleSelectAll = () => {
-    setCheckedIds(allChecked ? [] : products.map((p) => p.id));
+  // Click a product chip → one label lands on the sheet immediately.
+  const addOne = (product) => setBatches((prev) => bumpBatch(prev, product, 1));
+
+  // Bulk-seed every product at once with the shared quantity field, for
+  // starting a baseline before fine-tuning up/down per product.
+  const addQuantityToAll = () => {
+    setBatches((prev) => products.reduce((acc, p) => bumpBatch(acc, p, quantity), prev));
   };
 
-  // Adds every checked product to the queue in one click, using the shared
-  // quantity field as the count for each — covers single-add (check one),
-  // add-all (Select All), and everything in between (check a few).
-  const addSelectedToQueue = () => {
-    const existingIds = new Set(batches.map((b) => b.product_id));
-    const toAdd = products.filter((p) => checkedIds.includes(p.id) && !existingIds.has(p.id));
-    if (toAdd.length === 0) return;
-    const now = Date.now();
-    const newBatches = toAdd.map((p, i) => ({
-      id: now + i,
-      product_id: p.id,
-      product_name: p.name,
-      base_type: p.base_type,
-      weight_grams: p.weight_grams,
-      ingredients: p.ingredients,
-      qty: quantity,
-    }));
-    setBatches((prev) => [...prev, ...newBatches]);
-    setCheckedIds([]);
+  const dropOne = (prev, idx) => {
+    if (prev[idx].qty <= 1) return prev.filter((_, i) => i !== idx);
+    const next = [...prev];
+    next[idx] = { ...next[idx], qty: next[idx].qty - 1 };
+    return next;
+  };
+
+  // Click the × on a printed label in the sheet → remove that exact one.
+  const removeOneFromBatch = (batchId) => {
+    setBatches((prev) => {
+      const idx = prev.findIndex((b) => b.id === batchId);
+      return idx === -1 ? prev : dropOne(prev, idx);
+    });
+  };
+
+  // Click the − on a product chip → remove one, without hunting for it in the sheet.
+  const removeOneByProduct = (productId) => {
+    setBatches((prev) => {
+      const idx = prev.findIndex((b) => b.product_id === productId);
+      return idx === -1 ? prev : dropOne(prev, idx);
+    });
   };
 
   const removeBatch = (id) =>
@@ -378,13 +487,88 @@ export default function CustomLabelsClient({ products, businessConfig }) {
     pages.push(queue.slice(i, i + labelsPerPage));
   }
 
+  // How full the last page is — surfaced as a capacity meter + ghost slots
+  // so it's obvious how many more labels are needed to avoid wasting a
+  // partially-filled sheet of (expensive) adhesive paper.
+  const lastPageCount = pages.length ? pages[pages.length - 1].length : 0;
+  const freeOnLastPage = pages.length ? labelsPerPage - lastPageCount : 0;
+
+  // One-click default: spread just enough labels across every visible
+  // product to exactly fill up the sheet currently in progress (or a whole
+  // fresh sheet if nothing's queued yet) — so a full page of variety is one
+  // click away instead of clicking each chip by hand. Weighted by all-time
+  // units sold (products.units_sold, from order_items) so frequently-sold
+  // soaps get more labels than slow movers, not an even split. +1 smoothing
+  // per product so a brand-new product with zero sales still gets a small
+  // share instead of none.
+  const fillSheetEvenly = () => {
+    const target = totalLabels === 0 ? labelsPerPage : freeOnLastPage;
+    if (target <= 0 || products.length === 0) return;
+
+    const weights = products.map((p) => (p.units_sold || 0) + 1);
+    const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+    const raw = weights.map((w) => (target * w) / totalWeight);
+    const counts = raw.map(Math.floor);
+    const shortfall = target - counts.reduce((sum, n) => sum + n, 0);
+
+    // Largest-remainder method: hand the leftover slots (lost to flooring)
+    // to whichever products lost the most, so the total still lands
+    // exactly on `target` while staying as proportional as possible.
+    const byRemainder = raw
+      .map((r, i) => ({ i, frac: r - Math.floor(r) }))
+      .sort((a, b) => b.frac - a.frac);
+    for (let k = 0; k < shortfall; k++) {
+      counts[byRemainder[k % byRemainder.length].i] += 1;
+    }
+
+    setBatches((prev) =>
+      products.reduce((acc, p, i) => bumpBatch(acc, p, counts[i]), prev),
+    );
+  };
+
+  // Per-mode sheet layout — mini prints landscape, edge-to-edge, centered on the page.
+  const sheetLayoutStyle =
+    printMode === 'mini'
+      ? {
+          display: 'grid',
+          gridTemplateColumns: 'repeat(7, 38.1mm)',
+          gridAutoRows: '14mm',
+          gap: 0,
+          justifyContent: 'center',
+          alignContent: 'center',
+          padding: '5mm',
+          width: '297mm',
+          height: '210mm',
+        }
+      : printMode === 'stickers'
+      ? {
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 60mm)',
+          gap: '5mm',
+          alignItems: 'center',
+          padding: '10mm',
+          width: '210mm',
+          height: 'auto',
+          minHeight: '297mm',
+        }
+      : {
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '2mm',
+          padding: '8mm 0 0',
+          width: '210mm',
+          height: 'auto',
+          minHeight: '297mm',
+        };
+
   return (
     <div className="labels-page">
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
         @page {
-          size: A4 portrait;
+          size: A4 ${printMode === 'mini' ? 'landscape' : 'portrait'};
           margin: 0;
         }
         .labels-page {
@@ -411,19 +595,27 @@ export default function CustomLabelsClient({ products, businessConfig }) {
         }
 
         .mini-label {
-          width: 40mm;
-          height: 18mm;
+          width: 38.1mm;
+          height: 14mm;
           border: 1px dashed #ccc;
           display: flex;
           flex-direction: column;
           position: relative;
           box-sizing: border-box;
           overflow: hidden;
-          background-image: url('/label-bg.png');
-          background-size: cover;
-          background-position: center;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
+          background: transparent;
+        }
+
+        /* Remove-on-hover: the × only shows while hovering a printed label,
+           so the sheet preview stays clean until you're pointing at the
+           exact one you want to pull off. */
+        .remove-label-btn {
+          opacity: 0;
+          transition: opacity 0.12s ease;
+        }
+        .product-label:hover .remove-label-btn,
+        .mini-label:hover .remove-label-btn {
+          opacity: 1;
         }
 
         .soap-band-container {
@@ -483,6 +675,23 @@ export default function CustomLabelsClient({ products, businessConfig }) {
             background: white !important;
             padding: 0 !important;
             min-height: 0 !important;
+            /* Grayscale on print only — screen preview stays in brand
+               colors, but the printed sheet renders as pure black/gray so
+               printers don't reach for color ink on what's mostly text. */
+            filter: grayscale(100%) !important;
+          }
+
+          /* This wrapper caps the on-screen editing UI to a comfortable
+             reading width (860px). Left un-reset for print, it also
+             squeezes the print sheets themselves — harmless for the
+             210mm-wide portrait sheets (narrower than 860px/227.7mm) but
+             it clips the 297mm-wide landscape Mini Sticker sheet, whose
+             own auto-margin centering can't work inside a container
+             narrower than itself. Every sheet must center against the
+             full physical page, not this reading-width box. */
+          .labels-content-wrap {
+            max-width: none !important;
+            margin: 0 !important;
           }
 
           .label-page-sheet {
@@ -506,16 +715,19 @@ export default function CustomLabelsClient({ products, businessConfig }) {
 
           .mini-page-sheet {
             display: grid !important;
-            grid-template-columns: repeat(4, 40mm) !important;
-            gap: 2mm !important;
-            padding: 8mm 22mm !important;
+            grid-template-columns: repeat(7, 38.1mm) !important;
+            grid-auto-rows: 14mm !important;
+            gap: 0 !important;
+            justify-content: center !important;
+            align-content: center !important;
+            padding: 5mm !important;
             margin: 0 auto !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             page-break-after: always;
             break-after: page;
-            width: 210mm !important;
-            height: 297mm !important;
+            width: 297mm !important;
+            height: 210mm !important;
             box-sizing: border-box !important;
           }
           .mini-page-sheet:last-child {
@@ -567,15 +779,16 @@ export default function CustomLabelsClient({ products, businessConfig }) {
           }
 
           .mini-label {
-            width: 40mm !important;
-            height: 18mm !important;
+            width: 38.1mm !important;
+            height: 14mm !important;
+            /* Cut lines: every label keeps its own dashed border so, tiled
+               edge-to-edge with zero gap, adjoining borders form a full
+               cutting grid across the whole sheet. */
             border: 0.1mm dashed #000 !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
           }
 
           .soap-band-container {
@@ -696,10 +909,10 @@ export default function CustomLabelsClient({ products, businessConfig }) {
           </div>
         )}
 
-        {/* Stickers / Mini: qty + add-selected inline */}
+        {/* Stickers / Mini: bulk-seed qty + running capacity readout */}
         {(printMode === 'stickers' || printMode === 'mini') && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, flexWrap: 'wrap' }}>
-            <label style={{ fontSize: '13px', color: COLORS.muted, fontFamily: FONTS.sans, whiteSpace: 'nowrap' }}>Qty each:</label>
+            <label style={{ fontSize: '13px', color: COLORS.muted, fontFamily: FONTS.sans, whiteSpace: 'nowrap' }}>Add</label>
             <input
               type="number"
               min={1}
@@ -709,27 +922,62 @@ export default function CustomLabelsClient({ products, businessConfig }) {
               style={{ width: '60px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px', fontFamily: FONTS.sans, boxSizing: 'border-box' }}
             />
             <button
-              onClick={addSelectedToQueue}
-              disabled={checkedIds.length === 0}
+              onClick={addQuantityToAll}
+              disabled={products.length === 0}
+              title="Seed every product with this quantity to start — then click a product below to add one, or click × on a label in the sheet to remove one"
               style={{
                 padding: '6px 14px',
-                background: checkedIds.length > 0 ? COLORS.brand : '#9CA3AF',
+                background: products.length > 0 ? COLORS.brand : '#9CA3AF',
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
                 fontWeight: 700,
                 fontSize: '13px',
-                cursor: checkedIds.length > 0 ? 'pointer' : 'not-allowed',
+                cursor: products.length > 0 ? 'pointer' : 'not-allowed',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
                 fontFamily: FONTS.sans,
+                whiteSpace: 'nowrap',
               }}
             >
-              <Plus size={14} /> Add Selected{checkedIds.length > 0 ? ` (${checkedIds.length})` : ''}
+              <Plus size={14} /> to all
+            </button>
+            <button
+              onClick={fillSheetEvenly}
+              disabled={!(products.length > 0 && (totalLabels === 0 || freeOnLastPage > 0))}
+              title="Fill up the current sheet, weighted toward your best-selling products"
+              style={{
+                padding: '6px 14px',
+                background: products.length > 0 && (totalLabels === 0 || freeOnLastPage > 0) ? '#2563EB' : '#9CA3AF',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: products.length > 0 && (totalLabels === 0 || freeOnLastPage > 0) ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontFamily: FONTS.sans,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Layers size={14} /> Fill sheet
             </button>
             {batches.length > 0 && (
-              <span style={{ fontSize: '12px', color: COLORS.muted, fontFamily: FONTS.sans }}>{totalLabels} label{totalLabels !== 1 ? 's' : ''} · {pages.length} page{pages.length !== 1 ? 's' : ''}</span>
+              <span style={{ fontSize: '12px', color: COLORS.muted, fontFamily: FONTS.sans }}>
+                {totalLabels} label{totalLabels !== 1 ? 's' : ''} · {pages.length} page{pages.length !== 1 ? 's' : ''}
+                {' · '}
+                {freeOnLastPage === 0 ? (
+                  <span style={{ color: COLORS.brand, fontWeight: 700 }}>last page full</span>
+                ) : (
+                  <span>
+                    {lastPageCount}/{labelsPerPage} on last page —{' '}
+                    <span style={{ color: '#B45309', fontWeight: 700 }}>{freeOnLastPage} free</span>
+                  </span>
+                )}
+              </span>
             )}
           </div>
         )}
@@ -758,53 +1006,88 @@ export default function CustomLabelsClient({ products, businessConfig }) {
         </button>
       </div>
 
-      <div style={{ maxWidth: '860px', margin: '0 auto' }}>
+      <div className="labels-content-wrap" style={{ maxWidth: '860px', margin: '0 auto' }}>
 
-        {/* Product checklist — check/uncheck individual products, or Select all / Deselect all */}
+        {/* Product palette — click a product to add one label to the sheet
+            instantly. Remove one at a time by hovering a printed label
+            below and clicking its ×, or clear a whole product with the
+            trash icon in the batch summary underneath. */}
         {(printMode === 'stickers' || printMode === 'mini') && (
           <div className="no-print" style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div style={{ marginBottom: '10px' }}>
               <span style={{ fontSize: '12px', fontWeight: 700, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: '0.03em', fontFamily: FONTS.sans }}>
-                Products {checkedIds.length > 0 ? `(${checkedIds.length} selected)` : ''}
+                Products — click to add one
               </span>
-              <button
-                type="button"
-                onClick={toggleSelectAll}
-                style={{ background: 'none', border: 'none', color: COLORS.brand, fontWeight: 700, fontSize: '12px', cursor: 'pointer', fontFamily: FONTS.sans }}
-              >
-                {allChecked ? 'Deselect all' : 'Select all'}
-              </button>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {products.map((p) => {
-                const checked = checkedIds.includes(p.id);
+                const queued = batches.find((b) => b.product_id === p.id);
                 return (
-                  <label
+                  <div
                     key={p.id}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '6px',
-                      padding: '5px 10px 5px 8px',
                       borderRadius: '20px',
-                      border: `1px solid ${checked ? COLORS.brand : '#E5E7EB'}`,
-                      background: checked ? '#D8F3DC' : 'white',
-                      fontSize: '12px',
+                      border: `1px solid ${queued ? COLORS.brand : '#E5E7EB'}`,
+                      background: queued ? '#D8F3DC' : 'white',
                       fontFamily: FONTS.sans,
-                      cursor: 'pointer',
-                      userSelect: 'none',
                     }}
                   >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleProduct(p.id)}
-                      style={{ margin: 0, accentColor: COLORS.brand, cursor: 'pointer' }}
-                    />
-                    <span style={{ fontWeight: checked ? 700 : 500, color: checked ? COLORS.brand : COLORS.text }}>
-                      {p.name}
-                    </span>
-                  </label>
+                    {queued && (
+                      <button
+                        type="button"
+                        onClick={() => removeOneByProduct(p.id)}
+                        title="Remove one"
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          color: COLORS.brand,
+                          fontWeight: 800,
+                          fontSize: '15px',
+                          lineHeight: 1,
+                          width: '20px',
+                          height: '20px',
+                          marginLeft: '4px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          padding: 0,
+                        }}
+                      >
+                        −
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => addOne(p)}
+                      title="Add one"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '5px 10px 5px 8px',
+                        border: 'none',
+                        background: 'transparent',
+                        fontSize: '12px',
+                        fontFamily: FONTS.sans,
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                      }}
+                    >
+                      {queued && (
+                        <span style={{ background: COLORS.brand, color: 'white', borderRadius: '10px', padding: '1px 6px', fontWeight: 800, fontSize: '11px' }}>
+                          {queued.qty}
+                        </span>
+                      )}
+                      <span style={{ fontWeight: queued ? 700 : 500, color: queued ? COLORS.brand : COLORS.text }}>
+                        {p.name}
+                      </span>
+                      <Plus size={12} style={{ opacity: 0.5, color: queued ? COLORS.brand : COLORS.muted }} />
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -881,35 +1164,46 @@ export default function CustomLabelsClient({ products, businessConfig }) {
                 background: 'white',
                 borderRadius: '4px',
                 boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
-                marginBottom: '32px',
-                padding:
-                  printMode === 'stickers' ? '10mm' : printMode === 'mini' ? '8mm 22mm' : '8mm 0 0',
-                display: printMode === 'bands' ? 'flex' : 'grid',
-                gridTemplateColumns:
-                  printMode === 'stickers'
-                    ? 'repeat(3, 60mm)'
-                    : printMode === 'mini'
-                    ? 'repeat(4, 40mm)'
-                    : 'none',
-                flexDirection: printMode === 'bands' ? 'column' : 'row',
-                alignItems: 'center',
-                gap: printMode === 'stickers' ? '5mm' : printMode === 'mini' ? '2mm' : '2mm',
-                width: '210mm',
-                height: 'auto',
-                minHeight: '297mm',
                 margin: '0 auto 32px auto',
                 boxSizing: 'border-box',
+                ...sheetLayoutStyle,
               }}
             >
               {page.map((label) =>
                 printMode === 'stickers' ? (
-                  <ProductLabel key={label.uid} label={label} license={businessConfig.brand.license} />
+                  <ProductLabel
+                    key={label.uid}
+                    label={label}
+                    license={businessConfig.brand.license}
+                    onRemove={() => removeOneFromBatch(label.id)}
+                  />
                 ) : printMode === 'mini' ? (
-                  <MiniProductLabel key={label.uid} label={label} license={businessConfig.brand.license} />
+                  <MiniProductLabel
+                    key={label.uid}
+                    label={label}
+                    license={businessConfig.brand.license}
+                    onRemove={() => removeOneFromBatch(label.id)}
+                  />
                 ) : (
                   <SoapBand key={label.uid} license={businessConfig.brand.license} />
                 ),
               )}
+              {/* Screen-only ghost slots for the remaining empty space on the last
+                  page — shows exactly how many more labels are needed to avoid
+                  printing (and wasting) a partially-filled sheet. Never printed. */}
+              {(printMode === 'stickers' || printMode === 'mini') &&
+                pageIdx === pages.length - 1 &&
+                Array.from({ length: freeOnLastPage }, (_, i) => (
+                  <div
+                    key={`ghost-${i}`}
+                    className={`no-print ${printMode === 'mini' ? 'mini-label' : 'product-label'}`}
+                    style={{
+                      background: 'transparent',
+                      backgroundImage: 'none',
+                      border: '1px dashed #E5E7EB',
+                    }}
+                  />
+                ))}
               {/* Final cutting guide for the bottom edge — screen-only text, print-only line */}
               {printMode === 'bands' && (
                 <div className="cutting-guide" style={{ marginTop: '-8px' }}>
@@ -944,7 +1238,7 @@ export default function CustomLabelsClient({ products, businessConfig }) {
             />
             {printMode === 'bands'
               ? 'Add pages to see the wrapper bands preview.'
-              : 'Check one or more products above, then Add Selected to see the A4 page preview.'}
+              : 'Click a product above to add it to the sheet.'}
           </div>
         )}
       </div>
