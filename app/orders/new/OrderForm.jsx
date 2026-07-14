@@ -215,9 +215,11 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   // Auto shipping is derived inline from subtotal (not via useEffect) so it
   // lands on the same render as the subtotal change — a useEffect would run
   // one render later, showing a stale total until it re-fires.
-  const autoShipping = subtotal >= (settings?.free_shipping_threshold || 1000) ? 0 : (settings?.shipping_charge_below || 100);
+  const freeShippingThreshold = Number(settings?.free_shipping_threshold) || 1000;
+  const shippingChargeBelow = Number(settings?.shipping_charge_below) || 100;
+  const autoShipping = subtotal >= freeShippingThreshold ? 0 : shippingChargeBelow;
   const effectiveShipping = (!isEdit && !hasManualShipping) ? autoShipping : parseFloat(shipping || 0);
-  const orderValue = Math.max(0, subtotal - parseFloat(discount || 0) + effectiveShipping + parseFloat(customization || 0));
+  const orderValue = Math.max(0, subtotal - parseFloat(discount || 0) + parseFloat(effectiveShipping || 0) + parseFloat(customization || 0));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
