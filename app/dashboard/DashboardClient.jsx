@@ -466,7 +466,10 @@ const DashboardClient = ({
                 <span style={{ fontSize: '11px', color: '#6B7280' }}>each soap costs ~{fmtCurrency(lastCost.cost_price_per_soap)} to make:</span>
               )}
               {topProductsSorted.slice(0, 4).map((p) => {
-                const asp = p.units_sold > 0 ? p.revenue / p.units_sold : 0;
+                // Actual price charged per unit — not the net-of-shipping/discount
+                // "revenue" used for the bar chart, which can drift from the real
+                // catalog price when orders mix products or carry a discount.
+                const asp = p.units_sold > 0 ? p.gross_revenue / p.units_sold : 0;
                 // Travel packs are 1/5th of a soap — blended make cost doesn't apply per piece
                 const margin = lastCost?.cost_price_per_soap > 0 && asp > 0 && p.base_type !== 'Travel'
                   ? (asp - lastCost.cost_price_per_soap) / asp : null;
