@@ -1,6 +1,5 @@
 'use client';
 
-import businessConfig from '@/lib/config/business.json';
 import { Plus, Printer, Tag, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
@@ -51,7 +50,7 @@ function getFullIngredients(baseType, additionalIngredients) {
   return `${baseText}, ${additionalIngredients.trim()}`;
 }
 
-function ProductLabel({ label }) {
+function ProductLabel({ label, license }) {
   return (
     <div className="product-label">
       {/* White overlay for readability over background image */}
@@ -211,7 +210,7 @@ function SoapBand() {
                 padding: '0.1mm 1mm',
               }}
             >
-              {businessConfig.brand.license}
+              {license}
             </div>
           </div>
 
@@ -229,7 +228,7 @@ function SoapBand() {
   );
 }
 
-export default function CustomLabelsClient({ products }) {
+export default function CustomLabelsClient({ products, businessConfig }) {
   // Each batch: { id, product_name, base_type, weight_grams, ingredients, qty }
   const [batches, setBatches] = useState([]);
   const [selectedProductId, setSelectedProductId] = useState('');
@@ -685,7 +684,7 @@ export default function CustomLabelsClient({ products }) {
             >
               {page.map((label) =>
                 printMode === 'stickers' ? (
-                  <ProductLabel key={label.uid} label={label} />
+                  <ProductLabel key={label.uid} label={label} license={businessConfig.brand.license} />
                 ) : (
                   <SoapBand key={label.uid} />
                 ),

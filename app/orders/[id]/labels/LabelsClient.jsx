@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Printer, Truck, Tag, CheckSquare, Square } from 'lucide-react';
-import businessConfig from '@/lib/config/business.json';
 import { formatPhoneForDisplay } from '@/lib/utils/phone';
 
 const BASE_LABELS = {
@@ -47,7 +46,7 @@ function getFullIngredients(baseType, additionalIngredients) {
   return `${baseText}, ${additionalIngredients.trim()}`;
 }
 
-const LabelsClient = ({ labels, orderInfo }) => {
+const LabelsClient = ({ labels, orderInfo, businessConfig }) => {
   const [selectedIds, setSelectedIds] = useState(new Set([...labels.map((_, i) => i), -1, -2]));
 
   const formatBBE = (dateStr) => {

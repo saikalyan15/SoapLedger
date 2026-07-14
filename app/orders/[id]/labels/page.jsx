@@ -1,11 +1,13 @@
 import sql from '@/lib/db';
 import LabelsClient from './LabelsClient';
 import { notFound } from 'next/navigation';
+import { getBusinessConfigAction } from '@/lib/actions/settings';
 
 export default async function LabelsPage({ params }) {
   const { id } = await params;
 
-  const data = await sql`
+  const [data, businessConfig] = await Promise.all([
+    sql`
     SELECT 
       o.id,
       o.order_date,
@@ -23,7 +25,9 @@ export default async function LabelsPage({ params }) {
     JOIN products p ON p.id = oi.product_id
     WHERE o.id = ${id}
     ORDER BY p.name
-  `;
+  `,
+    getBusinessConfigAction(),
+  ]);
 
   if (!data || data.length === 0) {
     notFound();
@@ -49,5 +53,5 @@ export default async function LabelsPage({ params }) {
     total_labels: labels.length
   };
 
-  return <LabelsClient labels={labels} orderInfo={orderInfo} />;
+  return <LabelsClient labels={labels} orderInfo={orderInfo} businessConfig={businessConfig} />;
 }
