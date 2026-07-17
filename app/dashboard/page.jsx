@@ -3,7 +3,7 @@ import {
   getRepeatCustomerRate,
   getProductPerformance,
   getCashFlowTrend,
-  getDashboardDataQuality,
+  getUnitEconomics,
   getTopExpenseCategories,
   getQuietCustomers,
   getThisMonthSnapshot,
@@ -16,7 +16,7 @@ export default async function DashboardPage() {
 
   const [
     revenue, customers, products, cashFlow, expenseCats,
-    snapshot, actionable, quietCustomers, dataQuality,
+    snapshot, actionable, quietCustomers, unitEconomics,
   ] = await Promise.all([
     getRevenueKPIs(range),
     getRepeatCustomerRate(range),
@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     getThisMonthSnapshot(),
     getActionableOrders(),
     getQuietCustomers(),
-    getDashboardDataQuality(),
+    getUnitEconomics(),
   ]);
 
   return (
@@ -40,7 +40,7 @@ export default async function DashboardPage() {
         initialSnapshot={snapshot}
         initialActionable={actionable}
         initialQuietCustomers={quietCustomers}
-        initialDataQuality={dataQuality}
+        initialUnitEconomics={unitEconomics}
       />
     </div>
   );

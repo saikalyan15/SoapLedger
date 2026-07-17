@@ -56,6 +56,11 @@ const fmtNumber = (value, decimals = 0) => {
   });
 };
 
+const fmtUnitCurrency = (value) => {
+  if (value == null || Number.isNaN(Number(value))) return '—';
+  return `₹${Math.round(Number(value)).toLocaleString('en-IN')}`;
+};
+
 const signedCurrency = (value) => {
   if (value === 0) return fmtCurrency(0);
   return `${value > 0 ? '+' : ''}${fmtCurrency(value)}`;
@@ -100,7 +105,7 @@ export default function DashboardClient({
   initialSnapshot,
   initialActionable,
   initialQuietCustomers,
-  initialDataQuality,
+  initialUnitEconomics,
 }) {
   const [filter, setFilter] = useState('All Time');
   const [isPending, startTransition] = useTransition();
@@ -299,23 +304,28 @@ export default function DashboardClient({
         <div className="money-readiness-copy">
           <Info size={20} />
           <div>
-            <span>Numbers we can trust</span>
-            <h2>Cash view is ready. Profit and break-even are not yet reliable.</h2>
+            <span>How unit cost is calculated</span>
+            <h2>Blended unit cost is ready. Product-level margin is still estimated.</h2>
             <p>
-              Ingredient purchases are recorded as expenses, but batch cost, labour, and sellable yield are not linked to products.
-              {' '}Only {initialDataQuality.orders_with_material_cost} of {initialDataQuality.recognised_orders} recognised orders include material cost.
+              Last {initialUnitEconomics.window_days} days: {fmtUnitCurrency(initialUnitEconomics.included_spend)} from categories marked “include in cost price”
+              {' '}÷ {fmtNumber(initialUnitEconomics.equivalent_soaps, 1)} equivalent soaps sold. Included: {initialUnitEconomics.included_categories.join(', ')}.
             </p>
           </div>
         </div>
         <div className="money-readiness-metric">
-          <span>Cost recovery</span>
-          <strong>{recoveryGap > 0 ? `${fmtCurrency(recoveryGap)} left to recover` : 'Recorded spend recovered'}</strong>
-          <small>Lifetime recorded cash</small>
+          <span>Blended unit cost</span>
+          <strong>{fmtUnitCurrency(initialUnitEconomics.unit_cost)} per soap</strong>
+          <small>Included recorded costs ÷ equivalent soaps</small>
+        </div>
+        <div className="money-readiness-metric">
+          <span>Est. cash contribution</span>
+          <strong>{fmtUnitCurrency(initialUnitEconomics.unit_contribution)} per soap</strong>
+          <small>{fmtUnitCurrency(initialUnitEconomics.avg_selling_price)} average selling price · before overhead</small>
         </div>
         <div className="money-readiness-metric">
           <span>Break-even</span>
           <strong>Not calculated</strong>
-          <small>Needs fixed costs + unit contribution margin</small>
+          <small>Fixed monthly costs are not identified yet</small>
         </div>
       </section>
 
@@ -425,7 +435,7 @@ export default function DashboardClient({
               </table>
             </div>
           )}
-          <p className="money-table-note">Product profit is intentionally not shown until batch and unit costs are linked.</p>
+          <p className="money-table-note">Product-level profit is not shown because this blended unit cost is not allocated by recipe.</p>
         </article>
 
         <article className="money-panel money-customers-panel">
