@@ -1,742 +1,459 @@
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, CartesianGrid, Legend, Cell, PieChart, Pie, AreaChart, Area,
-  ComposedChart, ReferenceLine,
+  Bar,
+  CartesianGrid,
+  ComposedChart,
+  Legend,
+  Line,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts';
 import {
-  TrendingUp, TrendingDown, Package, Users, ShoppingBag,
-  DollarSign, AlertTriangle, Loader2, Factory, ArrowUpRight, ArrowDownRight, Minus,
-  Clock, CheckCircle, Truck, CreditCard, CircleDollarSign, ChevronRight,
+  AlertTriangle,
+  CheckCircle,
+  ChevronRight,
+  Clock,
+  CreditCard,
+  Factory,
+  Info,
+  Loader2,
+  Truck,
 } from 'lucide-react';
 import {
-  getRevenueKPIs,
-  getRepeatCustomerRate,
+  getCashFlowTrend,
   getProductPerformance,
-  getMonthlyBaseRevenue,
-  getCostPriceTrend,
-  getMonthlySurplusDeficit,
-  getBreakEvenProjection,
+  getRepeatCustomerRate,
   getTopExpenseCategories,
 } from '@/lib/queries/dashboard';
 
-// ── Formatters ────────────────────────────────────────────────────────────────
-const fmt = (n, decimals = 0) => {
-  if (n == null) return '—';
-  return Number(n).toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-};
-const fmtCurrency = (n) => {
-  if (n == null) return '—';
-  return `₹${(Math.round(Number(n) / 10) * 10).toLocaleString('en-IN')}`;
-};
-const fmtNum = (n) => {
-  if (n == null) return '—';
-  return Math.round(Number(n)).toLocaleString('en-IN');
-};
-
-// ── Palette ───────────────────────────────────────────────────────────────────
-// One hue FAMILY per base (no green-vs-teal lookalikes), covering every base_type
-// in the products table. Validated for CVD separation, chroma, and lightness on
-// white cards (worst pair ΔE 11.1, floor band — relieved by white segment gaps,
-// legend, and tooltips). Gold is sub-3:1 contrast on white: same relief applies.
-// 'Other' is the deliberate muted fold bucket, excluded from series checks.
-const BASE_COLOURS = {
-  'Glycerine':       '#2F8F5B', // green (brand)
-  'Goat Milk':       '#5B3E9E', // violet
-  'Shea Butter':     '#D4A017', // gold
-  'Red Wine':        '#9D2450', // wine
-  'Loofah':          '#A0622D', // brown
-  'Travel':          '#3178C6', // blue
-  'Papaya Cucumber': '#C7490B', // papaya orange
-  'Mixed':           '#D66BA0', // pink
-  'Other':           '#9CA3AF', // fold bucket — deliberately muted
-};
-
-// Any base type added later gets a distinct spare hue instead of collapsing to
-// gray (which made Mixed and Papaya Cucumber indistinguishable before).
-const SPARE_COLOURS = ['#0E7490', '#B91C1C', '#4D7C0F', '#6D28D9'];
-const assignedSpares = {};
-let spareIndex = 0;
-const colourForBase = (base) => {
-  if (BASE_COLOURS[base]) return BASE_COLOURS[base];
-  if (!assignedSpares[base]) assignedSpares[base] = SPARE_COLOURS[spareIndex++ % SPARE_COLOURS.length];
-  return assignedSpares[base];
-};
-const STATUS_COLOR = { green: '#16A34A', amber: '#D97706', red: '#DC2626' };
+const ACTION_REQUIRED_STATUSES = ['Awaiting Payment', 'Payment Confirmed', 'Ready to Dispatch'];
 
 const STATUS_META = {
-  'Ready to Dispatch': { icon: Truck,        color: '#16A34A', bg: '#F0FDF4' },
-  'In Manufacturing':  { icon: Factory,      color: '#6B21A8', bg: '#F5F3FF' },
-  'Payment Confirmed': { icon: CheckCircle,  color: '#0F766E', bg: '#F0FDFA' },
-  'Awaiting Payment':  { icon: CreditCard,   color: '#D97706', bg: '#FFFBEB' },
-  'Dispatched':        { icon: Truck,        color: '#2563EB', bg: '#EFF6FF' },
+  'Ready to Dispatch': { icon: Truck, color: '#166534', bg: '#F0FDF4' },
+  'In Manufacturing': { icon: Factory, color: '#6B21A8', bg: '#F5F3FF' },
+  'Payment Confirmed': { icon: CheckCircle, color: '#0F766E', bg: '#F0FDFA' },
+  'Awaiting Payment': { icon: CreditCard, color: '#B45309', bg: '#FFFBEB' },
+  Dispatched: { icon: Truck, color: '#2563EB', bg: '#EFF6FF' },
 };
 
-// ── Reusable components ───────────────────────────────────────────────────────
-const ChartCard = ({ title, subtitle, children, loading, empty, icon: Icon, isMobile }) => (
-  <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '16px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: isMobile ? '20px' : '28px', display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0 }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-      <div>
-        <h3 style={{ fontSize: isMobile ? '15px' : '16px', fontWeight: 700, color: '#111827', margin: 0, fontFamily: 'DM Serif Display, serif' }}>{title}</h3>
-        {subtitle && <p style={{ fontSize: '12px', color: '#6B7280', margin: '3px 0 0 0' }}>{subtitle}</p>}
-      </div>
-      {Icon && !isMobile && <div style={{ padding: '8px', background: '#F7F3EA', borderRadius: '8px', color: '#6B7280' }}><Icon size={18} /></div>}
-    </div>
-    <div style={{ flex: 1, position: 'relative' }}>
-      {loading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader2 size={28} className="animate-spin" style={{ color: '#1B4332' }} /></div>}
-      {empty && !loading ? <div style={{ height: '180px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}><AlertTriangle size={28} style={{ marginBottom: '8px', opacity: 0.4 }} /><span style={{ fontSize: '13px' }}>No data</span></div> : children}
-    </div>
+const fmtCurrency = (value) => {
+  if (value == null || Number.isNaN(Number(value))) return '—';
+  const rounded = Math.round(Math.abs(Number(value)) / 10) * 10;
+  return `${Number(value) < 0 ? '−' : ''}₹${rounded.toLocaleString('en-IN')}`;
+};
+
+const fmtNumber = (value, decimals = 0) => {
+  if (value == null || Number.isNaN(Number(value))) return '—';
+  return Number(value).toLocaleString('en-IN', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+};
+
+const signedCurrency = (value) => {
+  if (value === 0) return fmtCurrency(0);
+  return `${value > 0 ? '+' : ''}${fmtCurrency(value)}`;
+};
+
+const periodLabel = (filter) => filter === 'All Time' ? 'All available records' : filter;
+
+const CashMetric = ({ label, value, note, tone = 'ink', helper }) => (
+  <div className="money-metric">
+    <div className="money-metric-label">{label}</div>
+    <div className={`money-metric-value money-tone-${tone}`}>{value}</div>
+    {note && <div className="money-metric-note">{note}</div>}
+    {helper && <div className="money-metric-helper">{helper}</div>}
   </div>
 );
 
-// Delta card for "This Month" — only shows MoM delta after day 6 to avoid
-// misleading "₹X less" comparisons against a full previous month.
-const DeltaCard = ({ label, value, delta, dayOfMonth, color, format = 'currency', loading, isMobile }) => {
-  const showDelta = dayOfMonth >= 7;
-  const isPositive = delta > 0;
-  const isZero = delta === 0 || delta == null;
-  const deltaColor = isZero ? '#6B7280' : isPositive ? '#16A34A' : '#DC2626';
-  const DeltaIcon = isZero ? Minus : isPositive ? ArrowUpRight : ArrowDownRight;
-  const formattedDelta = format === 'currency' ? fmtCurrency(Math.abs(delta)) : fmtNum(Math.abs(delta));
-  return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '12px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: isMobile ? '14px 16px' : '20px 24px', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: color }} />
-      <div style={{ fontSize: '11px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>{label}</div>
-      <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: 800, color: '#111827', fontFamily: 'DM Serif Display, serif', marginBottom: '6px' }}>
-        {loading ? <Loader2 size={24} className="animate-spin" style={{ color: '#E5E7EB' }} /> : value}
-      </div>
-      {!loading && (
-        showDelta ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <DeltaIcon size={14} color={deltaColor} />
-            <span style={{ fontSize: '12px', fontWeight: 700, color: deltaColor }}>{isZero ? 'same as' : `${formattedDelta} ${isPositive ? 'more than'  : 'less than'}`}</span>
-            <span style={{ fontSize: '11px', color: '#9CA3AF' }}>same point last month</span>
-          </div>
-        ) : (
-          <div style={{ fontSize: '11px', color: '#9CA3AF' }}>day {dayOfMonth} — month in progress</div>
-        )
-      )}
-    </div>
-  );
-};
-
-const SectionHeader = ({ title, icon: Icon, accentColor, status, statusLabel, statusNote }) => {
-  const dot = STATUS_COLOR[status];
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', paddingBottom: '14px', borderBottom: `1px solid ${accentColor}22` }}>
-      <div style={{ width: '4px', height: '28px', borderRadius: '2px', background: accentColor, flexShrink: 0 }} />
-      <Icon size={15} color={accentColor} />
-      <span style={{ fontWeight: 800, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#111827' }}>{title}</span>
-      {status && (
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', background: `${dot}15`, border: `1px solid ${dot}30`, padding: '4px 12px', borderRadius: '20px' }}>
-          <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: dot }} />
-          <span style={{ fontSize: '12px', fontWeight: 700, color: dot }}>{statusLabel}</span>
-          {statusNote && <span style={{ fontSize: '11px', color: '#6B7280' }}>· {statusNote}</span>}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const MobileSectionToggle = ({ visible, expanded, onToggle, label, statusText }) => visible ? (
-  <button
-    type="button"
-    className="dashboard-section-toggle"
-    onClick={onToggle}
-    aria-expanded={expanded}
-  >
-    <span>{label}</span>
-    <span className="dashboard-section-toggle-meta">{statusText}</span>
-    <ChevronRight size={18} style={{ transform: expanded ? 'rotate(90deg)' : 'none' }} />
-  </button>
-) : null;
-
-const CustomTooltip = ({ active, payload, label }) => {
+const CashTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: '#fff', border: '1px solid #E9E2D4', borderRadius: '8px', padding: '12px 16px', fontSize: '13px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', minWidth: '160px', zIndex: 1000 }}>
-      <p style={{ fontWeight: 700, marginBottom: '8px', color: '#1A1A1A' }}>{label}</p>
-      {payload.map((p) => (
-        <div key={p.dataKey || p.name} style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', color: p.color || p.fill, marginBottom: '4px' }}>
-          <span>{p.name}</span>
-          <span style={{ fontWeight: 600 }}>
-            {p.name?.includes('Units') || p.name?.includes('Soaps') || p.name === 'Orders' ? fmtNum(p.value) : fmtCurrency(p.value)}
-          </span>
+    <div className="money-chart-tooltip">
+      <strong>{label}</strong>
+      {payload.map((item) => (
+        <div key={item.dataKey} style={{ color: item.color }}>
+          <span>{item.name}</span>
+          <strong>{signedCurrency(item.value)}</strong>
         </div>
       ))}
     </div>
   );
 };
 
-// ── Main component ────────────────────────────────────────────────────────────
-const DashboardClient = ({
-  initialRevenue, initialCustomers, initialProducts, initialBaseTrend, initialCostTrend,
-  initialProfitability, initialProjection, initialExpenseCats,
-  initialSnapshot, initialActionable, initialTopCustomers, initialRepeatCustomers,
+const EmptyState = ({ children }) => (
+  <div className="money-empty">{children}</div>
+);
+
+export default function DashboardClient({
+  initialRevenue,
+  initialCustomers,
+  initialProducts,
+  initialCashFlow,
+  initialExpenseCats,
+  initialSnapshot,
+  initialActionable,
   initialQuietCustomers,
-}) => {
+  initialDataQuality,
+}) {
   const [filter, setFilter] = useState('All Time');
   const [isPending, startTransition] = useTransition();
-  const [isMobile, setIsMobile] = useState(false);
-  const [mobileSections, setMobileSections] = useState({ products: true, customers: false, finances: false });
+  const [customers, setCustomers] = useState(initialCustomers);
+  const [products, setProducts] = useState(initialProducts);
+  const [cashFlow, setCashFlow] = useState(initialCashFlow);
+  const [expenseCats, setExpenseCats] = useState(initialExpenseCats);
 
-  const [revenue, setRevenue]           = useState(initialRevenue);
-  const [customers, setCustomers]       = useState(initialCustomers);
-  const [products, setProducts]         = useState(initialProducts);
-  const [baseTrend, setBaseTrend]       = useState(initialBaseTrend);
-  const [costTrend, setCostTrend]       = useState(initialCostTrend);
-  const [profitability, setProfitability] = useState(initialProfitability);
-  const [projection, setProjection]     = useState(initialProjection);
-  const [expenseCats, setExpenseCats]   = useState(initialExpenseCats);
+  const now = new Date();
+  const dayOfMonth = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthName = now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  const { this_month: thisMonth, last_month: lastMonth } = initialSnapshot;
+  const paceComparison = initialSnapshot.last_month_same_period || lastMonth;
 
-  // These are always current-period — not affected by the date filter
-  const snapshot         = initialSnapshot;
-  const actionable       = initialActionable;
-  const topCustomers     = initialTopCustomers;
-  const repeatCustomers  = initialRepeatCustomers;
-  const quietCustomers   = initialQuietCustomers;
+  const thisMonthNet = thisMonth.revenue - thisMonth.expenses;
+  const comparisonNet = paceComparison.revenue - (paceComparison.expenses || 0);
+  const lifetimeNet = initialRevenue.total_revenue - initialRevenue.total_expenses;
+  const recoveryGap = Math.max(0, -lifetimeNet);
+  const projectedRevenue = dayOfMonth >= 7
+    ? thisMonth.revenue * (daysInMonth / dayOfMonth)
+    : null;
+  const monthProgress = Math.min(100, (dayOfMonth / daysInMonth) * 100);
 
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
+  const ordersNeedingAction = initialActionable
+    .filter((row) => ACTION_REQUIRED_STATUSES.includes(row.status))
+    .reduce((sum, row) => sum + row.count, 0);
+
+  const healthTone = thisMonthNet < 0 ? 'red'
+    : ordersNeedingAction > 0 || lifetimeNet < 0 ? 'amber'
+      : 'green';
+  const healthTitle = thisMonthNet < 0
+    ? 'More cash went out than came in this month.'
+    : ordersNeedingAction > 0
+      ? `${ordersNeedingAction} order${ordersNeedingAction === 1 ? '' : 's'} need attention.`
+      : lifetimeNet < 0
+        ? 'Cash-positive this month; lifetime costs are not fully recovered.'
+        : 'Recorded cash is positive this month and overall.';
+
+  const healthCopy = thisMonthNet < 0
+    ? `${fmtCurrency(Math.abs(thisMonthNet))} more went out than came in during ${monthName}.`
+    : lifetimeNet < 0
+      ? `${fmtCurrency(thisMonthNet)} more came in than went out in ${monthName}. ${fmtCurrency(recoveryGap)} of recorded spend still needs to be earned back.`
+      : `${fmtCurrency(thisMonthNet)} more came in than went out in ${monthName}. Recorded lifetime cash is ahead by ${fmtCurrency(lifetimeNet)}.`;
+
+  const changeCopy = (value, comparison, noun = '') => {
+    const delta = value - comparison;
+    if (delta === 0) return `Level with the same point last month${noun}`;
+    return `${fmtCurrency(Math.abs(delta))} ${delta > 0 ? 'more' : 'less'} than the same point last month${noun}`;
+  };
 
   const handleFilterChange = (label) => {
     setFilter(label);
+    const rangeStart = new Date();
     let from = null;
-    const now = new Date();
-    if (label === 'Last 30 Days') from = new Date(now.setDate(now.getDate() - 30)).toISOString().split('T')[0];
-    else if (label === 'Last 90 Days') from = new Date(now.setDate(now.getDate() - 90)).toISOString().split('T')[0];
-    else if (label === 'This Year') from = `${new Date().getFullYear()}-01-01`;
-    startTransition(() => {
-      Promise.all([
-        getRevenueKPIs({ from, to: null }),
+    if (label === 'Last 30 Days') {
+      rangeStart.setDate(rangeStart.getDate() - 30);
+      from = rangeStart.toISOString().split('T')[0];
+    } else if (label === 'Last 90 Days') {
+      rangeStart.setDate(rangeStart.getDate() - 90);
+      from = rangeStart.toISOString().split('T')[0];
+    } else if (label === 'This Year') {
+      from = `${rangeStart.getFullYear()}-01-01`;
+    }
+
+    startTransition(async () => {
+      const [nextCustomers, nextProducts, nextCashFlow, nextExpenseCats] = await Promise.all([
         getRepeatCustomerRate({ from, to: null }),
         getProductPerformance({ from, to: null }),
-        getMonthlyBaseRevenue({ from, to: null }),
-        getCostPriceTrend({ from, to: null }),
-        getMonthlySurplusDeficit(),
-        getBreakEvenProjection(),
+        getCashFlowTrend({ from, to: null }),
         getTopExpenseCategories({ from, to: null }),
-      ]).then(([rev, cust, prod, bTrend, cTrend, prof, proj, eCats]) => {
-        setRevenue(rev); setCustomers(cust); setProducts(prod);
-        setBaseTrend(bTrend); setCostTrend(cTrend); setProfitability(prof);
-        setProjection(proj); setExpenseCats(eCats);
-      });
+      ]);
+      setCustomers(nextCustomers);
+      setProducts(nextProducts);
+      setCashFlow(nextCashFlow);
+      setExpenseCats(nextExpenseCats);
     });
   };
 
-  // ── Derived values ──────────────────────────────────────────────────────────
-  const totalBaseRevenue = products.revenue_by_base.reduce((s, i) => s + i.revenue, 0);
-  const topProductsSorted = [...products.top_products].sort((a, b) => b.revenue - a.revenue);
-  const sortedBaseRevenue = [...products.revenue_by_base]
-    .filter((item) => item.revenue > 0)
-    .sort((a, b) => b.revenue - a.revenue);
-  const baseRevenueData = sortedBaseRevenue.length > 5
-    ? [
-        ...sortedBaseRevenue.slice(0, 4),
-        {
-          base_type: 'Other',
-          revenue: sortedBaseRevenue.slice(4).reduce((sum, item) => sum + item.revenue, 0),
-        },
-      ]
-    : sortedBaseRevenue;
+  const topProducts = [...products.top_products]
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 6);
+  const maxExpense = expenseCats[0]?.total || 1;
 
-  const { this_month: tm, last_month: lm } = snapshot;
-  const paceComparison = snapshot.last_month_same_period || lm;
-  const dayOfMonth  = new Date().getDate();
-  const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-  const paceBar = Math.min((dayOfMonth / daysInMonth) * 100, 100);
-
-  // "Needs attention" = statuses waiting on YOU right now. Dispatched and
-  // In Manufacturing are normal pipeline, not alarms — counting them would
-  // leave the banner permanently amber and train the eye to ignore it.
-  const ACTION_NOW_STATUSES = ['Awaiting Payment', 'Payment Confirmed', 'Ready to Dispatch'];
-  const totalActionable = actionable
-    .filter((r) => ACTION_NOW_STATUSES.includes(r.status))
-    .reduce((s, r) => s + r.count, 0);
-
-  const filterScope = filter === 'All Time' ? 'All available records' : filter;
-  const projectedRevenue = dayOfMonth >= 7 ? tm.revenue * (daysInMonth / dayOfMonth) : null;
-  const revenuePaceDelta = tm.revenue - paceComparison.revenue;
-
-  // ── Traffic lights ──────────────────────────────────────────────────────────
-  const repeatRate = customers.repeat_rate;
-  const customerStatus = repeatRate >= 40 ? { status: 'green', label: 'Healthy',     note: `${fmt(repeatRate, 1)}% repeat` }
-    : repeatRate >= 20  ? { status: 'amber', label: 'Building',    note: `${fmt(repeatRate, 1)}% repeat` }
-    :                     { status: 'red',   label: 'Low loyalty', note: `${fmt(repeatRate, 1)}% repeat` };
-
-  const lastCost = costTrend[costTrend.length - 1];
-  const unitMargin = lastCost?.avg_selling_price > 0
-    ? (lastCost.avg_selling_price - lastCost.cost_price_per_soap) / lastCost.avg_selling_price : null;
-  const perSoapProfit = unitMargin == null ? null
-    : fmtCurrency(lastCost.avg_selling_price - lastCost.cost_price_per_soap);
-  const opsStatus = unitMargin == null ? { status: 'amber', label: 'No data', note: '' }
-    : unitMargin >= 0.40 ? { status: 'green', label: 'Healthy margin', note: `≈${perSoapProfit} profit per soap` }
-    : unitMargin >= 0.20 ? { status: 'amber', label: 'Tight margin',   note: `≈${perSoapProfit} profit per soap` }
-    :                      { status: 'red',   label: 'Low margin',     note: `≈${perSoapProfit} profit per soap` };
-
-  const pl = revenue.profit_loss;
-  const profitStatus = pl > 0                              ? { status: 'green', label: 'In profit',      note: `+${fmtCurrency(pl)}` }
-    : pl > -(revenue.total_revenue * 0.1)                  ? { status: 'amber', label: 'Near breakeven', note: fmtCurrency(pl) }
-    :                                                        { status: 'red',   label: 'At a loss',      note: fmtCurrency(pl) };
-
-  const paceKnown = dayOfMonth >= 7; // same guard as DeltaCard — early-month deltas are noise
-  const healthTone = totalActionable > 0 || (paceKnown && revenuePaceDelta < 0) ? '#D97706' : '#16A34A';
-  const healthSummary = totalActionable > 0
-    ? `${totalActionable} order${totalActionable === 1 ? '' : 's'} need attention`
-    : paceKnown && revenuePaceDelta < 0 ? 'Revenue is behind pace' : 'Business is on track';
-
-  const toggleMobileSection = (section) => {
-    setMobileSections((current) => ({ ...current, [section]: !current[section] }));
-  };
-
-  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '100px' }}>
-
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+    <main className="money-dashboard">
+      <header className="money-header">
         <div>
-          <h1 style={{ fontFamily: 'DM Serif Display, serif', fontSize: isMobile ? '28px' : '34px', color: '#1B4332', margin: '0 0 4px 0' }}>Dashboard</h1>
-          <p style={{ color: '#6B7280', fontSize: '14px', margin: 0 }}>Business health at a glance</p>
+          <h1>Money dashboard</h1>
+          <p>{monthName} · day {dayOfMonth} of {daysInMonth}</p>
         </div>
-        <div className="dashboard-filter" role="group" aria-label="Dashboard date range" style={{ display: 'flex', background: '#FFFFFF', padding: '4px', borderRadius: '10px', border: '1px solid #E9E2D4' }}>
-          {['All Time', 'This Year', 'Last 90 Days', 'Last 30 Days'].map((label) => (
-            <button key={label} aria-pressed={filter === label} onClick={() => handleFilterChange(label)} style={{ padding: '7px 14px', borderRadius: '7px', fontSize: '12px', fontWeight: 600, border: 'none', background: filter === label ? '#1B4332' : 'transparent', color: filter === label ? '#FFFFFF' : '#6B7280', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      </header>
 
-      <div className="dashboard-health-summary" style={{ borderLeftColor: healthTone }}>
-        <div className="dashboard-health-icon" style={{ background: `${healthTone}14`, color: healthTone }}>
-          <CircleDollarSign size={20} />
+      <section className={`money-status money-status-${healthTone}`} aria-live="polite">
+        <div className="money-status-icon">
+          {healthTone === 'green' ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="dashboard-health-title">{healthSummary}</div>
-          <div className="dashboard-health-copy">
-            {!paceKnown
-              ? <>Day {dayOfMonth} — too early in the month for a fair comparison with last month.</>
-              : revenuePaceDelta === 0
-                ? <>Revenue is <strong>level with the same point last month</strong>.</>
-                : <>Revenue is {revenuePaceDelta > 0 ? 'ahead of' : 'behind'} the same point last month by <strong>{fmtCurrency(Math.abs(revenuePaceDelta))}</strong>.</>}
-            {unitMargin != null && <>
-              {' '}A soap costs about <strong>{fmtCurrency(lastCost.cost_price_per_soap)}</strong> to make and sells for about <strong>{fmtCurrency(lastCost.avg_selling_price)}</strong> — roughly <strong>{fmtCurrency(lastCost.avg_selling_price - lastCost.cost_price_per_soap)}</strong> profit on each one.
-            </>}
-          </div>
-        </div>
-        {totalActionable > 0 && <Link href="/orders" className="dashboard-health-link">Review orders <ChevronRight size={15} /></Link>}
-      </div>
-
-      <div className="dashboard-scope-note"><span>{filterScope}</span> applies to Products, customer rate, and period finance KPIs. This Month and customer lists remain current/lifetime views.</div>
-
-      <div className="dashboard-total-revenue" aria-live="polite" aria-busy={isPending}>
         <div>
-          <div className="dashboard-total-revenue-label">Total Revenue</div>
-          <div className="dashboard-total-revenue-scope">{filterScope}</div>
+          <h2>{healthTitle}</h2>
+          <p>{healthCopy}</p>
         </div>
-        <div className="dashboard-total-revenue-value">
-          {isPending ? <Loader2 size={26} className="animate-spin" aria-label="Updating total revenue" /> : fmtCurrency(revenue.total_revenue)}
+        <a href="#money-definition">See how this is calculated <ChevronRight size={15} /></a>
+      </section>
+
+      <section className="money-scoreboard" aria-label="Current month cash summary">
+        <div className="money-scoreboard-primary">
+          <CashMetric
+            label="Money in"
+            value={fmtCurrency(thisMonth.revenue)}
+            note={dayOfMonth >= 7 ? changeCopy(thisMonth.revenue, paceComparison.revenue) : 'Month still too early for a fair comparison'}
+            tone="green"
+          />
+          <CashMetric
+            label="Money out"
+            value={fmtCurrency(thisMonth.expenses)}
+            note={dayOfMonth >= 7 ? changeCopy(thisMonth.expenses, paceComparison.expenses || 0) : 'Recorded expenses so far'}
+            tone="red"
+          />
+          <CashMetric
+            label="Net cash"
+            value={signedCurrency(thisMonthNet)}
+            note={dayOfMonth >= 7 ? changeCopy(thisMonthNet, comparisonNet) : 'Money in minus money out'}
+            helper="Recorded cash, not accounting profit"
+            tone={thisMonthNet >= 0 ? 'green' : 'red'}
+          />
         </div>
-        <div className="dashboard-total-revenue-meta">
-          <span><strong>{fmtNum(revenue.orders_count)}</strong> orders</span>
-          <span><strong>{fmtCurrency(revenue.avg_order_value)}</strong> average order</span>
+        <div className="money-scoreboard-secondary">
+          <CashMetric
+            label="Money waiting"
+            value={fmtCurrency(initialRevenue.pending_revenue)}
+            helper="Unpaid orders; not counted as money in"
+          />
+          <CashMetric
+            label="Lifetime cash position"
+            value={signedCurrency(lifetimeNet)}
+            helper="All recorded money in minus all recorded spend"
+            tone={lifetimeNet >= 0 ? 'green' : 'red'}
+          />
+          <CashMetric
+            label="Orders needing action"
+            value={fmtNumber(ordersNeedingAction)}
+            helper={ordersNeedingAction > 0 ? 'Waiting on payment, confirmation, or dispatch' : 'No orders need your attention'}
+          />
         </div>
-      </div>
+      </section>
 
-      {/* ─── THIS MONTH ──────────────────────────────────────── */}
-      <div style={{ marginBottom: '40px' }}>
-        <SectionHeader title="This Month" icon={ShoppingBag} accentColor="#1B4332" />
-
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: '16px', marginBottom: '16px' }}>
-          <DeltaCard label="Revenue"    value={fmtCurrency(tm.revenue)} delta={tm.revenue - paceComparison.revenue} dayOfMonth={dayOfMonth} color="#1B4332" format="currency" loading={false} isMobile={isMobile} />
-          <DeltaCard label="Orders"     value={fmtNum(tm.orders)}       delta={tm.orders  - paceComparison.orders}  dayOfMonth={dayOfMonth} color="#1B4332" format="number"   loading={false} isMobile={isMobile} />
-          <DeltaCard label="Soaps Sold" value={fmtNum(tm.soaps)}        delta={tm.soaps   - paceComparison.soaps}   dayOfMonth={dayOfMonth} color="#1B4332" format="number"   loading={false} isMobile={isMobile} />
-          {(() => {
-            const net = tm.revenue - tm.expenses;
-            const netColor = net >= 0 ? '#16A34A' : '#DC2626';
-            return (
-              <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '12px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: isMobile ? '14px 16px' : '20px 24px', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: netColor }} />
-                <div style={{ fontSize: '11px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Profit This Month</div>
-                <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: 800, color: netColor, fontFamily: 'DM Serif Display, serif', marginBottom: '6px' }}>
-                  {net >= 0 ? '+' : ''}{fmtCurrency(net)}
-                </div>
-                <div style={{ fontSize: '11px', color: '#9CA3AF' }}>earned {fmtCurrency(tm.revenue)} · spent {fmtCurrency(tm.expenses)}</div>
-              </div>
-            );
-          })()}
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
-          {/* Monthly pace card */}
-          <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '12px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: '20px 24px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Month Progress</div>
-            <div style={{ marginBottom: '10px' }}>
-              <span style={{ fontSize: '22px', fontWeight: 800, color: '#111827', fontFamily: 'DM Serif Display, serif' }}>{fmtCurrency(tm.revenue)}</span>
-              <span style={{ fontSize: '13px', color: '#6B7280', marginLeft: '8px' }}>so far</span>
-            </div>
-            {/* Day-of-month progress bar */}
-            <div style={{ height: '6px', background: '#F0EBDF', borderRadius: '3px', overflow: 'hidden', marginBottom: '10px' }}>
-              <div style={{ height: '100%', width: `${paceBar}%`, background: '#D1FAE5', borderRadius: '3px', position: 'relative' }}>
-                <div style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: '3px', background: '#1B4332', borderRadius: '2px' }} />
-              </div>
-            </div>
-            {/* Context — no projection, just reference points */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280' }}>
-              <span>Day {dayOfMonth} of {daysInMonth}</span>
-              <span>Last month total <strong style={{ color: '#374151' }}>{fmtCurrency(lm.revenue)}</strong></span>
-            </div>
-            {projection.avgMonthlyRevenue > 0 && (
-              <div style={{ marginTop: '8px', fontSize: '12px', color: '#6B7280' }}>
-                6-month avg <strong style={{ color: '#374151' }}>{fmtCurrency(projection.avgMonthlyRevenue)}</strong>
-              </div>
-            )}
-            {projectedRevenue != null && <div style={{ marginTop: '6px', fontSize: '12px', color: '#1B4332' }}>Current pace projects <strong>{fmtCurrency(projectedRevenue)}</strong> by month end</div>}
-          </div>
-
-          {/* Actionable orders */}
-          <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '12px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: '20px 24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Orders in Progress</div>
-              {totalActionable > 0 && <div style={{ background: '#FEF2F2', color: '#DC2626', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>{totalActionable} need action</div>}
-            </div>
-            {actionable.length === 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#16A34A', fontSize: '14px', fontWeight: 600, padding: '8px 0' }}>
-                <CheckCircle size={18} /> All clear
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {actionable.map((row) => {
-                  const meta = STATUS_META[row.status] || { icon: Clock, color: '#6B7280', bg: '#F9FAFB' };
-                  const StatusIcon = meta.icon;
-                  return (
-                    <Link href="/orders" key={row.status} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: meta.bg, borderRadius: '8px', textDecoration: 'none' }}>
-                      <StatusIcon size={14} color={meta.color} />
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#111827', flex: 1 }}>{row.status}</span>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: meta.color }}>{row.count}</span>
-                      <span style={{ fontSize: '12px', color: '#6B7280' }}>{fmtCurrency(row.value)}</span>
-                      <ChevronRight size={14} color={meta.color} />
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-            {revenue.pending_revenue > 0 && (
-              <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #F0EBDF', fontSize: '12px', color: '#6B7280', lineHeight: 1.5 }}>
-                <strong style={{ color: '#92400E' }}>{fmtCurrency(revenue.pending_revenue)}</strong> sits in orders placed but not paid yet — not counted in revenue until the money arrives.
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ─── PRODUCTS ────────────────────────────────────────── */}
-      <div style={{ marginBottom: '40px' }}>
-        <MobileSectionToggle visible={isMobile} expanded={mobileSections.products} onToggle={() => toggleMobileSection('products')} label="Products" statusText={opsStatus.label} />
-        {(!isMobile || mobileSections.products) && <>
-        {!isMobile && <SectionHeader title="Products" icon={Package} accentColor="#B45309" status={opsStatus.status} statusLabel={opsStatus.label} statusNote={opsStatus.note} />}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.4fr 1fr', gap: '20px' }}>
-
-          <ChartCard title="Top Products by Revenue" subtitle="Coloured by soap base" loading={isPending} empty={products.top_products.length === 0} icon={Package} isMobile={isMobile}>
-            <div style={{ height: isMobile ? '260px' : '300px', width: '100%', minWidth: 0, minHeight: 0 }}>
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 600, height: 300 }}>
-                <BarChart layout="vertical" data={topProductsSorted} margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#374151' }} width={isMobile ? 80 : 110} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="revenue" name="Revenue" fill="#2F8F5B" radius={[0, 6, 6, 0]}>
-                    {topProductsSorted.map((p) => (
-                      <Cell key={p.name} fill={colourForBase(p.base_type)} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            {/* Per-unit price vs make cost — instant win/lose read, not a bare number */}
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px', alignItems: 'center' }}>
-              {lastCost?.cost_price_per_soap > 0 && (
-                <span style={{ fontSize: '11px', color: '#6B7280' }}>each soap costs ~{fmtCurrency(lastCost.cost_price_per_soap)} to make:</span>
-              )}
-              {topProductsSorted.slice(0, 4).map((p) => {
-                // Actual price charged per unit — not the net-of-shipping/discount
-                // "revenue" used for the bar chart, which can drift from the real
-                // catalog price when orders mix products or carry a discount.
-                const asp = p.units_sold > 0 ? p.gross_revenue / p.units_sold : 0;
-                // Travel packs are 1/5th of a soap — blended make cost doesn't apply per piece
-                const margin = lastCost?.cost_price_per_soap > 0 && asp > 0 && p.base_type !== 'Travel'
-                  ? (asp - lastCost.cost_price_per_soap) / asp : null;
-                const tone = margin == null ? { bg: '#F9FAFB', border: '#E5E7EB', text: '#4B5563' }
-                  : margin >= 0.40 ? { bg: '#F0FDF4', border: '#DCFCE7', text: '#166534' }
-                  : margin >= 0.20 ? { bg: '#FFFBEB', border: '#FDE68A', text: '#92400E' }
-                  :                  { bg: '#FEF2F2', border: '#FECACA', text: '#991B1B' };
-                const profit = margin == null ? null : Math.round(asp - lastCost.cost_price_per_soap);
-                return (
-                  <div key={p.name} style={{ fontSize: '11px', background: tone.bg, border: `1px solid ${tone.border}`, borderRadius: '6px', padding: '3px 8px', color: tone.text }}>
-                    <span style={{ fontWeight: 700 }}>{p.name.split(' ')[0]}</span> · sells ₹{Math.round(asp)}
-                    {profit != null && <> · <span style={{ fontWeight: 700 }}>{profit >= 0 ? `₹${profit} profit` : `loses ₹${Math.abs(profit)}`}</span> each</>}
-                  </div>
-                );
-              })}
-            </div>
-          </ChartCard>
-
-          <ChartCard title="Revenue by Base Type" subtitle="Which soap category earns most" loading={isPending} empty={products.revenue_by_base.length === 0} icon={Package} isMobile={isMobile}>
-            <div style={{ height: isMobile ? '260px' : '300px', position: 'relative', minWidth: 0, minHeight: 0 }}>
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 420, height: 300 }}>
-                <PieChart>
-                  <Pie data={baseRevenueData} dataKey="revenue" nameKey="base_type" cx="50%" cy="47%" innerRadius={isMobile ? 48 : 62} outerRadius={isMobile ? 76 : 96} paddingAngle={2}>
-                    {baseRevenueData.map((entry) => (
-                      <Cell key={entry.base_type} fill={colourForBase(entry.base_type)} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(v) => { const item = baseRevenueData.find(d => d.base_type === v); return <span style={{ color: '#4B5563', fontSize: '11px' }}>{v}: <b>{fmtCurrency(item?.revenue)}</b></span>; }} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div style={{ position: 'absolute', top: '43%', left: '50%', transform: 'translate(-50%,-50%)', textAlign: 'center', pointerEvents: 'none' }}>
-                <div style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 800, color: '#111827', fontFamily: 'DM Serif Display, serif' }}>{fmtCurrency(totalBaseRevenue)}</div>
-                <div style={{ fontSize: '10px', color: '#6B7280' }}>total</div>
-              </div>
-            </div>
-          </ChartCard>
-        </div>
-
-        <div style={{ marginTop: '20px' }}>
-          <ChartCard title="Monthly Revenue by Soap Base" subtitle="Which bases are in demand each month" loading={isPending} empty={baseTrend.months.length === 0} icon={Package} isMobile={isMobile}>
-            <div style={{ height: isMobile ? '280px' : '320px', width: '100%', minWidth: 0, minHeight: 0 }}>
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 900, height: 320 }}>
-                <BarChart data={baseTrend.months} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F0EBDF" vertical={false} />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmtNum(v)}`} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(v) => <span style={{ color: '#4B5563', fontSize: '11px' }}>{v}</span>} />
-                  {baseTrend.base_types.map((base) => (
-                    <Bar key={base} dataKey={base} name={base} stackId="base" fill={colourForBase(base)} stroke="#FFFFFF" strokeWidth={1} maxBarSize={56} />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </ChartCard>
-        </div>
-        </>}
-      </div>
-
-      {/* ─── CUSTOMERS ───────────────────────────────────────── */}
-      <div style={{ marginBottom: '40px' }}>
-        <MobileSectionToggle visible={isMobile} expanded={mobileSections.customers} onToggle={() => toggleMobileSection('customers')} label="Customers" statusText={`${fmt(repeatRate, 1)}% repeat`} />
-        {(!isMobile || mobileSections.customers) && <>
-        {!isMobile && <SectionHeader title="Customers" icon={Users} accentColor="#6B21A8" status={customerStatus.status} statusLabel={customerStatus.label} statusNote={customerStatus.note} />}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '20px' }}>
-
-          {/* Going quiet — repeat customers overdue for their next order */}
-          <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '16px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: isMobile ? '20px' : '28px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: 0, fontFamily: 'DM Serif Display, serif' }}>Going Quiet</h3>
-                <p style={{ fontSize: '12px', color: '#6B7280', margin: '3px 0 0 0' }}>Overdue for their next order — worth a message</p>
-              </div>
-              {quietCustomers.length > 0 && <div style={{ background: '#FFFBEB', color: '#92400E', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '12px' }}>{quietCustomers.length}</div>}
-            </div>
-            {quietCustomers.length === 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#16A34A', fontSize: '13px', fontWeight: 600, padding: '16px 0' }}>
-                <CheckCircle size={16} /> No one's gone quiet
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {quietCustomers.map((c) => (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#FFFBEB', borderRadius: '10px', border: '1px solid #FDE68A' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#92400E' }}>{c.name.charAt(0)}</span>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
-                      <div style={{ fontSize: '11px', color: '#92400E' }}>usually orders every {c.avg_gap_days} days — quiet for {c.days_quiet}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Repeat customers */}
-          <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '16px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: isMobile ? '20px' : '28px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: 0, fontFamily: 'DM Serif Display, serif' }}>Repeat Customers</h3>
-                <p style={{ fontSize: '12px', color: '#6B7280', margin: '3px 0 0 0' }}>
-                  Ordered more than once{repeatRate > 0 && <> — about <strong style={{ color: '#374151' }}>1 in {Math.max(1, Math.round(100 / repeatRate))}</strong> of your customers comes back</>}
-                </p>
-              </div>
-              {repeatCustomers.length > 0 && <div style={{ background: '#F5F3FF', color: '#6B21A8', fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '12px' }}>{repeatCustomers.length}</div>}
-            </div>
-            {repeatCustomers.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#9CA3AF', fontSize: '13px' }}>No repeat customers yet</div>
-            ) : (
-              <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '380px', overflowY: 'auto' }}>
-                  {repeatCustomers.map((c) => (
-                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#FBF9F3', borderRadius: '10px', border: '1px solid #F0EBDF' }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#F5F3FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#6B21A8' }}>{c.name.charAt(0)}</span>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
-                        <div style={{ fontSize: '11px', color: '#6B7280' }}>{c.order_count} orders · last {new Date(c.last_order_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <Link href="/repeat-customers" style={{ display: 'block', textAlign: 'center', marginTop: '14px', fontSize: '12px', fontWeight: 700, color: '#6B21A8', textDecoration: 'none' }}>
-                  View all &amp; soap history →
-                </Link>
-              </>
-            )}
-          </div>
-
-          {/* Top customers by LTV */}
-          <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '16px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: isMobile ? '20px' : '28px' }}>
-            <div style={{ marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: 0, fontFamily: 'DM Serif Display, serif' }}>Top Customers</h3>
-              <p style={{ fontSize: '12px', color: '#6B7280', margin: '3px 0 0 0' }}>By lifetime spend</p>
-            </div>
-            {topCustomers.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#9CA3AF', fontSize: '13px' }}>No data yet</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {topCustomers.map((c, i) => (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0', borderBottom: i < topCustomers.length - 1 ? '1px solid #F0EBDF' : 'none' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 800, color: '#9CA3AF', width: '20px', textAlign: 'center', flexShrink: 0 }}>#{i + 1}</span>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F5F3FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontSize: '12px', fontWeight: 800, color: '#6B21A8' }}>{c.name.charAt(0)}</span>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
-                      <div style={{ fontSize: '11px', color: '#6B7280' }}>{c.order_count} orders</div>
-                    </div>
-                    <div style={{ fontSize: '14px', fontWeight: 800, color: '#1B4332', flexShrink: 0 }}>{fmtCurrency(c.total_spend)}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        </>}
-      </div>
-
-      {/* ─── FINANCES ────────────────────────────────────────── */}
-      <div style={{ marginBottom: '40px' }}>
-        <MobileSectionToggle visible={isMobile} expanded={mobileSections.finances} onToggle={() => toggleMobileSection('finances')} label="Finances" statusText={profitStatus.label} />
-        {(!isMobile || mobileSections.finances) && <>
-        {!isMobile && <SectionHeader title="Finances" icon={DollarSign} accentColor="#2C6E9E" status={profitStatus.status} statusLabel={profitStatus.label} statusNote={profitStatus.note} />}
-
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px', marginBottom: '20px' }}>
-          <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '12px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: '20px 24px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#C44536' }} />
-            <div style={{ fontSize: '11px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Cost per Soap</div>
-            <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: 800, color: '#111827', fontFamily: 'DM Serif Display, serif', marginBottom: '4px' }}>
-              {lastCost?.cost_price_per_soap > 0 ? fmtCurrency(lastCost.cost_price_per_soap) : '—'}
-            </div>
-            <div style={{ fontSize: '12px', color: '#6B7280', lineHeight: 1.5 }}>
-              What one soap costs you all-in (every recurring expense ÷ every soap sold)
-              {lastCost?.avg_selling_price > 0 && <> — and you sell at <strong style={{ color: '#374151' }}>{fmtCurrency(lastCost.avg_selling_price)}</strong> on average</>}.
+      <section className="money-two-column">
+        <article className="money-panel money-pace-panel">
+          <div className="money-panel-heading">
+            <div>
+              <h2>Month pace</h2>
+              <p>A pace estimate, not a forecast</p>
             </div>
           </div>
-          <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '12px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: '20px 24px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: pl >= 0 ? '#16A34A' : '#DC2626' }} />
-            <div style={{ fontSize: '11px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Net Profit / Loss</div>
-            <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: 800, color: pl >= 0 ? '#16A34A' : '#DC2626', fontFamily: 'DM Serif Display, serif', marginBottom: '4px' }}>
-              {pl >= 0 ? '+' : ''}{fmtCurrency(pl)}
-            </div>
-            <div style={{ fontSize: '12px', color: '#6B7280', lineHeight: 1.5 }}>
-              {pl >= 0
-                ? <>You've earned <strong style={{ color: '#374151' }}>{fmtCurrency(pl)}</strong> more than you've spent, everything included.</>
-                : <>You've spent <strong style={{ color: '#374151' }}>{fmtCurrency(Math.abs(pl))}</strong> more than you've earned so far, everything included.</>}
-              {' '}(Earned {fmtCurrency(revenue.total_revenue)} · spent {fmtCurrency(revenue.total_expenses)})
-            </div>
+          <div className="money-pace-track" aria-label={`Day ${dayOfMonth} of ${daysInMonth}`}>
+            <div style={{ width: `${monthProgress}%` }} />
           </div>
-          <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '12px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: '20px 24px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: pl >= 0 ? '#16A34A' : '#DC2626' }} />
-            <div style={{ fontSize: '11px', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Break-Even</div>
-            <div style={{ fontSize: isMobile ? '24px' : '30px', fontWeight: 800, color: '#111827', fontFamily: 'DM Serif Display, serif', marginBottom: '4px' }}>
-              {projection.flatBreakEvenMonth}
-            </div>
-            <div style={{ fontSize: '12px', color: '#6B7280', lineHeight: 1.5 }}>
-              {projection.flatBreakEvenMonth === 'Never'
-                ? <>Monthly costs are higher than monthly revenue right now, so the {fmtCurrency(projection.gapToClose)} gap isn't closing.</>
-                : projection.flatBreakEvenMonth
-                  ? <>Keep the current pace ({fmtCurrency(projection.avgMonthlyRevenue)}/month) and by then you'll have earned back everything spent since day one — {fmtCurrency(projection.gapToClose)} still to recover.</>
-                  : <>Not enough history yet to project this.</>}
-            </div>
+          <div className="money-pace-values">
+            <div><span>Current money in</span><strong>{fmtCurrency(thisMonth.revenue)}</strong><small>Day {dayOfMonth} of {daysInMonth}</small></div>
+            <div><span>Last month total</span><strong>{fmtCurrency(lastMonth.revenue)}</strong><small>Completed month</small></div>
+            <div><span>If this pace continues</span><strong>{projectedRevenue == null ? 'Too early' : fmtCurrency(projectedRevenue)}</strong><small>Not guaranteed</small></div>
           </div>
-        </div>
+        </article>
 
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.7fr 1fr', gap: '20px' }}>
-        <ChartCard title="Monthly Surplus / Deficit" subtitle="Revenue vs costs — are we making money each month?" loading={isPending} empty={profitability.length === 0} icon={DollarSign} isMobile={isMobile}>
-          <div style={{ height: isMobile ? '280px' : '320px', width: '100%', minWidth: 0, minHeight: 0 }}>
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 900, height: 320 }}>
-              <ComposedChart data={profitability} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F0EBDF" vertical={false} />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} />
-                <YAxis yAxisId="money" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(v) => `₹${fmtNum(Math.round(v / 10) * 10)}`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                <Bar yAxisId="money" dataKey="revenue" name="Revenue" fill="#2F8F5B" radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="money" dataKey="recurring_costs" name="Costs" fill="#C44536" radius={[4, 4, 0, 0]} />
-                <Line yAxisId="money" type="monotone" dataKey="surplus_deficit" name="Surplus/Deficit" stroke="#1B4332" strokeWidth={2.5} dot={{ fill: '#1B4332', r: 3.5 }} />
-                <ReferenceLine yAxisId="money" y={0} stroke="#9CA3AF" strokeDasharray="3 3" />
-              </ComposedChart>
-            </ResponsiveContainer>
+        <article className="money-panel">
+          <div className="money-panel-heading">
+            <div>
+              <h2>Orders in progress</h2>
+              <p>Operational work tied to future or recognised cash</p>
+            </div>
+            <Link href="/orders">View orders <ChevronRight size={14} /></Link>
           </div>
-        </ChartCard>
-
-        {/* Where the money goes — biggest spending categories */}
-        <div style={{ background: '#FFFFFF', border: '1px solid #E9E2D4', borderRadius: '16px', boxShadow: '0 1px 3px rgba(27, 67, 50, 0.06)', padding: isMobile ? '20px' : '28px' }}>
-          <div style={{ marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: 0, fontFamily: 'DM Serif Display, serif' }}>Where the Money Goes</h3>
-            <p style={{ fontSize: '12px', color: '#6B7280', margin: '3px 0 0 0' }}>Biggest spending categories — {filterScope.toLowerCase()}</p>
-          </div>
-          {expenseCats.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '32px 0', color: '#9CA3AF', fontSize: '13px' }}>No expenses recorded</div>
+          {initialActionable.length === 0 ? (
+            <EmptyState><CheckCircle size={17} /> All clear</EmptyState>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {expenseCats.map((cat) => {
-                const maxTotal = expenseCats[0].total;
+            <div className="money-order-list">
+              {initialActionable.map((row) => {
+                const meta = STATUS_META[row.status] || { icon: Clock, color: '#6B7280', bg: '#F9FAFB' };
+                const StatusIcon = meta.icon;
                 return (
-                  <div key={cat.name}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '5px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>
-                        {cat.name}
-                        {cat.type === 'one_time' && <span style={{ fontSize: '10px', fontWeight: 600, color: '#9CA3AF', marginLeft: '6px' }}>one-time</span>}
-                      </span>
-                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#374151' }}>{fmtCurrency(cat.total)}</span>
-                    </div>
-                    <div style={{ height: '6px', background: '#F0EBDF', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${(cat.total / maxTotal) * 100}%`, background: cat.type === 'recurring' ? '#2C6E9E' : '#9CA3AF', borderRadius: '3px' }} />
-                    </div>
-                  </div>
+                  <Link href="/orders" key={row.status} style={{ '--status-color': meta.color, '--status-bg': meta.bg }}>
+                    <StatusIcon size={15} />
+                    <span>{row.status}</span>
+                    <strong>{row.count}</strong>
+                    <small>{fmtCurrency(row.value)}</small>
+                    <ChevronRight size={14} />
+                  </Link>
                 );
               })}
-              <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px', lineHeight: 1.5 }}>
-                Blue bars repeat every month; grey were one-off purchases. Total spent: <strong style={{ color: '#374151' }}>{fmtCurrency(revenue.total_expenses)}</strong>.
-              </div>
             </div>
           )}
-        </div>
-        </div>
-        </>}
-      </div>
+        </article>
+      </section>
 
-    </div>
+      <section className="money-readiness" id="money-definition">
+        <div className="money-readiness-copy">
+          <Info size={20} />
+          <div>
+            <span>Numbers we can trust</span>
+            <h2>Cash view is ready. Profit and break-even are not yet reliable.</h2>
+            <p>
+              Ingredient purchases are recorded as expenses, but batch cost, labour, and sellable yield are not linked to products.
+              {' '}Only {initialDataQuality.orders_with_material_cost} of {initialDataQuality.recognised_orders} recognised orders include material cost.
+            </p>
+          </div>
+        </div>
+        <div className="money-readiness-metric">
+          <span>Cost recovery</span>
+          <strong>{recoveryGap > 0 ? `${fmtCurrency(recoveryGap)} left to recover` : 'Recorded spend recovered'}</strong>
+          <small>Lifetime recorded cash</small>
+        </div>
+        <div className="money-readiness-metric">
+          <span>Break-even</span>
+          <strong>Not calculated</strong>
+          <small>Needs fixed costs + unit contribution margin</small>
+        </div>
+      </section>
+
+      <section className="money-analysis-header">
+        <div>
+          <h2>Look back and decide</h2>
+          <p>Historical patterns sit below the current-month cash view.</p>
+        </div>
+        <div className="money-period" role="group" aria-label="Analysis period">
+          <span>Analysis period</span>
+          <div>
+            {['All Time', 'This Year', 'Last 90 Days', 'Last 30 Days'].map((label) => (
+              <button
+                type="button"
+                key={label}
+                aria-pressed={filter === label}
+                onClick={() => handleFilterChange(label)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="money-analysis-grid" aria-busy={isPending}>
+        {isPending && <div className="money-loading"><Loader2 className="animate-spin" size={28} /> Updating analysis</div>}
+
+        <article className="money-panel money-chart-panel">
+          <div className="money-panel-heading">
+            <div>
+              <h2>Net cash by month</h2>
+              <p>Money in, all recorded money out, and the difference · {periodLabel(filter)}</p>
+            </div>
+          </div>
+          {cashFlow.length === 0 ? (
+            <EmptyState>No cash history in this period</EmptyState>
+          ) : (
+            <div className="money-chart">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 760, height: 310 }}>
+                <ComposedChart data={cashFlow} margin={{ top: 8, right: 14, left: 2, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EDE6D9" vertical={false} />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={(value) => `₹${Math.round(value / 1000)}k`} />
+                  <Tooltip content={<CashTooltip />} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
+                  <ReferenceLine y={0} stroke="#9CA3AF" />
+                  <Bar dataKey="revenue" name="Money in" fill="#4F8A67" radius={[3, 3, 0, 0]} maxBarSize={34} />
+                  <Bar dataKey="total_spend" name="Money out" fill="#D76757" radius={[3, 3, 0, 0]} maxBarSize={34} />
+                  <Line dataKey="net_cash_flow" name="Net cash" stroke="#173F31" strokeWidth={2.5} dot={{ r: 3, fill: '#173F31' }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </article>
+
+        <article className="money-panel money-expenses-panel">
+          <div className="money-panel-heading">
+            <div>
+              <h2>Where money went</h2>
+              <p>Ranked by recorded spend · {periodLabel(filter)}</p>
+            </div>
+            <Link href="/expenses">View expenses <ChevronRight size={14} /></Link>
+          </div>
+          {expenseCats.length === 0 ? (
+            <EmptyState>No expenses in this period</EmptyState>
+          ) : (
+            <div className="money-expense-list">
+              {expenseCats.map((category) => (
+                <div key={category.name}>
+                  <div><span>{category.name}</span><strong>{fmtCurrency(category.total)}</strong></div>
+                  <div className="money-expense-bar"><span style={{ width: `${(category.total / maxExpense) * 100}%` }} /></div>
+                  <small>{category.type === 'one_time' ? 'One-time purchase' : 'Recurring category'}</small>
+                </div>
+              ))}
+            </div>
+          )}
+        </article>
+
+        <article className="money-panel money-products-panel">
+          <div className="money-panel-heading">
+            <div>
+              <h2>What sold</h2>
+              <p>Revenue and realised selling price · {periodLabel(filter)}</p>
+            </div>
+            <Link href="/products">View products <ChevronRight size={14} /></Link>
+          </div>
+          {topProducts.length === 0 ? (
+            <EmptyState>No product sales in this period</EmptyState>
+          ) : (
+            <div className="money-table-wrap">
+              <table className="money-table">
+                <thead><tr><th>Product</th><th>Soaps sold</th><th>Revenue</th><th>Avg. selling price</th></tr></thead>
+                <tbody>
+                  {topProducts.map((product) => {
+                    const averagePrice = product.units_sold > 0 ? product.gross_revenue / product.units_sold : 0;
+                    return (
+                      <tr key={product.name}>
+                        <td><strong>{product.name}</strong><small>{product.base_type}</small></td>
+                        <td>{fmtNumber(product.units_sold)}</td>
+                        <td>{fmtCurrency(product.revenue)}</td>
+                        <td>{fmtCurrency(averagePrice)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="money-table-note">Product profit is intentionally not shown until batch and unit costs are linked.</p>
+        </article>
+
+        <article className="money-panel money-customers-panel">
+          <div className="money-panel-heading">
+            <div>
+              <h2>Customers worth a message</h2>
+              <p>Repeat customers overdue for their usual reorder</p>
+            </div>
+            <div className="money-repeat-rate"><strong>{fmtNumber(customers.repeat_rate, 1)}%</strong><span>repeat rate</span></div>
+          </div>
+          {initialQuietCustomers.length === 0 ? (
+            <EmptyState><CheckCircle size={17} /> No repeat customer has gone quiet</EmptyState>
+          ) : (
+            <div className="money-customer-list">
+              {initialQuietCustomers.map((customer) => (
+                <div key={customer.id}>
+                  <span className="money-customer-avatar">{customer.name.charAt(0)}</span>
+                  <div><strong>{customer.name}</strong><small>{customer.order_count} orders</small></div>
+                  <p>Usually every {customer.avg_gap_days} days</p>
+                  <p>Quiet for <strong>{customer.days_quiet} days</strong></p>
+                  <span>Worth a personal check-in</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <Link href="/repeat-customers" className="money-bottom-link">View customer history <ChevronRight size={14} /></Link>
+        </article>
+      </section>
+    </main>
   );
-};
-
-export default DashboardClient;
+}

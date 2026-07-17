@@ -2,16 +2,12 @@ import {
   getRevenueKPIs,
   getRepeatCustomerRate,
   getProductPerformance,
-  getMonthlyBaseRevenue,
-  getCostPriceTrend,
-  getMonthlySurplusDeficit,
-  getBreakEvenProjection,
+  getCashFlowTrend,
+  getDashboardDataQuality,
   getTopExpenseCategories,
   getQuietCustomers,
   getThisMonthSnapshot,
   getActionableOrders,
-  getTopCustomers,
-  getRepeatCustomersList,
 } from '@/lib/queries/dashboard';
 import DashboardClient from './DashboardClient';
 
@@ -19,23 +15,18 @@ export default async function DashboardPage() {
   const range = { from: null, to: null };
 
   const [
-    revenue, customers, products, baseTrend, costTrend,
-    profitability, projection, expenseCats,
-    snapshot, actionable, topCustomers, repeatCustomers, quietCustomers,
+    revenue, customers, products, cashFlow, expenseCats,
+    snapshot, actionable, quietCustomers, dataQuality,
   ] = await Promise.all([
     getRevenueKPIs(range),
     getRepeatCustomerRate(range),
     getProductPerformance(range),
-    getMonthlyBaseRevenue(range),
-    getCostPriceTrend(range),
-    getMonthlySurplusDeficit(),
-    getBreakEvenProjection(),
+    getCashFlowTrend(range),
     getTopExpenseCategories(range),
     getThisMonthSnapshot(),
     getActionableOrders(),
-    getTopCustomers(),
-    getRepeatCustomersList(),
     getQuietCustomers(),
+    getDashboardDataQuality(),
   ]);
 
   return (
@@ -44,16 +35,12 @@ export default async function DashboardPage() {
         initialRevenue={revenue}
         initialCustomers={customers}
         initialProducts={products}
-        initialBaseTrend={baseTrend}
-        initialCostTrend={costTrend}
-        initialProfitability={profitability}
-        initialProjection={projection}
+        initialCashFlow={cashFlow}
         initialExpenseCats={expenseCats}
         initialSnapshot={snapshot}
         initialActionable={actionable}
-        initialTopCustomers={topCustomers}
-        initialRepeatCustomers={repeatCustomers}
         initialQuietCustomers={quietCustomers}
+        initialDataQuality={dataQuality}
       />
     </div>
   );
