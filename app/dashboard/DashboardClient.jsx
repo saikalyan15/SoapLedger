@@ -304,23 +304,23 @@ export default function DashboardClient({
         <div className="money-readiness-copy">
           <Info size={20} />
           <div>
-            <span>How unit cost is calculated</span>
-            <h2>Blended unit cost is ready. Product-level margin is still estimated.</h2>
+            <span>How this average is calculated</span>
+            <h2>Average cost is ready. Profit by product is still an estimate.</h2>
             <p>
-              Last {initialUnitEconomics.window_days} days: {fmtUnitCurrency(initialUnitEconomics.included_spend)} from categories marked “include in cost price”
-              {' '}÷ {fmtNumber(initialUnitEconomics.equivalent_soaps, 1)} equivalent soaps sold. Included: {initialUnitEconomics.included_categories.join(', ')}.
+              In the last {initialUnitEconomics.window_days} days you recorded {fmtUnitCurrency(initialUnitEconomics.included_spend)} for materials, packaging, shipping, and labour,
+              {' '}and sold {fmtNumber(initialUnitEconomics.equivalent_soaps, 1)} soap-equivalents. That is {fmtUnitCurrency(initialUnitEconomics.included_spend)} ÷ {fmtNumber(initialUnitEconomics.equivalent_soaps, 1)} = {fmtUnitCurrency(initialUnitEconomics.unit_cost)} average cost per soap.
             </p>
           </div>
         </div>
         <div className="money-readiness-metric">
-          <span>Blended unit cost</span>
+          <span>Average recorded cost</span>
           <strong>{fmtUnitCurrency(initialUnitEconomics.unit_cost)} per soap</strong>
-          <small>Included recorded costs ÷ equivalent soaps</small>
+          <small>Materials + packaging + shipping + labour</small>
         </div>
         <div className="money-readiness-metric">
-          <span>Est. cash contribution</span>
+          <span>Left after direct costs</span>
           <strong>{fmtUnitCurrency(initialUnitEconomics.unit_contribution)} per soap</strong>
-          <small>{fmtUnitCurrency(initialUnitEconomics.avg_selling_price)} average selling price · before overhead</small>
+          <small>{fmtUnitCurrency(initialUnitEconomics.avg_selling_price)} average sale − {fmtUnitCurrency(initialUnitEconomics.unit_cost)} average cost. This is not profit.</small>
         </div>
         <div className="money-readiness-metric">
           <span>Break-even</span>
