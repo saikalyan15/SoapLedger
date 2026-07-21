@@ -396,42 +396,43 @@ function AddressSticker({ address, brandName, onRemove }) {
         style={{
           display: 'flex',
           flexDirection: 'column',
+          justifyContent: 'space-between',
           height: '100%',
-          padding: '1.5mm 2mm',
+          padding: '2mm 2.5mm',
           boxSizing: 'border-box',
         }}
       >
         {/* FROM tag + brand name */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5mm', marginBottom: '0.8mm' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5mm' }}>
           <span
             style={{
               display: 'inline-block',
               background: COLORS.brand,
               color: 'white',
               fontWeight: 800,
-              fontSize: '5pt',
+              fontSize: '6pt',
               letterSpacing: '0.1em',
               borderRadius: '0.8mm',
-              padding: '0.3mm 1.2mm',
+              padding: '0.4mm 1.5mm',
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact',
             }}
           >
             FROM
           </span>
-          <div style={{ flex: 1, borderTop: `0.15mm solid ${COLORS.brand}`, opacity: 0.4 }} />
-          <span style={{ fontSize: '4.5pt', fontWeight: 700, color: COLORS.brand, whiteSpace: 'nowrap' }}>
+          <div style={{ flex: 1, borderTop: `0.2mm solid ${COLORS.brand}`, opacity: 0.4 }} />
+          <span style={{ fontSize: '6pt', fontWeight: 700, color: COLORS.brand, whiteSpace: 'nowrap' }}>
             {brandName}
           </span>
         </div>
 
         {/* Sender name */}
-        <div style={{ fontSize: '6.5pt', fontWeight: 800, color: COLORS.text, lineHeight: 1.1, marginBottom: '0.3mm' }}>
+        <div style={{ fontSize: '9.5pt', fontWeight: 800, color: COLORS.text, lineHeight: 1.15 }}>
           {address.name}
         </div>
 
         {/* Address lines */}
-        <div style={{ fontSize: '5pt', color: COLORS.text, lineHeight: 1.25, fontWeight: 500, flex: 1 }}>
+        <div style={{ fontSize: '7.5pt', color: COLORS.text, lineHeight: 1.35, fontWeight: 500 }}>
           {address.line1}<br />
           {address.line2}<br />
           {address.line3}<br />
@@ -439,7 +440,7 @@ function AddressSticker({ address, brandName, onRemove }) {
         </div>
 
         {/* Phone */}
-        <div style={{ fontSize: '5.2pt', fontWeight: 700, color: COLORS.text, marginTop: '0.3mm' }}>
+        <div style={{ fontSize: '8pt', fontWeight: 700, color: COLORS.text }}>
           Ph: {address.phone}
         </div>
       </div>
