@@ -2,6 +2,7 @@ import { validateApiKey, ALLOWED_ORIGINS } from '@/lib/auth';
 import { NextResponse } from 'next/server';
 import { Pool } from '@neondatabase/serverless';
 import { normaliseToE164 } from '@/lib/utils/phone';
+import { revalidatePath } from 'next/cache';
 
 export async function POST(request) {
   const origin = request.headers.get('origin');
@@ -112,6 +113,10 @@ export async function POST(request) {
     }
 
     await client.query('COMMIT');
+
+    revalidatePath('/orders');
+    revalidatePath('/customers');
+    revalidatePath('/dashboard');
 
     return NextResponse.json({ order_id: newOrder.id, status: newOrder.status }, {
       headers: { ...(origin && { 'Access-Control-Allow-Origin': origin }) }
