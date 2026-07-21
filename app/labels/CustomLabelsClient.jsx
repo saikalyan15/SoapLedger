@@ -465,12 +465,14 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   const [quantity, setQuantity] = useState(1);
   const [printMode, setPrintMode] = useState('bands'); // 'stickers' | 'bands' | 'mini' | 'address'
   const [bandPages, setBandPages] = useState(1);
-  const [addressCount, setAddressCount] = useState(12);
+  const [addressCount, setAddressCount] = useState(24);
 
   // Stickers: 55x20mm, 3x14 grid (portrait). Mini: 38.1x14mm (widened from
   // 0.5in to fit larger ingredient text), 7x14 grid (landscape, edge-to-edge).
-  // Bands: 35mm height, 8 per sheet. Address: 60x30mm, 3x4 grid, 12 per sheet.
-  const labelsPerPage = printMode === 'stickers' ? 42 : printMode === 'mini' ? 98 : printMode === 'address' ? 12 : 8;
+  // Bands: 35mm height, 8 per sheet. Address: 60x30mm, 3x8 grid, 24 per sheet
+  // (10mm padding + 4mm gaps: 8*30 + 7*4 = 268mm fits inside the 277mm usable
+  // height of a 297mm-tall A4 page).
+  const labelsPerPage = printMode === 'stickers' ? 42 : printMode === 'mini' ? 98 : printMode === 'address' ? 24 : 8;
 
   const bumpBatch = (prev, product, amount) => {
     const idx = prev.findIndex((b) => b.product_id === product.id);
@@ -620,7 +622,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
       ? {
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 60mm)',
-          gap: '5mm',
+          gap: '4mm',
           justifyContent: 'center',
           alignContent: 'start',
           padding: '10mm',
@@ -828,7 +830,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           .address-page-sheet {
             display: grid !important;
             grid-template-columns: repeat(3, 60mm) !important;
-            gap: 5mm !important;
+            gap: 4mm !important;
             justify-content: center !important;
             align-content: start !important;
             padding: 10mm !important;
