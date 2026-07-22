@@ -104,7 +104,7 @@ const LabelsClient = ({ labels, orderInfo, businessConfig }) => {
           .shipping-section { display: flex; flex-wrap: wrap; gap: 5mm; border-top: 0.2mm solid #000; paddingTop: 6mm; page-break-inside: avoid; }
           .address-label { border: 0.3mm dashed #000 !important; box-sizing: border-box !important; padding: 8mm !important; }
           .to-label { width: 115mm !important; height: auto !important; }
-          .from-label { width: 75mm !important; height: auto !important; }
+          .from-label { width: 95mm !important; height: auto !important; }
           
           * { color: #000000 !important; border-color: #000000 !important; }
           .address-label div { background: none !important; }
@@ -205,31 +205,31 @@ const LabelsClient = ({ labels, orderInfo, businessConfig }) => {
           </div>
 
           {/* FROM LABEL */}
-          <div className={`address-label from-label ${selectedIds.has(-2) ? '' : 'deselected'}`} 
-               style={{ width: '75mm', padding: '5mm', boxSizing: 'border-box' }}
+          <div className={`address-label from-label ${selectedIds.has(-2) ? '' : 'deselected'}`}
+               style={{ width: '95mm', padding: '7mm', boxSizing: 'border-box' }}
                onClick={() => toggleLabel(-2)}>
             <div className="selection-overlay no-print">
-              {selectedIds.has(-2) ? <CheckSquare size={18} fill={COLORS.brand} color="white" /> : <Square size size={18} color={COLORS.muted} />}
+              {selectedIds.has(-2) ? <CheckSquare size={20} fill={COLORS.brand} color="white" /> : <Square size={20} color={COLORS.muted} />}
             </div>
             {/* Brand row */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '2mm', marginBottom: '5px' }}>
-              <img src="/logo/healing-soil-v2.1.png" style={{ width: '10mm', height: 'auto' }} />
-              <div style={{ fontSize: '10px', fontWeight: 800, color: COLORS.brand, letterSpacing: '0.04em' }}>{businessConfig.brand.name}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2.5mm', marginBottom: '6px' }}>
+              <img src="/logo/healing-soil-v2.1.png" style={{ width: '12mm', height: 'auto' }} />
+              <div style={{ fontSize: '12px', fontWeight: 800, color: COLORS.brand, letterSpacing: '0.04em' }}>{businessConfig.brand.name}</div>
             </div>
             {/* FROM heading with rule */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', margin: '2px 0 8px 0' }}>
-              <span className="addr-tag" style={{ fontSize: '13px', padding: '2px 10px' }}>FROM</span>
-              <div style={{ flex: 1, borderTop: '2px solid black' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0 10px 0' }}>
+              <span className="addr-tag" style={{ fontSize: '18px', padding: '3px 14px' }}>FROM</span>
+              <div style={{ flex: 1, borderTop: '2.5px solid black' }} />
             </div>
             {/* Sender */}
-            <div style={{ fontSize: '17px', fontWeight: 800, color: 'black', lineHeight: 1.1 }}>{businessConfig.returnAddress.name}</div>
-            <div style={{ fontSize: '12px', lineHeight: 1.4, color: 'black', marginTop: '4px', fontWeight: 500 }}>
+            <div style={{ fontSize: '21px', fontWeight: 800, color: 'black', lineHeight: 1.1 }}>{businessConfig.returnAddress.name}</div>
+            <div style={{ fontSize: '15px', lineHeight: 1.45, color: 'black', marginTop: '6px', fontWeight: 500 }}>
               {businessConfig.returnAddress.line1}<br />
               {businessConfig.returnAddress.line2}<br />
               {businessConfig.returnAddress.line3}<br />
               {businessConfig.returnAddress.cityStateZip}
             </div>
-            <div style={{ fontSize: '13px', fontWeight: 800, marginTop: '8px', color: 'black' }}>
+            <div style={{ fontSize: '16px', fontWeight: 800, marginTop: '10px', color: 'black' }}>
               Phone: {businessConfig.returnAddress.phone}
             </div>
           </div>

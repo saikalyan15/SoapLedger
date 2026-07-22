@@ -107,7 +107,7 @@ export default function ExpensesClient({ initialExpenses, initialCategories, sum
           <KPICard label="Total Year" value={fmt(summary.total_this_year)} color="#D4A017" />
           <KPICard label="Recurring" value={fmt(summary.recurring_total)} color="#0F766E" />
           <KPICard 
-            label="Cost/Soap" 
+            label="Make + Deliver / Soap" 
             value={summary.cost_price_per_soap > 0 ? fmt(Math.round(summary.cost_price_per_soap)) : "—"} 
             color="#6B21A8" 
           />
