@@ -34,7 +34,10 @@ const BAND_SIZES = {
   },
   '50g': {
     label: '50g Square',
-    panelWidths: [35, 40, 40, 40, 35],
+    // Tabs sized to just clear the 40mm back face (25+25=50mm, ~10mm
+    // overlap) rather than reusing the 100g bar's 35mm tabs, which were
+    // oversized for this smaller back and wasted paper.
+    panelWidths: [25, 40, 40, 40, 25],
     height: 20,
     logoWidth: 13,
   },
@@ -431,7 +434,7 @@ function AddressSticker({ address, brandName, onRemove }) {
           flexDirection: 'column',
           justifyContent: 'space-between',
           height: '100%',
-          padding: '2mm 2.5mm',
+          padding: '2.5mm 3mm',
           boxSizing: 'border-box',
         }}
       >
@@ -443,7 +446,7 @@ function AddressSticker({ address, brandName, onRemove }) {
               background: COLORS.brand,
               color: 'white',
               fontWeight: 800,
-              fontSize: '6pt',
+              fontSize: '6.5pt',
               letterSpacing: '0.1em',
               borderRadius: '0.8mm',
               padding: '0.4mm 1.5mm',
@@ -454,18 +457,18 @@ function AddressSticker({ address, brandName, onRemove }) {
             FROM
           </span>
           <div style={{ flex: 1, borderTop: `0.2mm solid ${COLORS.brand}`, opacity: 0.4 }} />
-          <span style={{ fontSize: '6pt', fontWeight: 700, color: COLORS.brand, whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: '6.5pt', fontWeight: 700, color: COLORS.brand, whiteSpace: 'nowrap' }}>
             {brandName}
           </span>
         </div>
 
         {/* Sender name */}
-        <div style={{ fontSize: '9.5pt', fontWeight: 800, color: COLORS.text, lineHeight: 1.15 }}>
+        <div style={{ fontSize: '11pt', fontWeight: 800, color: COLORS.text, lineHeight: 1.15 }}>
           {address.name}
         </div>
 
         {/* Address lines */}
-        <div style={{ fontSize: '7.5pt', color: COLORS.text, lineHeight: 1.35, fontWeight: 500 }}>
+        <div style={{ fontSize: '8.5pt', color: COLORS.text, lineHeight: 1.35, fontWeight: 500 }}>
           {address.line1}<br />
           {address.line2}<br />
           {address.line3}<br />
@@ -473,7 +476,7 @@ function AddressSticker({ address, brandName, onRemove }) {
         </div>
 
         {/* Phone */}
-        <div style={{ fontSize: '8pt', fontWeight: 700, color: COLORS.text }}>
+        <div style={{ fontSize: '9pt', fontWeight: 700, color: COLORS.text }}>
           Ph: {address.phone}
         </div>
       </div>
@@ -500,17 +503,17 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   const [printMode, setPrintMode] = useState('bands'); // 'stickers' | 'bands' | 'mini' | 'address'
   const [bandPages, setBandPages] = useState(1);
   const [bandSize, setBandSize] = useState('100g'); // '100g' | '50g'
-  const [addressCount, setAddressCount] = useState(24);
+  const [addressCount, setAddressCount] = useState(21);
 
   // Stickers: 55x20mm, 3x14 grid (portrait). Mini: 38.1x14mm (widened from
   // 0.5in to fit larger ingredient text), 7x14 grid (landscape, edge-to-edge).
   // Bands: 35mm-tall 100g bands fit 8 per sheet; 20mm-tall 50g bands fit 14.
-  // Address: 60x30mm, 3x8 grid, 24 per sheet (10mm padding + 4mm gaps:
-  // 8*30 + 7*4 = 268mm fits inside the 277mm usable height of a 297mm-tall
+  // Address: 62x36mm, 3x7 grid, 21 per sheet (8mm padding + 3mm gaps:
+  // 7*36 + 6*3 = 270mm fits inside the 281mm usable height of a 297mm-tall
   // A4 page).
   const bandsPerPage = bandSize === '50g' ? 14 : 8;
   const labelsPerPage =
-    printMode === 'stickers' ? 42 : printMode === 'mini' ? 98 : printMode === 'address' ? 24 : bandsPerPage;
+    printMode === 'stickers' ? 42 : printMode === 'mini' ? 98 : printMode === 'address' ? 21 : bandsPerPage;
 
   const bumpBatch = (prev, product, amount) => {
     const idx = prev.findIndex((b) => b.product_id === product.id);
@@ -659,11 +662,11 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
       : printMode === 'address'
       ? {
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 60mm)',
-          gap: '4mm',
+          gridTemplateColumns: 'repeat(3, 62mm)',
+          gap: '3mm',
           justifyContent: 'center',
           alignContent: 'start',
-          padding: '10mm',
+          padding: '8mm',
           width: '210mm',
           height: 'auto',
           minHeight: '297mm',
@@ -724,8 +727,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
         }
 
         .address-sticker {
-          width: 60mm;
-          height: 30mm;
+          width: 62mm;
+          height: 36mm;
           border: 1px dashed #ccc;
           display: flex;
           flex-direction: column;
@@ -867,11 +870,11 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
 
           .address-page-sheet {
             display: grid !important;
-            grid-template-columns: repeat(3, 60mm) !important;
-            gap: 4mm !important;
+            grid-template-columns: repeat(3, 62mm) !important;
+            gap: 3mm !important;
             justify-content: center !important;
             align-content: start !important;
-            padding: 10mm !important;
+            padding: 8mm !important;
             margin: 0 auto !important;
             box-shadow: none !important;
             border-radius: 0 !important;
@@ -944,8 +947,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           }
 
           .address-sticker {
-            width: 60mm !important;
-            height: 30mm !important;
+            width: 62mm !important;
+            height: 36mm !important;
             border: 0.1mm dashed #000 !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
