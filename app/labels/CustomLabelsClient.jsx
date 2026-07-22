@@ -421,6 +421,66 @@ function SoapBand({ license, size = BAND_SIZES['100g'] }) {
   );
 }
 
+function AddressSticker({ address, brandName, onRemove }) {
+  return (
+    <div className="address-sticker">
+      {onRemove && <RemoveLabelButton onRemove={onRemove} />}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          height: '100%',
+          padding: '2mm 2.5mm',
+          boxSizing: 'border-box',
+        }}
+      >
+        {/* FROM tag + brand name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5mm' }}>
+          <span
+            style={{
+              display: 'inline-block',
+              background: COLORS.brand,
+              color: 'white',
+              fontWeight: 800,
+              fontSize: '6pt',
+              letterSpacing: '0.1em',
+              borderRadius: '0.8mm',
+              padding: '0.4mm 1.5mm',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+            }}
+          >
+            FROM
+          </span>
+          <div style={{ flex: 1, borderTop: `0.2mm solid ${COLORS.brand}`, opacity: 0.4 }} />
+          <span style={{ fontSize: '6pt', fontWeight: 700, color: COLORS.brand, whiteSpace: 'nowrap' }}>
+            {brandName}
+          </span>
+        </div>
+
+        {/* Sender name */}
+        <div style={{ fontSize: '9.5pt', fontWeight: 800, color: COLORS.text, lineHeight: 1.15 }}>
+          {address.name}
+        </div>
+
+        {/* Address lines */}
+        <div style={{ fontSize: '7.5pt', color: COLORS.text, lineHeight: 1.35, fontWeight: 500 }}>
+          {address.line1}<br />
+          {address.line2}<br />
+          {address.line3}<br />
+          {address.cityStateZip}
+        </div>
+
+        {/* Phone */}
+        <div style={{ fontSize: '8pt', fontWeight: 700, color: COLORS.text }}>
+          Ph: {address.phone}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // These product lines don't get individual labels printed (gift/seasonal
 // bundles, kids sets, discovery boxes, and travel minis are packaged and
 // labeled differently) — keep them out of the label palette entirely.
@@ -437,15 +497,20 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   // product palette — per-product fine-tuning happens by clicking a chip
   // (add one) or the × on a printed label in the sheet (remove one).
   const [quantity, setQuantity] = useState(1);
-  const [printMode, setPrintMode] = useState('bands'); // 'stickers' | 'bands'
+  const [printMode, setPrintMode] = useState('bands'); // 'stickers' | 'bands' | 'mini' | 'address'
   const [bandPages, setBandPages] = useState(1);
   const [bandSize, setBandSize] = useState('100g'); // '100g' | '50g'
+  const [addressCount, setAddressCount] = useState(24);
 
   // Stickers: 55x20mm, 3x14 grid (portrait). Mini: 38.1x14mm (widened from
   // 0.5in to fit larger ingredient text), 7x14 grid (landscape, edge-to-edge).
   // Bands: 35mm-tall 100g bands fit 8 per sheet; 20mm-tall 50g bands fit 14.
+  // Address: 60x30mm, 3x8 grid, 24 per sheet (10mm padding + 4mm gaps:
+  // 8*30 + 7*4 = 268mm fits inside the 277mm usable height of a 297mm-tall
+  // A4 page).
   const bandsPerPage = bandSize === '50g' ? 14 : 8;
-  const labelsPerPage = printMode === 'stickers' ? 42 : printMode === 'mini' ? 98 : bandsPerPage;
+  const labelsPerPage =
+    printMode === 'stickers' ? 42 : printMode === 'mini' ? 98 : printMode === 'address' ? 24 : bandsPerPage;
 
   const bumpBatch = (prev, product, amount) => {
     const idx = prev.findIndex((b) => b.product_id === product.id);
@@ -510,10 +575,15 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
       // For bands, we just fill the requested number of pages
       return Array.from({ length: bandPages * bandsPerPage }, (_, i) => ({ uid: `band-${i}` }));
     }
+    if (printMode === 'address') {
+      // Every sticker is identical (the sender's own address), so there's
+      // no per-product palette here — just a flat count to fill.
+      return Array.from({ length: addressCount }, (_, i) => ({ uid: `addr-${i}` }));
+    }
     return batches.flatMap((b) =>
       Array.from({ length: b.qty }, (_, i) => ({ uid: `${b.id}-${i}`, ...b })),
     );
-  }, [batches, printMode, bandPages, bandsPerPage]);
+  }, [batches, printMode, bandPages, bandsPerPage, addressCount]);
 
   const totalLabels = queue.length;
 
@@ -586,6 +656,18 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           height: 'auto',
           minHeight: '297mm',
         }
+      : printMode === 'address'
+      ? {
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 60mm)',
+          gap: '4mm',
+          justifyContent: 'center',
+          alignContent: 'start',
+          padding: '10mm',
+          width: '210mm',
+          height: 'auto',
+          minHeight: '297mm',
+        }
       : {
           display: 'flex',
           flexDirection: 'column',
@@ -641,6 +723,18 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           background: transparent;
         }
 
+        .address-sticker {
+          width: 60mm;
+          height: 30mm;
+          border: 1px dashed #ccc;
+          display: flex;
+          flex-direction: column;
+          position: relative;
+          box-sizing: border-box;
+          overflow: hidden;
+          background: white;
+        }
+
         /* Remove-on-hover: the × only shows while hovering a printed label,
            so the sheet preview stays clean until you're pointing at the
            exact one you want to pull off. */
@@ -649,7 +743,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           transition: opacity 0.12s ease;
         }
         .product-label:hover .remove-label-btn,
-        .mini-label:hover .remove-label-btn {
+        .mini-label:hover .remove-label-btn,
+        .address-sticker:hover .remove-label-btn {
           opacity: 1;
         }
 
@@ -770,6 +865,27 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             break-after: auto;
           }
 
+          .address-page-sheet {
+            display: grid !important;
+            grid-template-columns: repeat(3, 60mm) !important;
+            gap: 4mm !important;
+            justify-content: center !important;
+            align-content: start !important;
+            padding: 10mm !important;
+            margin: 0 auto !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            page-break-after: always;
+            break-after: page;
+            width: 210mm !important;
+            height: 297mm !important;
+            box-sizing: border-box !important;
+          }
+          .address-page-sheet:last-child {
+            page-break-after: auto;
+            break-after: auto;
+          }
+
           .band-page-sheet {
             display: flex !important;
             flex-direction: column !important;
@@ -825,6 +941,17 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             break-inside: avoid !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
+          }
+
+          .address-sticker {
+            width: 60mm !important;
+            height: 30mm !important;
+            border: 0.1mm dashed #000 !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            background: white !important;
           }
 
           .soap-band-container {
@@ -919,6 +1046,22 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           >
             Mini Stickers
           </button>
+          <button
+            onClick={() => setPrintMode('address')}
+            style={{
+              background: printMode === 'address' ? COLORS.brand : 'transparent',
+              color: printMode === 'address' ? 'white' : COLORS.muted,
+              border: 'none',
+              padding: '6px 14px',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: FONTS.sans,
+            }}
+          >
+            From Address
+          </button>
         </div>
 
         {/* Bands: soap size sub-toggle (defaults to the original 100g layout) */}
@@ -968,6 +1111,34 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
               }}
             />
             <span style={{ fontSize: '12px', color: COLORS.muted, fontFamily: FONTS.sans }}>{totalLabels} bands</span>
+          </div>
+        )}
+
+        {/* Address: flat sticker count — every sticker is identical (the
+            sender's own return address), so there's no per-product palette,
+            just how many to print. */}
+        {printMode === 'address' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <label style={{ fontSize: '13px', color: COLORS.muted, fontFamily: FONTS.sans, whiteSpace: 'nowrap' }}>Stickers:</label>
+            <input
+              type="number"
+              min={1}
+              max={200}
+              value={addressCount}
+              onChange={(e) => setAddressCount(Math.max(1, Math.min(200, parseInt(e.target.value) || 1)))}
+              style={{
+                width: '60px',
+                padding: '6px 8px',
+                borderRadius: '6px',
+                border: '1px solid #D1D5DB',
+                fontSize: '13px',
+                fontFamily: FONTS.sans,
+                boxSizing: 'border-box',
+              }}
+            />
+            <span style={{ fontSize: '12px', color: COLORS.muted, fontFamily: FONTS.sans }}>
+              {totalLabels} sticker{totalLabels !== 1 ? 's' : ''} · {pages.length} page{pages.length !== 1 ? 's' : ''}
+            </span>
           </div>
         )}
 
@@ -1220,6 +1391,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                   ? 'label-page-sheet'
                   : printMode === 'mini'
                   ? 'mini-page-sheet'
+                  : printMode === 'address'
+                  ? 'address-page-sheet'
                   : 'band-page-sheet'
               }
               style={{
@@ -1246,6 +1419,13 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                     license={businessConfig.brand.license}
                     onRemove={() => removeOneFromBatch(label.id)}
                   />
+                ) : printMode === 'address' ? (
+                  <AddressSticker
+                    key={label.uid}
+                    address={businessConfig.returnAddress}
+                    brandName={businessConfig.brand.name}
+                    onRemove={() => setAddressCount((c) => Math.max(0, c - 1))}
+                  />
                 ) : (
                   <SoapBand
                     key={label.uid}
@@ -1257,12 +1437,12 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
               {/* Screen-only ghost slots for the remaining empty space on the last
                   page — shows exactly how many more labels are needed to avoid
                   printing (and wasting) a partially-filled sheet. Never printed. */}
-              {(printMode === 'stickers' || printMode === 'mini') &&
+              {(printMode === 'stickers' || printMode === 'mini' || printMode === 'address') &&
                 pageIdx === pages.length - 1 &&
                 Array.from({ length: freeOnLastPage }, (_, i) => (
                   <div
                     key={`ghost-${i}`}
-                    className={`no-print ${printMode === 'mini' ? 'mini-label' : 'product-label'}`}
+                    className={`no-print ${printMode === 'mini' ? 'mini-label' : printMode === 'address' ? 'address-sticker' : 'product-label'}`}
                     style={{
                       background: 'transparent',
                       backgroundImage: 'none',
@@ -1304,6 +1484,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             />
             {printMode === 'bands'
               ? 'Add pages to see the wrapper bands preview.'
+              : printMode === 'address'
+              ? 'Set a sticker count above to fill the sheet.'
               : 'Click a product above to add it to the sheet.'}
           </div>
         )}
