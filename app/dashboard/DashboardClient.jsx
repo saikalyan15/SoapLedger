@@ -21,7 +21,6 @@ import {
   Clock,
   CreditCard,
   Factory,
-  Info,
   Loader2,
   Truck,
 } from 'lucide-react';
@@ -59,6 +58,12 @@ const fmtNumber = (value, decimals = 0) => {
 const fmtUnitCurrency = (value) => {
   if (value == null || Number.isNaN(Number(value))) return '—';
   return `₹${Math.round(Number(value)).toLocaleString('en-IN')}`;
+};
+
+const signedUnitCurrency = (value) => {
+  if (value == null || Number.isNaN(Number(value))) return '—';
+  if (Number(value) === 0) return fmtUnitCurrency(0);
+  return `${Number(value) > 0 ? '+' : '−'}${fmtUnitCurrency(Math.abs(Number(value)))}`;
 };
 
 const signedCurrency = (value) => {
@@ -189,6 +194,10 @@ export default function DashboardClient({
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 6);
   const maxExpense = expenseCats[0]?.total || 1;
+  const operationsAreProfitable = initialUnitEconomics.operating_result >= 0;
+  const operatingResultWord = initialUnitEconomics.operating_result > 0
+    ? 'made'
+    : initialUnitEconomics.operating_result < 0 ? 'lost' : 'broke even';
 
   return (
     <main className="money-dashboard">
@@ -300,32 +309,38 @@ export default function DashboardClient({
         </article>
       </section>
 
-      <section className="money-readiness" id="money-definition">
+      <section className={`money-readiness money-readiness-${operationsAreProfitable ? 'positive' : 'negative'}`} id="money-definition">
         <div className="money-readiness-copy">
-          <Info size={20} />
+          {operationsAreProfitable ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
           <div>
-            <span>How this average is calculated</span>
-            <h2>Average cost is ready. Profit by product is still an estimate.</h2>
+            <span>Last {initialUnitEconomics.window_days} days · recorded operations</span>
+            <h2>
+              You {operatingResultWord}{initialUnitEconomics.operating_result !== 0 && ` ${fmtUnitCurrency(Math.abs(initialUnitEconomics.operating_result))}`} from normal operations.
+            </h2>
             <p>
-              In the last {initialUnitEconomics.window_days} days you recorded {fmtUnitCurrency(initialUnitEconomics.included_spend)} for materials, packaging, shipping, and labour,
-              {' '}and sold {fmtNumber(initialUnitEconomics.equivalent_soaps, 1)} soap-equivalents. That is {fmtUnitCurrency(initialUnitEconomics.included_spend)} ÷ {fmtNumber(initialUnitEconomics.equivalent_soaps, 1)} = {fmtUnitCurrency(initialUnitEconomics.unit_cost)} average cost per soap.
+              {fmtUnitCurrency(initialUnitEconomics.recognised_revenue)} sales − {fmtUnitCurrency(initialUnitEconomics.operating_spend)} normal operating costs
+              {' '}= {signedUnitCurrency(initialUnitEconomics.operating_result)}. One-time costs of {fmtUnitCurrency(initialUnitEconomics.one_time_spend)} are excluded.
+              {initialUnitEconomics.labour_spend === 0 && ' Labour is recorded as ₹0, so add your time as a cost if it is currently missing.'}
             </p>
           </div>
         </div>
         <div className="money-readiness-metric">
-          <span>Average recorded cost</span>
+          <span>You spend</span>
           <strong>{fmtUnitCurrency(initialUnitEconomics.unit_cost)} per soap</strong>
-          <small>Materials + packaging + shipping + labour</small>
+          <small>{fmtUnitCurrency(initialUnitEconomics.production_cost_per_soap)} to make + {fmtUnitCurrency(initialUnitEconomics.shipping_cost_per_soap)} shipping</small>
         </div>
         <div className="money-readiness-metric">
-          <span>Left after direct costs</span>
-          <strong>{fmtUnitCurrency(initialUnitEconomics.unit_contribution)} per soap</strong>
-          <small>{fmtUnitCurrency(initialUnitEconomics.avg_selling_price)} average sale − {fmtUnitCurrency(initialUnitEconomics.unit_cost)} average cost. This is not profit.</small>
+          <span>You sell for</span>
+          <strong>{fmtUnitCurrency(initialUnitEconomics.avg_selling_price)} per soap</strong>
+          <small>Actual recorded sales ÷ {fmtNumber(initialUnitEconomics.equivalent_soaps, 1)} soap-equivalents</small>
         </div>
-        <div className="money-readiness-metric">
-          <span>Break-even</span>
-          <strong>Not calculated</strong>
-          <small>Fixed monthly costs are not identified yet</small>
+        <div className={`money-readiness-metric money-readiness-result ${operationsAreProfitable ? 'is-positive' : 'is-negative'}`}>
+          <span>Operating {operationsAreProfitable ? 'profit' : 'loss'}</span>
+          <strong>{signedUnitCurrency(initialUnitEconomics.operating_result_per_soap)} per soap</strong>
+          <small>
+            {fmtUnitCurrency(initialUnitEconomics.avg_selling_price)} selling price − {fmtUnitCurrency(initialUnitEconomics.operating_cost_per_soap)} normal costs
+            {initialUnitEconomics.operating_margin_pct != null && ` · ${Math.round(initialUnitEconomics.operating_margin_pct)}% margin`}
+          </small>
         </div>
       </section>
 

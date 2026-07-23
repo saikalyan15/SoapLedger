@@ -18,6 +18,31 @@ const COLORS = {
   muted: '#4B5563',
 };
 
+// Wrapper band physical layouts, keyed by soap format. Panel widths are
+// [leftTab, leftSide, front, rightSide, rightTab] in mm — the band wraps
+// side-front-side around 3 of the bar's 4 faces, then the two glue tabs
+// fold onto the back face and overlap each other there.
+// 100g: real bar footprint is 54mm (front) x 24mm (side), 35mm tall.
+// 50g square: measured bar is 40mm x 40mm (square footprint) x 20mm tall —
+// front and side are equal since the footprint is a square, not a rectangle.
+const BAND_SIZES = {
+  '100g': {
+    label: '100g Rectangle',
+    panelWidths: [50, 24, 54, 24, 50],
+    height: 35,
+    logoWidth: 22,
+  },
+  '50g': {
+    label: '50g Square',
+    // Tabs sized to just clear the 40mm back face (25+25=50mm, ~10mm
+    // overlap) rather than reusing the 100g bar's 35mm tabs, which were
+    // oversized for this smaller back and wasted paper.
+    panelWidths: [25, 40, 40, 40, 25],
+    height: 20,
+    logoWidth: 13,
+  },
+};
+
 const FONTS = {
   sans: '"Plus Jakarta Sans", "Inter", Arial, sans-serif',
 };
@@ -302,7 +327,10 @@ function MiniProductLabel({ label, license, onRemove }) {
   );
 }
 
-function SoapBand({ license }) {
+function SoapBand({ license, size = BAND_SIZES['100g'] }) {
+  const [tabL, sideL, front, sideR, tabR] = size.panelWidths;
+  const totalWidth = tabL + sideL + front + sideR + tabR;
+
   return (
     <div className="soap-band-container">
       {/* Cutting guidelines — thin dashed line for print, text for screen */}
@@ -311,15 +339,23 @@ function SoapBand({ license }) {
         <span className="no-print" style={{ fontSize: '10px', color: '#999', padding: '0 8px' }}>Cut Line</span>
         <div style={{ height: '1px', flex: 1, borderTop: '0.1mm dashed #999' }}></div>
       </div>
-      
-      <div className="soap-band">
+
+      <div
+        className="soap-band"
+        style={{ width: `${totalWidth}mm`, height: `${size.height}mm` }}
+      >
         {/* Notice: No white background overlay. We want the kraft paper to show through the background image natively */}
 
         <div
           className="band-grid"
-          style={{ position: 'relative', zIndex: 1, height: '100%' }}
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            height: '100%',
+            gridTemplateColumns: `${tabL}mm ${sideL}mm ${front}mm ${sideR}mm ${tabR}mm`,
+          }}
         >
-          {/* Panel 1: Left glue tab — 50mm, overlaps on back */}
+          {/* Panel 1: Left glue tab — overlaps on back */}
           <div
             className="band-panel"
             style={{
@@ -334,10 +370,10 @@ function SoapBand({ license }) {
             </span>
           </div>
 
-          {/* Panel 2: Left side — 24mm depth */}
+          {/* Panel 2: Left side */}
           <div className="band-panel" />
 
-          {/* Panel 3: Front face — 54mm length */}
+          {/* Panel 3: Front face */}
           <div
             className="band-panel"
             style={{
@@ -354,7 +390,7 @@ function SoapBand({ license }) {
             {/* Logo at Top — safely away from cut line */}
             <img
               src="/logo/healing-soil-v2.1.png"
-              style={{ width: '22mm', height: 'auto' }}
+              style={{ width: `${size.logoWidth}mm`, height: 'auto' }}
             />
 
             {/* Clear space for sticker in middle */}
@@ -374,10 +410,10 @@ function SoapBand({ license }) {
             </div>
           </div>
 
-          {/* Panel 4: Right side — 24mm depth */}
+          {/* Panel 4: Right side */}
           <div className="band-panel" />
 
-          {/* Panel 5: Right glue tab — 50mm, overlaps on back */}
+          {/* Panel 5: Right glue tab — overlaps on back */}
           <div className="band-panel" />
         </div>
       </div>
@@ -398,7 +434,7 @@ function AddressSticker({ address, brandName, onRemove }) {
           flexDirection: 'column',
           justifyContent: 'space-between',
           height: '100%',
-          padding: '2mm 2.5mm',
+          padding: '2.5mm 3mm',
           boxSizing: 'border-box',
         }}
       >
@@ -410,7 +446,7 @@ function AddressSticker({ address, brandName, onRemove }) {
               background: COLORS.brand,
               color: 'white',
               fontWeight: 800,
-              fontSize: '6pt',
+              fontSize: '6.5pt',
               letterSpacing: '0.1em',
               borderRadius: '0.8mm',
               padding: '0.4mm 1.5mm',
@@ -421,18 +457,18 @@ function AddressSticker({ address, brandName, onRemove }) {
             FROM
           </span>
           <div style={{ flex: 1, borderTop: `0.2mm solid ${COLORS.brand}`, opacity: 0.4 }} />
-          <span style={{ fontSize: '6pt', fontWeight: 700, color: COLORS.brand, whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: '6.5pt', fontWeight: 700, color: COLORS.brand, whiteSpace: 'nowrap' }}>
             {brandName}
           </span>
         </div>
 
         {/* Sender name */}
-        <div style={{ fontSize: '9.5pt', fontWeight: 800, color: COLORS.text, lineHeight: 1.15 }}>
+        <div style={{ fontSize: '11pt', fontWeight: 800, color: COLORS.text, lineHeight: 1.15 }}>
           {address.name}
         </div>
 
         {/* Address lines */}
-        <div style={{ fontSize: '7.5pt', color: COLORS.text, lineHeight: 1.35, fontWeight: 500 }}>
+        <div style={{ fontSize: '8.5pt', color: COLORS.text, lineHeight: 1.35, fontWeight: 500 }}>
           {address.line1}<br />
           {address.line2}<br />
           {address.line3}<br />
@@ -440,7 +476,7 @@ function AddressSticker({ address, brandName, onRemove }) {
         </div>
 
         {/* Phone */}
-        <div style={{ fontSize: '8pt', fontWeight: 700, color: COLORS.text }}>
+        <div style={{ fontSize: '9pt', fontWeight: 700, color: COLORS.text }}>
           Ph: {address.phone}
         </div>
       </div>
@@ -466,14 +502,18 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   const [quantity, setQuantity] = useState(1);
   const [printMode, setPrintMode] = useState('bands'); // 'stickers' | 'bands' | 'mini' | 'address'
   const [bandPages, setBandPages] = useState(1);
-  const [addressCount, setAddressCount] = useState(24);
+  const [bandSize, setBandSize] = useState('100g'); // '100g' | '50g'
+  const [addressCount, setAddressCount] = useState(21);
 
   // Stickers: 55x20mm, 3x14 grid (portrait). Mini: 38.1x14mm (widened from
   // 0.5in to fit larger ingredient text), 7x14 grid (landscape, edge-to-edge).
-  // Bands: 35mm height, 8 per sheet. Address: 60x30mm, 3x8 grid, 24 per sheet
-  // (10mm padding + 4mm gaps: 8*30 + 7*4 = 268mm fits inside the 277mm usable
-  // height of a 297mm-tall A4 page).
-  const labelsPerPage = printMode === 'stickers' ? 42 : printMode === 'mini' ? 98 : printMode === 'address' ? 24 : 8;
+  // Bands: 35mm-tall 100g bands fit 8 per sheet; 20mm-tall 50g bands fit 14.
+  // Address: 62x36mm, 3x7 grid, 21 per sheet (8mm padding + 3mm gaps:
+  // 7*36 + 6*3 = 270mm fits inside the 281mm usable height of a 297mm-tall
+  // A4 page).
+  const bandsPerPage = bandSize === '50g' ? 14 : 8;
+  const labelsPerPage =
+    printMode === 'stickers' ? 42 : printMode === 'mini' ? 98 : printMode === 'address' ? 21 : bandsPerPage;
 
   const bumpBatch = (prev, product, amount) => {
     const idx = prev.findIndex((b) => b.product_id === product.id);
@@ -535,8 +575,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   // Expand batches into flat label list for the print grid
   const queue = useMemo(() => {
     if (printMode === 'bands') {
-      // For bands, we just fill the requested number of pages (8 per page)
-      return Array.from({ length: bandPages * 8 }, (_, i) => ({ uid: `band-${i}` }));
+      // For bands, we just fill the requested number of pages
+      return Array.from({ length: bandPages * bandsPerPage }, (_, i) => ({ uid: `band-${i}` }));
     }
     if (printMode === 'address') {
       // Every sticker is identical (the sender's own address), so there's
@@ -546,7 +586,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
     return batches.flatMap((b) =>
       Array.from({ length: b.qty }, (_, i) => ({ uid: `${b.id}-${i}`, ...b })),
     );
-  }, [batches, printMode, bandPages, addressCount]);
+  }, [batches, printMode, bandPages, bandsPerPage, addressCount]);
 
   const totalLabels = queue.length;
 
@@ -622,11 +662,11 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
       : printMode === 'address'
       ? {
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 60mm)',
-          gap: '4mm',
+          gridTemplateColumns: 'repeat(3, 62mm)',
+          gap: '3mm',
           justifyContent: 'center',
           alignContent: 'start',
-          padding: '10mm',
+          padding: '8mm',
           width: '210mm',
           height: 'auto',
           minHeight: '297mm',
@@ -687,8 +727,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
         }
 
         .address-sticker {
-          width: 60mm;
-          height: 30mm;
+          width: 62mm;
+          height: 36mm;
           border: 1px dashed #ccc;
           display: flex;
           flex-direction: column;
@@ -826,11 +866,11 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
 
           .address-page-sheet {
             display: grid !important;
-            grid-template-columns: repeat(3, 60mm) !important;
-            gap: 4mm !important;
+            grid-template-columns: repeat(3, 62mm) !important;
+            gap: 3mm !important;
             justify-content: center !important;
             align-content: start !important;
-            padding: 10mm !important;
+            padding: 8mm !important;
             margin: 0 auto !important;
             box-shadow: none !important;
             border-radius: 0 !important;
@@ -850,8 +890,9 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             flex-direction: column !important;
             align-items: center !important;
             justify-content: flex-start !important;
-            /* 6mm top clears printer hardware margins; 8 x 35mm bands = 280mm,
-               leaving ~11mm at the bottom of the 297mm page */
+            /* 6mm top clears printer hardware margins; 8 x 35mm (100g) or
+               14 x 20mm (50g) bands both total 280mm, leaving ~11mm at the
+               bottom of the 297mm page */
             padding: 6mm 0 0 !important;
             margin: 0 auto !important;
             box-shadow: none !important;
@@ -902,8 +943,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           }
 
           .address-sticker {
-            width: 60mm !important;
-            height: 30mm !important;
+            width: 62mm !important;
+            height: 36mm !important;
             border: 0.1mm dashed #000 !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
@@ -1021,6 +1062,32 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             From Address
           </button>
         </div>
+
+        {/* Bands: soap size sub-toggle (defaults to the original 100g layout) */}
+        {printMode === 'bands' && (
+          <div style={{ display: 'flex', background: '#E5E7EB', borderRadius: '8px', padding: '3px', gap: '2px' }}>
+            {Object.entries(BAND_SIZES).map(([key, cfg]) => (
+              <button
+                key={key}
+                onClick={() => setBandSize(key)}
+                style={{
+                  background: bandSize === key ? COLORS.brand : 'transparent',
+                  color: bandSize === key ? 'white' : COLORS.muted,
+                  border: 'none',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: FONTS.sans,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {cfg.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Bands: page count inline */}
         {printMode === 'bands' && (
@@ -1359,7 +1426,11 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                     onRemove={() => setAddressCount((c) => Math.max(0, c - 1))}
                   />
                 ) : (
-                  <SoapBand key={label.uid} license={businessConfig.brand.license} />
+                  <SoapBand
+                    key={label.uid}
+                    license={businessConfig.brand.license}
+                    size={BAND_SIZES[bandSize]}
+                  />
                 ),
               )}
               {/* Screen-only ghost slots for the remaining empty space on the last
