@@ -768,10 +768,6 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             background: white !important;
             padding: 0 !important;
             min-height: 0 !important;
-            /* Grayscale on print only — screen preview stays in brand
-               colors, but the printed sheet renders as pure black/gray so
-               printers don't reach for color ink on what's mostly text. */
-            filter: grayscale(100%) !important;
           }
 
           /* This wrapper caps the on-screen editing UI to a comfortable
