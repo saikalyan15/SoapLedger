@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   getRevenueKPIs,
   getRepeatCustomerRate,
@@ -8,6 +10,7 @@ import {
   getQuietCustomers,
   getThisMonthSnapshot,
   getActionableOrders,
+  getOrdersByLocation,
 } from '@/lib/queries/dashboard';
 import DashboardClient from './DashboardClient';
 
@@ -16,7 +19,7 @@ export default async function DashboardPage() {
 
   const [
     revenue, customers, products, cashFlow, expenseCats,
-    snapshot, actionable, quietCustomers, unitEconomics,
+    snapshot, actionable, quietCustomers, unitEconomics, locations,
   ] = await Promise.all([
     getRevenueKPIs(range),
     getRepeatCustomerRate(range),
@@ -27,7 +30,12 @@ export default async function DashboardPage() {
     getActionableOrders(),
     getQuietCustomers(),
     getUnitEconomics(),
+    getOrdersByLocation(),
   ]);
+
+  const indiaGeo = JSON.parse(
+    fs.readFileSync(path.join(process.cwd(), 'public', 'data', 'india-states.geojson'), 'utf-8'),
+  );
 
   return (
     <div className="dashboard-page" style={{ padding: '40px' }}>
@@ -41,6 +49,8 @@ export default async function DashboardPage() {
         initialActionable={actionable}
         initialQuietCustomers={quietCustomers}
         initialUnitEconomics={unitEconomics}
+        initialLocations={locations}
+        indiaGeo={indiaGeo}
       />
     </div>
   );

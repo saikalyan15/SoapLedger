@@ -30,6 +30,7 @@ import {
   getRepeatCustomerRate,
   getTopExpenseCategories,
 } from '@/lib/queries/dashboard';
+import OrdersMap from './OrdersMap';
 
 const ACTION_REQUIRED_STATUSES = ['Awaiting Payment', 'Payment Confirmed', 'Ready to Dispatch'];
 
@@ -111,6 +112,8 @@ export default function DashboardClient({
   initialActionable,
   initialQuietCustomers,
   initialUnitEconomics,
+  initialLocations,
+  indiaGeo,
 }) {
   const [filter, setFilter] = useState('All Time');
   const [isPending, startTransition] = useTransition();
@@ -452,6 +455,8 @@ export default function DashboardClient({
           )}
           <p className="money-table-note">Product-level profit is not shown because this blended unit cost is not allocated by recipe.</p>
         </article>
+
+        <OrdersMap geo={indiaGeo} locations={initialLocations} />
 
         <article className="money-panel money-customers-panel">
           <div className="money-panel-heading">

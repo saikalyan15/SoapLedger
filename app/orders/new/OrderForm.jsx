@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { createOrderAction, updateOrderAction } from '@/lib/actions/orders';
 import { ORDER_STATUSES, ORDER_SOURCES } from '@/lib/constants';
+import { INDIAN_STATES, suggestLocationFromAddress } from '@/lib/geo';
 
 const OrderForm = ({ products, settings, initialData = null }) => {
   const router = useRouter();
@@ -40,11 +41,31 @@ const OrderForm = ({ products, settings, initialData = null }) => {
         id: s.id,
         label: s.label,
         address_text: s.address_text,
-        status: s.status
+        status: s.status,
+        city: s.city || '',
+        state: s.state || ''
       }));
     }
-    return [{ label: 'Primary Shipment', address_text: customer.address, status: 'Order Placed' }];
+    return [{ label: 'Primary Shipment', address_text: customer.address, status: 'Order Placed', city: '', state: '' }];
   });
+
+  // Best-effort city/state guess from pasted address text. Only fills fields
+  // that are still empty — never overwrites a value the user already set.
+  const autoSuggestShipmentLocation = (index) => {
+    setShipments((prev) => {
+      const target = prev[index];
+      if (!target || (target.city && target.state)) return prev;
+      const suggestion = suggestLocationFromAddress(target.address_text);
+      if (!suggestion.city && !suggestion.state) return prev;
+      const next = [...prev];
+      next[index] = {
+        ...target,
+        city: target.city || suggestion.city,
+        state: target.state || suggestion.state
+      };
+      return next;
+    });
+  };
 
   // Sync primary shipment address with customer address if it hasn't been manually edited
   useEffect(() => {
@@ -52,6 +73,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
       const newShipments = [...shipments];
       newShipments[0].address_text = customer.address;
       setShipments(newShipments);
+      autoSuggestShipmentLocation(0);
     }
   }, [customer.address]);
 
@@ -141,11 +163,14 @@ const OrderForm = ({ products, settings, initialData = null }) => {
       const res = await fetch(`/api/customers/${c.id}/addresses`);
       const data = await res.json();
       if (data.addresses && data.addresses.length > 0) {
-        setShipments([{ 
-          label: data.addresses[0].label || 'Primary Shipment', 
-          address_text: data.addresses[0].address_text, 
-          status: 'Order Placed' 
+        setShipments([{
+          label: data.addresses[0].label || 'Primary Shipment',
+          address_text: data.addresses[0].address_text,
+          status: 'Order Placed',
+          city: '',
+          state: ''
         }]);
+        autoSuggestShipmentLocation(0);
       }
     } catch (err) {
       console.error('Failed to fetch customer addresses:', err);
@@ -161,10 +186,12 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   };
 
   const addShipment = () => {
-    setShipments([...shipments, { 
-      label: `Shipment ${shipments.length + 1}`, 
-      address_text: '', 
-      status: 'Order Placed' 
+    setShipments([...shipments, {
+      label: `Shipment ${shipments.length + 1}`,
+      address_text: '',
+      status: 'Order Placed',
+      city: '',
+      state: ''
     }]);
   };
 
@@ -333,18 +360,50 @@ const OrderForm = ({ products, settings, initialData = null }) => {
                 <div style={{ fontWeight: '700', fontSize: '14px', color: '#1B4332' }}>{s.label}</div>
                 {idx > 0 && <button type="button" onClick={() => removeShipment(idx)} style={{ color: '#DC2626', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={16} /></button>}
               </div>
-              <textarea 
-                value={s.address_text} 
+              <textarea
+                value={s.address_text}
                 onChange={(e) => {
                   const newShipments = [...shipments];
                   newShipments[idx].address_text = e.target.value;
                   setShipments(newShipments);
                 }}
+                onBlur={() => autoSuggestShipmentLocation(idx)}
                 placeholder="Enter destination address..."
                 rows={2}
                 style={{ ...inputBaseStyle, fontSize: '13px' }}
                 required
               />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
+                <div>
+                  <label style={labelStyle}>City</label>
+                  <input
+                    type="text"
+                    value={s.city}
+                    onChange={(e) => {
+                      const newShipments = [...shipments];
+                      newShipments[idx].city = e.target.value;
+                      setShipments(newShipments);
+                    }}
+                    placeholder="e.g. Bengaluru"
+                    style={{ ...inputBaseStyle, fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>State</label>
+                  <select
+                    value={s.state}
+                    onChange={(e) => {
+                      const newShipments = [...shipments];
+                      newShipments[idx].state = e.target.value;
+                      setShipments(newShipments);
+                    }}
+                    style={{ ...inputBaseStyle, fontSize: '13px' }}
+                  >
+                    <option value="">Select state...</option>
+                    {INDIAN_STATES.map(st => <option key={st} value={st}>{st}</option>)}
+                  </select>
+                </div>
+              </div>
             </div>
           ))}
         </div>
