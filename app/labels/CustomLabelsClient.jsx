@@ -3,15 +3,6 @@
 import { Layers, Plus, Printer, Tag, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-const BASE_LABELS = {
-  Glycerine: 'Glycerine Soap Base',
-  'Goat Milk': 'Goat Milk Soap Base',
-  'Shea Butter': 'Shea Butter Soap Base',
-  'Red Wine': 'Red Wine Soap Base',
-  Loofah: 'Loofah Soap Base',
-  Travel: '',
-};
-
 const COLORS = {
   brand: '#1B4332',
   text: '#000000',
@@ -49,17 +40,28 @@ const FONTS = {
 
 // Some products' free-text ingredients were typed with an old habit of
 // spelling out "...and Glycerin soap base" at the end — now redundant since
-// the base is always injected as its own leading ingredient below.
-const REDUNDANT_BASE_PHRASE = /\b(?:and\s+)?(?:glycerine?|goat\s*milk|shea\s*butter|red\s*wine|loofah)\s+soap\s*base\b/gi;
+// the base is always injected as its own leading ingredient below. Built
+// from the product's own base_type (not a fixed list) so it strips
+// correctly no matter what base_type gets typed on the Products page; the
+// trailing e? absorbs the Glycerin/Glycerine spelling variance.
+function stripRedundantBasePhrase(baseType, text) {
+  if (!baseType || !text) return text;
+  const escaped = baseType
+    .trim()
+    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\s+/g, '\\s*');
+  const stem = escaped.replace(/e$/i, '');
+  return text.replace(new RegExp(`\\b(?:and\\s+)?${stem}e?\\s+soap\\s*base\\b`, 'gi'), '');
+}
 
-// Lists the base type as "Glycerine Soap Base" etc. Combined with
-// REDUNDANT_BASE_PHRASE above and the de-dupe pass below, this avoids
-// printing "Glycerine Soap Base" (or "... Glycerin soap base") twice on one label.
+// Base type is free text on the product (Products page) — whatever's typed
+// there becomes its own leading ingredient, e.g. "Papaya Cucumber Soap
+// Base", so a new base_type never silently drops the base line. "Travel"
+// is the one exception: travel minis don't carry a soap-base ingredient.
 function getFullIngredients(baseType, additionalIngredients) {
-  const base = BASE_LABELS[baseType];
-  const cleanedAdditional = additionalIngredients
-    ?.replace(REDUNDANT_BASE_PHRASE, '')
-    .replace(/,\s*,/g, ',')
+  const base = baseType && baseType !== 'Travel' ? `${baseType} Soap Base` : '';
+  const cleanedAdditional = stripRedundantBasePhrase(baseType, additionalIngredients)
+    ?.replace(/,\s*,/g, ',')
     .replace(/,\s*$/, '')
     .trim();
   const combined = [base, cleanedAdditional].filter(Boolean).join(', ');
