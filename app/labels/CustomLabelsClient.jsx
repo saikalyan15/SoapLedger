@@ -4,11 +4,11 @@ import { Layers, Plus, Printer, Tag, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 const BASE_LABELS = {
-  Glycerine: 'Glycerine',
-  'Goat Milk': 'Goat Milk',
-  'Shea Butter': 'Shea Butter',
-  'Red Wine': 'Red Wine',
-  Loofah: 'Loofah',
+  Glycerine: 'Glycerine Soap Base',
+  'Goat Milk': 'Goat Milk Soap Base',
+  'Shea Butter': 'Shea Butter Soap Base',
+  'Red Wine': 'Red Wine Soap Base',
+  Loofah: 'Loofah Soap Base',
   Travel: '',
 };
 
@@ -47,36 +47,14 @@ const FONTS = {
   sans: '"Plus Jakarta Sans", "Inter", Arial, sans-serif',
 };
 
-const WavyDivider = ({ color = COLORS.brand, opacity = 0.3 }) => (
-  <svg
-    viewBox="0 0 200 8"
-    preserveAspectRatio="none"
-    style={{
-      width: '100%',
-      height: '3px',
-      display: 'block',
-      margin: '0.2mm 0',
-    }}
-  >
-    <path
-      d="M0,4 C12.5,0 12.5,8 25,4 C37.5,0 37.5,8 50,4 C62.5,0 62.5,8 75,4 C87.5,0 87.5,8 100,4 C112.5,0 112.5,8 125,4 C137.5,0 137.5,8 150,4 C162.5,0 162.5,8 175,4 C187.5,0 187.5,8 200,4"
-      fill="none"
-      stroke={color}
-      strokeWidth="2"
-      strokeOpacity={opacity}
-    />
-  </svg>
-);
-
 // Some products' free-text ingredients were typed with an old habit of
 // spelling out "...and Glycerin soap base" at the end — now redundant since
 // the base is always injected as its own leading ingredient below.
 const REDUNDANT_BASE_PHRASE = /\b(?:and\s+)?(?:glycerine?|goat\s*milk|shea\s*butter|red\s*wine|loofah)\s+soap\s*base\b/gi;
 
-// Lists the base type as a plain ingredient (e.g. "Glycerine") rather than
-// "Glycerine Soap Base" — "Soap Base" was redundant clutter. Combined with
+// Lists the base type as "Glycerine Soap Base" etc. Combined with
 // REDUNDANT_BASE_PHRASE above and the de-dupe pass below, this avoids
-// printing "Glycerine" (or "... Glycerin soap base") twice on one label.
+// printing "Glycerine Soap Base" (or "... Glycerin soap base") twice on one label.
 function getFullIngredients(baseType, additionalIngredients) {
   const base = BASE_LABELS[baseType];
   const cleanedAdditional = additionalIngredients
@@ -161,99 +139,6 @@ function RemoveLabelButton({ onRemove }) {
     >
       ×
     </button>
-  );
-}
-
-function ProductLabel({ label, license, onRemove }) {
-  return (
-    <div className="product-label">
-      {onRemove && <RemoveLabelButton onRemove={onRemove} />}
-      {/* White overlay for readability over background image */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(255,255,255,0.65)',
-          zIndex: 0,
-          WebkitPrintColorAdjust: 'exact',
-          printColorAdjust: 'exact',
-        }}
-      />
-
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-          padding: '0.5mm 1.5mm',
-        }}
-      >
-        {/* Product name — prominent in 15mm height */}
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: '7.5pt',
-            fontWeight: 800,
-            color: COLORS.brand,
-            lineHeight: 1,
-            marginTop: '0.2mm',
-            marginBottom: '0.3mm',
-          }}
-        >
-          {getDisplayName(label.product_name, label.base_type)}
-        </div>
-
-        <WavyDivider opacity={0.3} />
-
-        {/* Ingredients — very compact */}
-        <div
-          style={{
-            flex: 1,
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '4.8pt',
-              color: COLORS.text,
-              lineHeight: 1,
-              fontWeight: 500,
-              background: 'rgba(255,255,255,0.60)',
-              borderRadius: '0.5mm',
-              padding: '0.1mm 0.5mm',
-              width: '100%',
-              boxSizing: 'border-box',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-            }}
-          >
-            {getFullIngredients(label.base_type, label.ingredients)}
-          </div>
-        </div>
-
-        {/* Bottom row: Weight + BBE only */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '2mm',
-            marginTop: '0.3mm',
-          }}
-        >
-          <div style={{ fontSize: '4.5pt', fontWeight: 700, color: COLORS.text }}>
-            Wt: {label.weight_grams}g
-          </div>
-          <div style={{ fontSize: '4.5pt', fontWeight: 700, color: COLORS.text }}>
-            BBE: ______
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -500,20 +385,20 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   // product palette — per-product fine-tuning happens by clicking a chip
   // (add one) or the × on a printed label in the sheet (remove one).
   const [quantity, setQuantity] = useState(1);
-  const [printMode, setPrintMode] = useState('bands'); // 'stickers' | 'bands' | 'mini' | 'address'
+  const [printMode, setPrintMode] = useState('bands'); // 'bands' | 'mini' | 'address'
   const [bandPages, setBandPages] = useState(1);
   const [bandSize, setBandSize] = useState('100g'); // '100g' | '50g'
   const [addressCount, setAddressCount] = useState(21);
 
-  // Stickers: 55x20mm, 3x14 grid (portrait). Mini: 38.1x14mm (widened from
-  // 0.5in to fit larger ingredient text), 7x14 grid (landscape, edge-to-edge).
+  // Mini: 38.1x14mm (widened from 0.5in to fit larger ingredient text),
+  // 7x14 grid (landscape, edge-to-edge).
   // Bands: 35mm-tall 100g bands fit 8 per sheet; 20mm-tall 50g bands fit 14.
   // Address: 62x36mm, 3x7 grid, 21 per sheet (8mm padding + 3mm gaps:
   // 7*36 + 6*3 = 270mm fits inside the 281mm usable height of a 297mm-tall
   // A4 page).
   const bandsPerPage = bandSize === '50g' ? 14 : 8;
   const labelsPerPage =
-    printMode === 'stickers' ? 42 : printMode === 'mini' ? 98 : printMode === 'address' ? 21 : bandsPerPage;
+    printMode === 'mini' ? 98 : printMode === 'address' ? 21 : bandsPerPage;
 
   const bumpBatch = (prev, product, amount) => {
     const idx = prev.findIndex((b) => b.product_id === product.id);
@@ -648,17 +533,6 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           width: '297mm',
           height: '210mm',
         }
-      : printMode === 'stickers'
-      ? {
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 60mm)',
-          gap: '5mm',
-          alignItems: 'center',
-          padding: '10mm',
-          width: '210mm',
-          height: 'auto',
-          minHeight: '297mm',
-        }
       : printMode === 'address'
       ? {
           display: 'grid',
@@ -698,22 +572,6 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           font-family: ${FONTS.sans};
         }
 
-        .product-label {
-          width: 55mm;
-          height: 20mm;
-          border: 1px dashed #ccc;
-          display: flex;
-          flex-direction: column;
-          position: relative;
-          box-sizing: border-box;
-          overflow: hidden;
-          background-image: url('/label-bg.png');
-          background-size: cover;
-          background-position: center;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-
         .mini-label {
           width: 38.1mm;
           height: 14mm;
@@ -745,7 +603,6 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           opacity: 0;
           transition: opacity 0.12s ease;
         }
-        .product-label:hover .remove-label-btn,
         .mini-label:hover .remove-label-btn,
         .address-sticker:hover .remove-label-btn {
           opacity: 1;
@@ -823,25 +680,6 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             margin: 0 !important;
           }
 
-          .label-page-sheet {
-            display: grid !important;
-            grid-template-columns: repeat(3, 55mm) !important;
-            gap: 5mm !important;
-            padding: 6mm 8mm !important;
-            margin: 0 auto !important;
-            box-shadow: none !important;
-            border-radius: 0 !important;
-            page-break-after: always;
-            break-after: page;
-            width: 210mm !important;
-            height: 297mm !important;
-            box-sizing: border-box !important;
-          }
-          .label-page-sheet:last-child {
-            page-break-after: auto;
-            break-after: auto;
-          }
-
           .mini-page-sheet {
             display: grid !important;
             grid-template-columns: repeat(7, 38.1mm) !important;
@@ -915,18 +753,6 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
              the extra guide rows would push the stack past 297mm */
           .cutting-guide {
             display: none !important;
-          }
-
-          .product-label {
-            width: 55mm !important;
-            height: 20mm !important;
-            border: 0.1mm dashed #000 !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-            box-sizing: border-box !important;
-            overflow: hidden !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
           }
 
           .mini-label {
@@ -1012,22 +838,6 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             }}
           >
             Wrapper Bands
-          </button>
-          <button
-            onClick={() => setPrintMode('stickers')}
-            style={{
-              background: printMode === 'stickers' ? COLORS.brand : 'transparent',
-              color: printMode === 'stickers' ? 'white' : COLORS.muted,
-              border: 'none',
-              padding: '6px 14px',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontFamily: FONTS.sans,
-            }}
-          >
-            Label Prints
           </button>
           <button
             onClick={() => setPrintMode('mini')}
@@ -1141,8 +951,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           </div>
         )}
 
-        {/* Stickers / Mini: bulk-seed qty + running capacity readout */}
-        {(printMode === 'stickers' || printMode === 'mini') && (
+        {/* Mini: bulk-seed qty + running capacity readout */}
+        {printMode === 'mini' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, flexWrap: 'wrap' }}>
             <label style={{ fontSize: '13px', color: COLORS.muted, fontFamily: FONTS.sans, whiteSpace: 'nowrap' }}>Add</label>
             <input
@@ -1244,7 +1054,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             instantly. Remove one at a time by hovering a printed label
             below and clicking its ×, or clear a whole product with the
             trash icon in the batch summary underneath. */}
-        {(printMode === 'stickers' || printMode === 'mini') && (
+        {printMode === 'mini' && (
           <div className="no-print" style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', marginBottom: '12px' }}>
             <div style={{ marginBottom: '10px' }}>
               <span style={{ fontSize: '12px', fontWeight: 700, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: '0.03em', fontFamily: FONTS.sans }}>
@@ -1326,8 +1136,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           </div>
         )}
 
-        {/* Sticker / Mini batch list — compact */}
-        {(printMode === 'stickers' || printMode === 'mini') && batches.length > 0 && (
+        {/* Mini batch list — compact */}
+        {printMode === 'mini' && batches.length > 0 && (
           <div className="no-print" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
             {batches.map((batch) => (
               <div
@@ -1386,9 +1196,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             {/* A4 sheet — white card in browser, actual print page when printing */}
             <div
               className={
-                printMode === 'stickers'
-                  ? 'label-page-sheet'
-                  : printMode === 'mini'
+                printMode === 'mini'
                   ? 'mini-page-sheet'
                   : printMode === 'address'
                   ? 'address-page-sheet'
@@ -1404,14 +1212,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
               }}
             >
               {page.map((label) =>
-                printMode === 'stickers' ? (
-                  <ProductLabel
-                    key={label.uid}
-                    label={label}
-                    license={businessConfig.brand.license}
-                    onRemove={() => removeOneFromBatch(label.id)}
-                  />
-                ) : printMode === 'mini' ? (
+                printMode === 'mini' ? (
                   <MiniProductLabel
                     key={label.uid}
                     label={label}
@@ -1436,12 +1237,12 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
               {/* Screen-only ghost slots for the remaining empty space on the last
                   page — shows exactly how many more labels are needed to avoid
                   printing (and wasting) a partially-filled sheet. Never printed. */}
-              {(printMode === 'stickers' || printMode === 'mini' || printMode === 'address') &&
+              {(printMode === 'mini' || printMode === 'address') &&
                 pageIdx === pages.length - 1 &&
                 Array.from({ length: freeOnLastPage }, (_, i) => (
                   <div
                     key={`ghost-${i}`}
-                    className={`no-print ${printMode === 'mini' ? 'mini-label' : printMode === 'address' ? 'address-sticker' : 'product-label'}`}
+                    className={`no-print ${printMode === 'mini' ? 'mini-label' : 'address-sticker'}`}
                     style={{
                       background: 'transparent',
                       backgroundImage: 'none',

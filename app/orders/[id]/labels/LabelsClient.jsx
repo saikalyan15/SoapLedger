@@ -1,17 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Printer, Truck, Tag, CheckSquare, Square } from 'lucide-react';
+import { Printer, Truck, CheckSquare, Square } from 'lucide-react';
 import { formatPhoneForDisplay } from '@/lib/utils/phone';
-
-const BASE_LABELS = {
-  'Glycerine':   'Glycerine',
-  'Goat Milk':   'Goat Milk',
-  'Shea Butter': 'Shea Butter',
-  'Red Wine':    'Red Wine',
-  'Loofah':      'Loofah',
-  'Travel':      '',
-};
 
 const COLORS = {
   brand: '#1B4332',
@@ -23,37 +14,8 @@ const FONTS = {
   sans: '"Plus Jakarta Sans", "Inter", Arial, sans-serif',
 };
 
-const WavyDivider = ({ color = COLORS.brand, opacity = 0.3 }) => (
-  <svg
-    viewBox="0 0 200 8"
-    preserveAspectRatio="none"
-    style={{ width: '100%', height: '3px', display: 'block', margin: '0.5mm 0' }}
-  >
-    <path
-      d="M0,4 C12.5,0 12.5,8 25,4 C37.5,0 37.5,8 50,4 C62.5,0 62.5,8 75,4 C87.5,0 87.5,8 100,4 C112.5,0 112.5,8 125,4 C137.5,0 137.5,8 150,4 C162.5,0 162.5,8 175,4 C187.5,0 187.5,8 200,4"
-      fill="none"
-      stroke={color}
-      strokeWidth="2"
-      strokeOpacity={opacity}
-    />
-  </svg>
-);
-
-function getFullIngredients(baseType, additionalIngredients) {
-  const base = BASE_LABELS[baseType];
-  const baseText = base ? `${base} Soap Base` : 'Soap Base';
-  if (!additionalIngredients?.trim()) return baseText;
-  return `${baseText}, ${additionalIngredients.trim()}`;
-}
-
-const LabelsClient = ({ labels, orderInfo, businessConfig }) => {
-  const [selectedIds, setSelectedIds] = useState(new Set([...labels.map((_, i) => i), -1, -2]));
-
-  const formatBBE = (dateStr) => {
-    const d = new Date(dateStr);
-    d.setMonth(d.getMonth() + 12);
-    return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-  };
+const LabelsClient = ({ orderInfo, businessConfig }) => {
+  const [selectedIds, setSelectedIds] = useState(new Set([-1, -2]));
 
   const toggleLabel = (id) => {
     const newSelected = new Set(selectedIds);
@@ -71,14 +33,6 @@ const LabelsClient = ({ labels, orderInfo, businessConfig }) => {
         .labels-page { background: #F0EDE8; padding: 20px; min-height: 100vh; font-family: ${FONTS.sans}; }
         .section-header { color: ${COLORS.brand}; margin: 20px 0 10px 0; display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; }
         
-        .product-label {
-          width: 60mm; height: 40mm; border: 1px dashed #CCC;
-          display: flex; flex-direction: column; position: relative;
-          cursor: pointer; transition: opacity 0.2s; box-sizing: border-box; overflow: hidden;
-          background-image: url('/label-bg.png'); background-size: cover; background-position: center;
-          -webkit-print-color-adjust: exact; print-color-adjust: exact;
-        }
-
         .address-label {
           background: white; border: 1px dashed #000; padding: 8mm;
           display: flex; flex-direction: column; cursor: pointer; position: relative; box-sizing: border-box;
@@ -98,9 +52,6 @@ const LabelsClient = ({ labels, orderInfo, businessConfig }) => {
           .labels-page { background: white !important; padding: 0 !important; min-height: 0 !important; }
           .deselected { display: none !important; }
           
-          .product-grid { display: grid; grid-template-columns: repeat(3, 60mm); gap: 4mm; margin-bottom: 6mm; padding-top: 2mm; }
-          .product-label { width: 60mm !important; height: 40mm !important; border: 0.3mm dashed #000 !important; page-break-inside: avoid !important; box-sizing: border-box !important; overflow: hidden !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-
           .shipping-section { display: flex; flex-wrap: wrap; gap: 5mm; border-top: 0.2mm solid #000; paddingTop: 6mm; page-break-inside: avoid; }
           .address-label { border: 0.3mm dashed #000 !important; box-sizing: border-box !important; padding: 8mm !important; }
           .to-label { width: 115mm !important; height: auto !important; }
@@ -124,55 +75,6 @@ const LabelsClient = ({ labels, orderInfo, businessConfig }) => {
       </div>
 
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        {/* Product Labels Section */}
-        <h3 className="section-header no-print"><Tag size={18} /> Product Labels</h3>
-        <div className="product-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-          {labels.map((label, index) => (
-            <div key={index} className={`product-label ${selectedIds.has(index) ? '' : 'deselected'}`} onClick={() => toggleLabel(index)}>
-              {/* Background overlay for text readability */}
-              <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.45)', zIndex: 0, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }} />
-
-              <div className="selection-overlay no-print" style={{ zIndex: 20 }}>
-                {selectedIds.has(index) ? <CheckSquare size={16} fill={COLORS.brand} color="white" /> : <Square size={16} color={COLORS.muted} />}
-              </div>
-
-              {/* Content layer */}
-              <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '2mm 3mm' }}>
-                {/* Logo centered */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1mm' }}>
-                  <img src="/logo/healing-soil-v2.1.png" style={{ width: '14mm', height: 'auto' }} />
-                  <div style={{ fontSize: '5pt', fontWeight: 700, color: COLORS.brand, letterSpacing: '0.08em', marginTop: '0.3mm' }}>{businessConfig.brand.name}</div>
-                </div>
-
-                {/* Product name */}
-                <div style={{ textAlign: 'center', fontSize: '11pt', fontWeight: 800, color: COLORS.brand, lineHeight: 1.1, marginBottom: '1mm' }}>
-                  {label.product_name}
-                </div>
-
-                {/* Ingredients */}
-                <div style={{ fontSize: '7pt', color: COLORS.text, lineHeight: 1.3, flex: 1, overflow: 'hidden', fontWeight: 500 }}>
-                  <span style={{ fontWeight: 800 }}>Ingredients : </span>{getFullIngredients(label.base_type, label.ingredients)}
-                </div>
-
-                {/* Bottom row: Udyam left, Weight + Expiry right */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '0.5mm' }}>
-                  <div style={{ fontSize: '5pt', fontWeight: 700, color: COLORS.text, letterSpacing: '0.06em' }}>
-                    {businessConfig.brand.license}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2mm' }}>
-                    <div style={{ fontSize: '5.5pt', fontWeight: 700, color: COLORS.text, background: 'rgba(255,255,255,0.7)', padding: '0.3mm 1mm', borderRadius: '1mm' }}>
-                      Wt: {label.weight_grams}g
-                    </div>
-                    <div style={{ fontSize: '5.5pt', fontWeight: 700, color: COLORS.text, background: 'rgba(255,255,255,0.7)', padding: '0.3mm 1mm', borderRadius: '1mm' }}>
-                      Expiry: {formatBBE(label.order_date)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
         {/* Shipping Section */}
         <h3 className="section-header no-print"><Truck size={18} /> Shipping Labels</h3>
         <div className="shipping-section" style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-start' }}>
