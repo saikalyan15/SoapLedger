@@ -5,16 +5,45 @@ import type { NextRequest } from 'next/server';
 const AUTH_TOKEN = 'healingsoil@7580';
 const COOKIE_NAME = 'soapledger_auth';
 
+// Routes called by external systems (healingsoil.in) that authenticate
+// themselves with the x-api-key header. Everything else under /api is only
+// ever called by this app's own browser UI, so it must carry the auth cookie.
+const API_KEY_ROUTES = ['/api/products', '/api/orders/incoming'];
+
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // 1. Skip auth for API routes (they have their own API key logic)
-  // and static files (images, etc.)
-  if (
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/_next') ||
-    pathname.includes('.')
-  ) {
+  // Static assets — always allowed.
+  if (pathname.startsWith('/_next')) {
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith('/api')) {
+    // These validate their own API key inside the route handler.
+    if (API_KEY_ROUTES.some((p) => pathname.startsWith(p))) {
+      return NextResponse.next();
+    }
+
+    // Every other API route reads from the database. Require either the
+    // browser auth cookie or a valid API key before anything touches Neon —
+    // an unauthenticated request must never be able to wake the compute or
+    // read customer data.
+    const hasCookie = request.cookies.get(COOKIE_NAME);
+    const hasApiKey =
+      request.headers.get('x-api-key') === process.env.HEALINGSOIL_API_KEY;
+
+    if (!hasCookie && !hasApiKey) {
+      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    return NextResponse.next();
+  }
+
+  // Static files (images, etc.)
+  if (pathname.includes('.')) {
     return NextResponse.next();
   }
 
@@ -53,12 +82,14 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api (handled by its own auth)
+     * Match all request paths except for:
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     *
+     * /api is deliberately INCLUDED so that database-backed API routes are
+     * gated too. Handling for it is branched inside middleware() above.
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };
