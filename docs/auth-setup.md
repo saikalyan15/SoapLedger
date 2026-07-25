@@ -104,6 +104,23 @@ Everything else requires a session. Pages redirect anonymous visitors to
 1. Open the site in a private window → should redirect to `/login`
 2. Sign in with an allowlisted account → should land on the dashboard
 3. Sign in with any other Google account → should show "does not have access"
-4. `curl https://soap-ledger.vercel.app/api/backup/export` → should return 401
+4. `npm run verify:auth -- --url=https://soap-ledger.vercel.app` → should print
+   all ✅ and exit 0. This checks steps 4-6 below automatically for every
+   database-backed route, not just `/api/backup/export`, so it's the fast way
+   to confirm the middleware guard is intact after any change to it or to
+   `auth.ts` — run it after every deploy that touches either file.
 5. Place a test order from healingsoil.in → should still reach SoapLedger
 6. healingsoil.in shop page → products should still load
+
+### Why `verify:auth` exists
+
+This is the regression test for the vulnerability found on 25 Jul 2026:
+middleware skipped `/api` entirely on the assumption routes checked their own
+auth, and 6 of 8 didn't — including `/api/backup/export`, which returned the
+full customer database to anyone who requested the URL, no login required.
+
+The current middleware denies by default, so a new API route is protected
+automatically without anyone having to remember to add a check. `verify:auth`
+is what catches it if that default-deny logic is ever accidentally loosened -
+there's no compiler error for "this route stopped requiring auth," so this
+script is the only thing that would actually notice.
