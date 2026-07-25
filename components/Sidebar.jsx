@@ -6,8 +6,9 @@ import { useState } from 'react'
 import {
   LayoutDashboard, PlusCircle, ShoppingBag, Users,
   Package, Receipt, Settings, X, Tag, TrendingUp, Bell, BarChart2, Droplets, NotebookPen,
-  ChevronDown, BarChart3, Wrench, Percent
+  ChevronDown, BarChart3, Wrench, Percent, LogOut
 } from 'lucide-react'
+import { signOutAction } from '@/lib/actions/auth'
 
 const navItems = [
   { label: 'Dashboard',   href: '/dashboard',  icon: LayoutDashboard },
@@ -241,6 +242,27 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         fontSize: '11px',
         color: 'rgba(255,255,255,0.3)',
       }}>
+        <form action={signOutAction}>
+          <button
+            type="submit"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px',
+              padding: 0,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: '12px',
+              color: 'rgba(255,255,255,0.5)',
+            }}
+          >
+            <LogOut size={13} />
+            Sign out
+          </button>
+        </form>
         Healing Soil © 2026
       </div>
     </aside>

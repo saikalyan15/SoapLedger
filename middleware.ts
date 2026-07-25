@@ -1,42 +1,53 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { auth } from '@/auth';
 
-// The secret token used for the magic link
-const AUTH_TOKEN = 'healingsoil@7580';
-const COOKIE_NAME = 'soapledger_auth';
+/**
+ * Access control for SoapLedger.
+ *
+ * Replaces the previous shared magic-link token. That scheme had three problems:
+ *  - the token was hardcoded in this file and committed to git history
+ *  - it travelled in the URL, so it leaked into browser history and Referer headers
+ *  - the cookie check only tested that the cookie EXISTED, never its value, so
+ *    anyone could set `soapledger_auth=true` by hand in devtools and walk in
+ *
+ * Access is now a Google sign-in checked against an allowlist in auth.ts.
+ */
 
-// Routes called by external systems (healingsoil.in) that authenticate
-// themselves with the x-api-key header. Everything else under /api is only
-// ever called by this app's own browser UI, so it must carry the auth cookie.
+// Called by healingsoil.in with an x-api-key header; they validate the key
+// themselves inside the route handler.
 const API_KEY_ROUTES = ['/api/products', '/api/orders/incoming'];
 
-export function middleware(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl;
+// Must stay open or the sign-in flow cannot complete.
+const PUBLIC_PATHS = ['/login', '/api/auth'];
 
-  // Static assets — always allowed.
+export default auth((request) => {
+  const { pathname } = request.nextUrl;
+  const isSignedIn = Boolean(request.auth?.user);
+
+  // Static assets.
   if (pathname.startsWith('/_next')) {
     return NextResponse.next();
   }
 
+  // The OAuth endpoints and the login page itself.
+  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    return NextResponse.next();
+  }
+
   if (pathname.startsWith('/api')) {
-    // These validate their own API key inside the route handler.
+    // Machine-to-machine routes handle their own API key.
     if (API_KEY_ROUTES.some((p) => pathname.startsWith(p))) {
       return NextResponse.next();
     }
 
-    // Every other API route reads from the database. Require either the
-    // browser auth cookie or a valid API key before anything touches Neon —
-    // an unauthenticated request must never be able to wake the compute or
-    // read customer data.
-    const hasCookie = request.cookies.get(COOKIE_NAME);
+    // Every other API route reads the database. Require a real session or a
+    // valid API key before anything can touch Neon — an unauthenticated request
+    // must never be able to wake the compute or read customer data.
     const hasApiKey =
       request.headers.get('x-api-key') === process.env.HEALINGSOIL_API_KEY;
 
-    if (!hasCookie && !hasApiKey) {
-      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'content-type': 'application/json' },
-      });
+    if (!isSignedIn && !hasApiKey) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     return NextResponse.next();
@@ -47,37 +58,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Check if the "Magic Token" is in the URL
-  const token = searchParams.get('token');
-
-  if (token === AUTH_TOKEN) {
-    // Correct token! Set a secure cookie for 1 year and redirect to clean URL
-    const response = NextResponse.redirect(new URL(pathname, request.url));
-    
-    response.cookies.set(COOKIE_NAME, 'true', {
-      httpOnly: true,
-      secure: request.nextUrl.protocol === 'https:',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 365, // 1 year
-    });
-    
-    return response;
+  // Pages: send anonymous visitors to the login screen rather than a bare 401,
+  // so a bookmarked deep link still works after signing in.
+  if (!isSignedIn) {
+    const loginUrl = new URL('/login', request.nextUrl.origin);
+    return NextResponse.redirect(loginUrl);
   }
 
-  // 3. Check if the user already has a valid auth cookie
-  const isAuthenticated = request.cookies.get(COOKIE_NAME);
-
-  if (!isAuthenticated) {
-    // Not authenticated and no token? Block access.
-    return new NextResponse(
-      JSON.stringify({ error: 'Unauthorized. Please use your magic link to login.' }),
-      { status: 401, headers: { 'content-type': 'application/json' } }
-    );
-  }
-
-  // User is authenticated, proceed normally
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: [
@@ -87,8 +76,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      *
-     * /api is deliberately INCLUDED so that database-backed API routes are
-     * gated too. Handling for it is branched inside middleware() above.
+     * /api is deliberately INCLUDED so database-backed API routes are gated
+     * too. Handling for it is branched inside the middleware above.
      */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
