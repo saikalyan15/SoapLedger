@@ -24,10 +24,31 @@ export async function GET(request) {
   }
 
   try {
+    // units_sold powers the "Most Loved by Our Community" row on the storefront,
+    // which claims best-sellers — so it has to come from real order lines rather
+    // than a manual flag.
+    //
+    // The status guard mirrors lib/queries/sku-report.js so the two can never
+    // disagree. Note that 'Cancelled' is not currently a valid status: the CHECK
+    // on orders.status allows only Received / In Progress / Dispatched /
+    // Delivered, so today this excludes nothing. It is here so that adding a
+    // cancelled state later does not silently inflate the storefront figures.
+    //
+    // The join runs on every call, but the storefront caches this response for
+    // 24h and purges on demand, so it is fetched rarely.
     const products = await sql`
-      SELECT * FROM products 
-      WHERE is_active = true OR in_stock = true
-      ORDER BY display_order ASC, name ASC
+      SELECT
+        p.*,
+        COALESCE(
+          SUM(CASE WHEN o.status != 'Cancelled' THEN oi.quantity ELSE 0 END),
+          0
+        )::int AS units_sold
+      FROM products p
+      LEFT JOIN order_items oi ON oi.product_id = p.id
+      LEFT JOIN orders o ON o.id = oi.order_id
+      WHERE p.is_active = true OR p.in_stock = true
+      GROUP BY p.id
+      ORDER BY p.display_order ASC, p.name ASC
     `;
 
     const formattedProducts = products.map(p => ({
@@ -46,6 +67,7 @@ export async function GET(request) {
       category: p.category || p.base_type,
       display_order: p.display_order || 0,
       texture: p.texture || null,
+      units_sold: p.units_sold ?? 0,
     }));
 
     return NextResponse.json(formattedProducts, {
