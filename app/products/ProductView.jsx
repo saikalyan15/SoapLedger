@@ -95,6 +95,14 @@ export default function ProductView({ products, allOils = [] }) {
       const link = p.slug ? `${SITE_URL}/shop/${p.slug}` : SITE_URL;
       const description = p.short_description || p.name;
 
+      // image_url is stored as a site-relative path ending .png, but the
+      // storefront serves WebP and Google requires an absolute URL. Sending the
+      // raw value gave Merchant Center a relative path pointing at a file that
+      // no longer exists. WebP is an accepted image format for feeds.
+      const imageLink = p.image_url
+        ? `${SITE_URL}${p.image_url.replace(/\.(png|jpe?g)$/i, '.webp')}`
+        : '';
+
       return [
         p.slug || p.id,
         p.name,
@@ -103,7 +111,7 @@ export default function ProductView({ products, allOils = [] }) {
         'new',
         price,
         link,
-        p.image_url || '',
+        imageLink,
         BRAND,
         'Health & Beauty > Personal Care > Skin Care',
         '',
