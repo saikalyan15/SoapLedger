@@ -6,7 +6,7 @@ import { useState } from 'react'
 import {
   LayoutDashboard, PlusCircle, ShoppingBag, Users,
   Package, Receipt, Settings, X, Tag, TrendingUp, Bell, BarChart2, Droplets, NotebookPen,
-  ChevronDown, BarChart3, Wrench, Percent, LogOut
+  ChevronDown, BarChart3, Wrench, Percent, LogOut, Truck
 } from 'lucide-react'
 import { signOutAction } from '@/lib/actions/auth'
 
@@ -33,6 +33,7 @@ const navItems = [
     icon: Wrench,
     children: [
       { label: 'Print',            href: '/labels',   icon: Tag },
+      { label: 'Dispatch Report',  href: '/orders/dispatch-report', icon: Truck },
       { label: 'Gift Handnote',    href: '/handnote', icon: NotebookPen },
       { label: 'Reorder Outreach', href: '/outreach', icon: Bell },
     ],
