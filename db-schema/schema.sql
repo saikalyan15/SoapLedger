@@ -109,6 +109,8 @@ CREATE TABLE orders (
   material_cost   NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
   status          TEXT NOT NULL DEFAULT 'Received'
                     CHECK (status IN ('Received', 'In Progress', 'Dispatched', 'Delivered')),
+  source          TEXT,
+  attribution     JSONB,
   notes           TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -157,6 +159,7 @@ SELECT
   o.order_date,
   o.status,
   o.notes,
+  o.source,
   o.created_at,
   o.order_value                                          AS revenue,
   o.shipping_charge,
@@ -167,7 +170,8 @@ SELECT
   c.id                                                   AS customer_id,
   c.name                                                 AS customer_name,
   c.phone                                                AS customer_phone,
-  c.address                                              AS customer_address
+  c.address                                              AS customer_address,
+  o.attribution
 FROM orders o
 JOIN customers c ON c.id = o.customer_id;
 

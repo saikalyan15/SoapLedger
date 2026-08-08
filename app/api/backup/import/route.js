@@ -74,8 +74,8 @@ export async function POST(request) {
 
       // orders (FK: customers)
       ...orders.map(r => sql`
-        INSERT INTO orders (id, customer_id, order_date, order_value, shipping_charge, packaging_cost, material_cost, status, notes, created_at, dispatched_at, delivered_at)
-        VALUES (${r.id}, ${r.customer_id}, ${r.order_date}, ${r.order_value}, ${r.shipping_charge}, ${r.packaging_cost}, ${r.material_cost ?? 0}, ${r.status}, ${r.notes ?? null}, ${r.created_at}, ${r.dispatched_at ?? null}, ${r.delivered_at ?? null})
+        INSERT INTO orders (id, customer_id, order_date, order_value, shipping_charge, packaging_cost, material_cost, status, source, attribution, notes, created_at, dispatched_at, delivered_at)
+        VALUES (${r.id}, ${r.customer_id}, ${r.order_date}, ${r.order_value}, ${r.shipping_charge}, ${r.packaging_cost}, ${r.material_cost ?? 0}, ${r.status}, ${r.source ?? null}, ${r.attribution ? JSON.stringify(r.attribution) : null}::jsonb, ${r.notes ?? null}, ${r.created_at}, ${r.dispatched_at ?? null}, ${r.delivered_at ?? null})
       `),
 
       // shipments (FK: orders)

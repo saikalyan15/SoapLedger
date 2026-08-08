@@ -20,7 +20,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { customer, items, shipping, source, notes: customNotes } = body;
+    const { customer, items, shipping, source, attribution, notes: customNotes } = body;
 
     if (!customer || !customer.phone || !items || !items.length) {
       return NextResponse.json({ error: 'Invalid order data' }, { status: 400 });
@@ -90,10 +90,13 @@ export async function POST(request) {
 
     // Normalize source
     const normalizedSource = (source?.toLowerCase() === 'website order' || source?.toLowerCase() === 'website') ? 'Website' : source;
+    const normalizedAttribution = attribution && typeof attribution === 'object'
+      ? JSON.stringify(attribution)
+      : null;
 
     const orderRes = await client.query(
-      'INSERT INTO orders (customer_id, order_date, order_value, shipping_charge, status, source, notes) VALUES ($1, CURRENT_DATE, $2, $3, $4, $5, $6) RETURNING id, status',
-      [customerId, finalRevenue, shipCharge, 'Order Placed', normalizedSource || null, combinedNotes]
+      'INSERT INTO orders (customer_id, order_date, order_value, shipping_charge, status, source, notes, attribution) VALUES ($1, CURRENT_DATE, $2, $3, $4, $5, $6, $7::jsonb) RETURNING id, status',
+      [customerId, finalRevenue, shipCharge, 'Order Placed', normalizedSource || null, combinedNotes, normalizedAttribution]
     );
     const newOrder = orderRes.rows[0];
 
