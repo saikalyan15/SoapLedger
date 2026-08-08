@@ -32,9 +32,10 @@ import {
 } from '@/lib/queries/dashboard';
 import OrdersMap from './OrdersMap';
 
-const ACTION_REQUIRED_STATUSES = ['Awaiting Payment', 'Payment Confirmed', 'Ready to Dispatch'];
+const ACTION_REQUIRED_STATUSES = ['Order Placed', 'Awaiting Payment', 'Payment Confirmed', 'Ready to Dispatch'];
 
 const STATUS_META = {
+  'Order Placed': { icon: Clock, color: '#9A3412', bg: '#FFF7ED' },
   'Ready to Dispatch': { icon: Truck, color: '#166534', bg: '#F0FDF4' },
   'In Manufacturing': { icon: Factory, color: '#6B21A8', bg: '#F5F3FF' },
   'Payment Confirmed': { icon: CheckCircle, color: '#0F766E', bg: '#F0FDFA' },
@@ -259,7 +260,7 @@ export default function DashboardClient({
           <CashMetric
             label="Orders needing action"
             value={fmtNumber(ordersNeedingAction)}
-            helper={ordersNeedingAction > 0 ? 'Waiting on payment, confirmation, or dispatch' : 'No orders need your attention'}
+            helper={ordersNeedingAction > 0 ? 'New orders, payments, confirmations, or dispatches to handle' : 'No orders need your attention'}
           />
         </div>
       </section>
