@@ -56,8 +56,8 @@ export async function POST(request) {
 
       // customers (no FK)
       ...customers.map(r => sql`
-        INSERT INTO customers (id, name, phone, address, notes, created_at)
-        VALUES (${r.id}, ${r.name}, ${r.phone}, ${r.address ?? null}, ${r.notes ?? null}, ${r.created_at})
+        INSERT INTO customers (id, name, phone, email, address, notes, created_at)
+        VALUES (${r.id}, ${r.name}, ${r.phone}, ${r.email ?? null}, ${r.address ?? null}, ${r.notes ?? null}, ${r.created_at})
       `),
 
       // settings (no FK)
@@ -74,8 +74,8 @@ export async function POST(request) {
 
       // orders (FK: customers)
       ...orders.map(r => sql`
-        INSERT INTO orders (id, customer_id, order_date, order_value, shipping_charge, packaging_cost, material_cost, status, source, attribution, notes, created_at, dispatched_at, delivered_at)
-        VALUES (${r.id}, ${r.customer_id}, ${r.order_date}, ${r.order_value}, ${r.shipping_charge}, ${r.packaging_cost}, ${r.material_cost ?? 0}, ${r.status}, ${r.source ?? null}, ${r.attribution ? JSON.stringify(r.attribution) : null}::jsonb, ${r.notes ?? null}, ${r.created_at}, ${r.dispatched_at ?? null}, ${r.delivered_at ?? null})
+        INSERT INTO orders (id, customer_id, order_date, order_value, shipping_charge, packaging_cost, material_cost, status, source, attribution, payment_provider, provider_order_id, provider_payment_id, payment_status, paid_at, notes, created_at, dispatched_at, delivered_at)
+        VALUES (${r.id}, ${r.customer_id}, ${r.order_date}, ${r.order_value}, ${r.shipping_charge}, ${r.packaging_cost}, ${r.material_cost ?? 0}, ${r.status}, ${r.source ?? null}, ${r.attribution ? JSON.stringify(r.attribution) : null}::jsonb, ${r.payment_provider ?? null}, ${r.provider_order_id ?? null}, ${r.provider_payment_id ?? null}, ${r.payment_status ?? 'unpaid'}, ${r.paid_at ?? null}, ${r.notes ?? null}, ${r.created_at}, ${r.dispatched_at ?? null}, ${r.delivered_at ?? null})
       `),
 
       // shipments (FK: orders)

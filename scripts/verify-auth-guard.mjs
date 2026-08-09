@@ -44,7 +44,12 @@ const PROTECTED_GET_ROUTES = [
 // than in middleware, because healingsoil.in calls them machine-to-machine.
 // A request with no key at all must still be rejected — just by the route,
 // not by middleware.
-const API_KEY_ROUTES = ['/api/products', '/api/orders/incoming'];
+const API_KEY_ROUTES = [
+  ['/api/products', 'GET'],
+  ['/api/orders/incoming', 'POST'],
+  ['/api/orders/payment', 'POST'],
+  ['/api/order-availability', 'GET'],
+];
 
 let failures = 0;
 
@@ -73,8 +78,9 @@ async function main() {
   }
 
   console.log('\nRoutes that validate their own x-api-key (no key sent, expect 401):');
-  await checkRejectsUnauthenticated('/api/products', 'GET');
-  await checkRejectsUnauthenticated('/api/orders/incoming', 'POST');
+  for (const [path, method] of API_KEY_ROUTES) {
+    await checkRejectsUnauthenticated(path, method);
+  }
 
   // Sanity check: if EVERY route were unreachable (wrong URL, server down),
   // the checks above would falsely "pass" as 401s that are actually network

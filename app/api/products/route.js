@@ -40,7 +40,7 @@ export async function GET(request) {
       SELECT
         p.*,
         COALESCE(
-          SUM(CASE WHEN o.status != 'Cancelled' THEN oi.quantity ELSE 0 END),
+          SUM(CASE WHEN o.status != 'Cancelled' AND o.source IS DISTINCT FROM 'Expression of Interest' THEN oi.quantity ELSE 0 END),
           0
         )::int AS units_sold
       FROM products p

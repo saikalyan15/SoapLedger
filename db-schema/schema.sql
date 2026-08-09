@@ -52,10 +52,13 @@ CREATE TABLE customers (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name        TEXT NOT NULL,
   phone       TEXT NOT NULL UNIQUE,
+  email       TEXT UNIQUE,
   address     TEXT,
   notes       TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX customers_email_unique ON customers (LOWER(email)) WHERE email IS NOT NULL;
 
 
 -- ============================================================
@@ -107,10 +110,16 @@ CREATE TABLE orders (
   shipping_charge NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
   packaging_cost  NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
   material_cost   NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-  status          TEXT NOT NULL DEFAULT 'Received'
-                    CHECK (status IN ('Received', 'In Progress', 'Dispatched', 'Delivered')),
+  status          TEXT NOT NULL DEFAULT 'Order Placed'
+                    CHECK (status IN ('Order Placed', 'Received', 'Awaiting Payment', 'Payment Confirmed', 'In Manufacturing', 'Ready to Dispatch', 'Dispatched', 'Partially Dispatched', 'Partially Delivered', 'Delivered', 'Cancelled')),
   source          TEXT,
   attribution     JSONB,
+  payment_provider TEXT,
+  provider_order_id TEXT,
+  provider_payment_id TEXT,
+  payment_status  TEXT NOT NULL DEFAULT 'unpaid'
+                    CHECK (payment_status IN ('unpaid', 'pending', 'manual', 'paid')),
+  paid_at         TIMESTAMPTZ,
   notes           TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -145,7 +154,8 @@ CREATE TABLE settings (
 INSERT INTO settings (key, value, description) VALUES
   ('default_packaging_cost',  '30',   'Default packaging cost per order in INR'),
   ('free_shipping_threshold', '1000', 'Orders at or above this value get free shipping'),
-  ('shipping_charge_below',   '100',  'Shipping charge for orders below the threshold');
+  ('shipping_charge_below',   '100',  'Shipping charge for orders below the threshold'),
+  ('accepting_orders',         'true', 'Allow new website orders. Turn off to pause Razorpay and manual fallback immediately.');
 
 
 -- ============================================================
@@ -171,7 +181,13 @@ SELECT
   c.name                                                 AS customer_name,
   c.phone                                                AS customer_phone,
   c.address                                              AS customer_address,
-  o.attribution
+  o.attribution,
+  o.payment_provider,
+  o.provider_order_id,
+  o.provider_payment_id,
+  o.payment_status,
+  o.paid_at,
+  c.email                                                AS customer_email
 FROM orders o
 JOIN customers c ON c.id = o.customer_id;
 

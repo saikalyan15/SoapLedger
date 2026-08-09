@@ -37,6 +37,7 @@ const OrdersView = ({ orders }) => {
     const matchesSearch =
       order.customer_name.toLowerCase().includes(search.toLowerCase()) ||
       order.id.toLowerCase().includes(search.toLowerCase()) ||
+      (order.customer_email && order.customer_email.toLowerCase().includes(search.toLowerCase())) ||
       (order.customer_phone && order.customer_phone.includes(search));
     return matchesFilter && matchesSearch;
   });

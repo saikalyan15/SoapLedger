@@ -10,6 +10,8 @@ export default function SettingsView({ settings, businessConfig }) {
 
   const initialCapacity = settings.find(s => s.key === 'monthly_capacity')?.value || '30';
   const [monthlyCapacity, setMonthlyCapacity] = useState(initialCapacity);
+  const initialAcceptingOrders = settings.find(s => s.key === 'accepting_orders')?.value !== 'false';
+  const [acceptingOrders, setAcceptingOrders] = useState(initialAcceptingOrders);
 
   // ── Backup state ───────────────────────────────────────────────────
   const [isExporting, setIsExporting] = useState(false);
@@ -142,7 +144,23 @@ export default function SettingsView({ settings, businessConfig }) {
 
   const saveCapacity = () => handleUpdate('monthly_capacity', monthlyCapacity);
 
-  const mainSettings = settings.filter(s => s.key !== 'monthly_capacity');
+  const mainSettings = settings.filter(s => !['monthly_capacity', 'accepting_orders'].includes(s.key));
+
+  const toggleOrders = async () => {
+    const next = !acceptingOrders;
+    setAcceptingOrders(next);
+    setSavingKey('accepting_orders');
+    try {
+      await updateSettingAction('accepting_orders', String(next));
+      setSuccessKey('accepting_orders');
+      setTimeout(() => setSuccessKey(null), 2000);
+    } catch {
+      setAcceptingOrders(!next);
+      alert('Failed to update website order availability');
+    } finally {
+      setSavingKey(null);
+    }
+  };
 
   return (
     <div className="pb-32 max-w-[800px]">
@@ -159,6 +177,36 @@ export default function SettingsView({ settings, businessConfig }) {
       <div className="mt-8 border-b-2 border-border mb-10"></div>
 
       <div className="space-y-6">
+        <div className={`rounded-xl border p-6 shadow-sm ${acceptingOrders ? 'border-[#BBF7D0] bg-[#F0FDF4]' : 'border-[#FECACA] bg-[#FEF2F2]'}`}>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="font-sans text-[13px] font-bold uppercase tracking-[0.1em] text-primary mb-1">
+                Website orders
+              </div>
+              <p className="font-sans text-[14px] text-muted m-0">
+                {acceptingOrders
+                  ? 'Checkout is open. Customers can pay and place orders.'
+                  : 'Checkout is paused. Customers can save an Expression of Interest and ask to be notified.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={acceptingOrders}
+              onClick={toggleOrders}
+              disabled={savingKey === 'accepting_orders'}
+              className={`min-w-[190px] rounded-lg px-5 py-3 text-sm font-bold text-white transition-colors disabled:opacity-60 ${acceptingOrders ? 'bg-[#B91C1C] hover:bg-[#991B1B]' : 'bg-primary hover:bg-primary-dark'}`}
+            >
+              {savingKey === 'accepting_orders'
+                ? 'Updating…'
+                : acceptingOrders ? 'Pause new orders' : 'Resume new orders'}
+            </button>
+          </div>
+          <p className="mt-3 font-sans text-xs text-[#6B7280]">
+            This takes effect immediately. Existing orders and carts are not changed.
+          </p>
+        </div>
+
         {mainSettings.map((setting) => (
           <div 
             key={setting.key} 

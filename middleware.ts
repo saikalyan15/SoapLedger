@@ -15,7 +15,12 @@ import { auth } from '@/auth';
 
 // Called by healingsoil.in with an x-api-key header; they validate the key
 // themselves inside the route handler.
-const API_KEY_ROUTES = ['/api/products', '/api/orders/incoming'];
+const API_KEY_ROUTES = [
+  '/api/products',
+  '/api/orders/incoming',
+  '/api/orders/payment',
+  '/api/order-availability',
+];
 
 // Must stay open or the sign-in flow cannot complete.
 const PUBLIC_PATHS = ['/login', '/api/auth'];
