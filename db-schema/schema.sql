@@ -118,8 +118,10 @@ CREATE TABLE orders (
   provider_order_id TEXT,
   provider_payment_id TEXT,
   payment_status  TEXT NOT NULL DEFAULT 'unpaid'
-                    CHECK (payment_status IN ('unpaid', 'pending', 'manual', 'paid')),
+                    CHECK (payment_status IN ('unpaid', 'pending', 'failed', 'manual', 'paid')),
   paid_at         TIMESTAMPTZ,
+  payment_failed_at TIMESTAMPTZ,
+  payment_failure_reason TEXT,
   notes           TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -187,7 +189,9 @@ SELECT
   o.provider_payment_id,
   o.payment_status,
   o.paid_at,
-  c.email                                                AS customer_email
+  c.email                                                AS customer_email,
+  o.payment_failed_at,
+  o.payment_failure_reason
 FROM orders o
 JOIN customers c ON c.id = o.customer_id;
 

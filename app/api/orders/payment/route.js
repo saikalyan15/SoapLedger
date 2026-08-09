@@ -31,8 +31,8 @@ export async function POST(request) {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const client = await pool.connect();
   try {
-    const { action, provider_order_id, provider_payment_id } = await request.json();
-    if (!provider_order_id || !['confirm', 'manual', 'status'].includes(action)) {
+    const { action, provider_order_id, provider_payment_id, failure_reason } = await request.json();
+    if (!provider_order_id || !['confirm', 'failed', 'manual', 'status'].includes(action)) {
       return NextResponse.json({ error: 'Invalid payment update' }, { status: 400 });
     }
 
@@ -59,7 +59,14 @@ export async function POST(request) {
       );
       await client.query("UPDATE shipments SET status = 'Payment Confirmed' WHERE order_id = $1", [locked.rows[0].id]);
       transitioned = true;
-    } else if (action === 'manual' && locked.rows[0].payment_status === 'pending') {
+    } else if (action === 'failed' && ['pending', 'failed'].includes(locked.rows[0].payment_status)) {
+      await client.query(
+        `UPDATE orders SET payment_status = 'failed', payment_failed_at = NOW(),
+         payment_failure_reason = $1 WHERE id = $2`,
+        [String(failure_reason || 'Payment was not completed').slice(0, 500), locked.rows[0].id]
+      );
+      transitioned = locked.rows[0].payment_status !== 'failed';
+    } else if (action === 'manual' && ['pending', 'failed'].includes(locked.rows[0].payment_status)) {
       await client.query("UPDATE orders SET status = 'Order Placed', payment_status = 'manual' WHERE id = $1", [locked.rows[0].id]);
       await client.query("UPDATE shipments SET status = 'Order Placed' WHERE order_id = $1", [locked.rows[0].id]);
       transitioned = true;
