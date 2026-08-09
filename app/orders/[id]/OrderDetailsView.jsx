@@ -3,13 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Pencil, ArrowLeft, ChevronDown, CheckCircle, UserCheck, AlertCircle, Printer, Package, MapPin, Droplets } from 'lucide-react';
+import { Pencil, ArrowLeft, ChevronDown, Printer, Package, MapPin, Droplets, CreditCard, ShieldCheck } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
-import { updateShipmentStatusAction, updateOrderStatusAction } from '@/lib/actions/orders';
+import { reconcileRazorpayPaymentAction, updateShipmentStatusAction, updateOrderStatusAction } from '@/lib/actions/orders';
 import { SETTABLE_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
 import { formatPhoneForDisplay } from '@/lib/utils/phone';
 
-const ShipmentCard = ({ shipment, items, isMobile, onStatusUpdate }) => {
+const ShipmentCard = ({ shipment, items, onStatusUpdate }) => {
   const [newStatus, setNewStatus] = useState(shipment.status);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -101,6 +101,117 @@ const ShipmentCard = ({ shipment, items, isMobile, onStatusUpdate }) => {
           </button>
         </div>
       </div>
+    </div>
+  );
+};
+
+const PaymentCard = ({ order, onReconciled }) => {
+  const [paymentId, setPaymentId] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [message, setMessage] = useState(null);
+  const isRazorpay = order.payment_provider === 'razorpay';
+  const isPaid = order.payment_status === 'paid';
+  const canReconcile = isRazorpay && !isPaid && order.provider_order_id;
+  const paymentIdIsValid = /^pay_[A-Za-z0-9]+$/.test(paymentId.trim());
+
+  const handleReconcile = async () => {
+    if (!paymentIdIsValid || isVerifying) return;
+    setIsVerifying(true);
+    setMessage(null);
+    const result = await reconcileRazorpayPaymentAction({
+      orderId: order.id,
+      providerOrderId: order.provider_order_id,
+      paymentId: paymentId.trim(),
+    });
+    setIsVerifying(false);
+    if (result.success) {
+      setMessage({ type: 'success', text: result.alreadyConfirmed ? 'Payment was already confirmed.' : 'Payment verified and order confirmed.' });
+      onReconciled();
+    } else {
+      setMessage({ type: 'error', text: result.error || 'Could not verify this payment.' });
+    }
+  };
+
+  const statusColor = isPaid ? '#166534' : order.payment_status === 'failed' ? '#B91C1C' : '#92400E';
+  const statusBackground = isPaid ? '#DCFCE7' : order.payment_status === 'failed' ? '#FEE2E2' : '#FEF3C7';
+
+  return (
+    <div style={{ ...cardStyle, borderColor: isPaid ? '#BBF7D0' : '#FDE68A' }}>
+      <div style={{ ...sectionLabelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <CreditCard size={13} />
+        Payment
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '16px' }}>
+        <div>
+          <div style={{ fontWeight: '700', color: '#111827', textTransform: 'capitalize' }}>
+            {isRazorpay ? 'Razorpay' : order.payment_provider || 'Manual'}
+          </div>
+          <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '2px' }}>
+            {isPaid ? 'Payment recorded in SoapLedger' : 'Payment confirmation required'}
+          </div>
+        </div>
+        <span style={{ background: statusBackground, color: statusColor, padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>
+          {order.payment_status || 'unpaid'}
+        </span>
+      </div>
+
+      {order.provider_order_id && (
+        <div style={{ marginBottom: '10px' }}>
+          <div style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: '3px' }}>Razorpay Order ID</div>
+          <code style={{ display: 'block', color: '#374151', fontSize: '11px', overflowWrap: 'anywhere' }}>{order.provider_order_id}</code>
+        </div>
+      )}
+      {order.provider_payment_id && (
+        <div style={{ marginBottom: '10px' }}>
+          <div style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: '3px' }}>Razorpay Payment ID</div>
+          <code style={{ display: 'block', color: '#166534', fontSize: '11px', overflowWrap: 'anywhere' }}>{order.provider_payment_id}</code>
+        </div>
+      )}
+      {order.paid_at && (
+        <div style={{ color: '#6B7280', fontSize: '11px', marginTop: '8px' }}>
+          Confirmed {new Date(order.paid_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+        </div>
+      )}
+
+      {canReconcile && (
+        <div style={{ borderTop: '1px solid #F3F4F6', marginTop: '16px', paddingTop: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', padding: '10px', marginBottom: '12px' }}>
+            <ShieldCheck size={16} color="#92400E" style={{ flexShrink: 0, marginTop: '1px' }} />
+            <p style={{ margin: 0, color: '#78350F', fontSize: '11px', lineHeight: '1.5' }}>
+              Use only when Razorpay Dashboard shows the payment as Captured. SoapLedger verifies it directly before changing this order.
+            </p>
+          </div>
+          <label htmlFor={`razorpay-payment-${order.id}`} style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#374151', marginBottom: '6px' }}>
+            Razorpay Payment ID
+          </label>
+          <input
+            id={`razorpay-payment-${order.id}`}
+            value={paymentId}
+            onChange={(event) => {
+              setPaymentId(event.target.value);
+              setMessage(null);
+            }}
+            placeholder="pay_..."
+            autoComplete="off"
+            spellCheck={false}
+            style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: '1px solid #D1D5DB', borderRadius: '7px', fontFamily: 'monospace', fontSize: '12px', marginBottom: '10px' }}
+          />
+          <button
+            type="button"
+            onClick={handleReconcile}
+            disabled={!paymentIdIsValid || isVerifying}
+            style={{ width: '100%', border: 'none', borderRadius: '7px', padding: '10px 12px', background: paymentIdIsValid && !isVerifying ? '#1B4332' : '#E5E7EB', color: paymentIdIsValid && !isVerifying ? '#FFFFFF' : '#9CA3AF', fontWeight: '700', fontSize: '12px', cursor: paymentIdIsValid && !isVerifying ? 'pointer' : 'not-allowed' }}
+          >
+            {isVerifying ? 'Verifying with Razorpay…' : 'Verify & Confirm Paid'}
+          </button>
+          {message && (
+            <p role="status" style={{ margin: '10px 0 0', color: message.type === 'success' ? '#166534' : '#B91C1C', fontSize: '11px', fontWeight: '600', lineHeight: '1.4' }}>
+              {message.text}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -244,7 +355,6 @@ const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [] }) 
               key={shipment.id} 
               shipment={shipment} 
               items={items.filter(i => i.shipment_id === shipment.id)}
-              isMobile={isMobile}
               onStatusUpdate={handleUpdateShipmentStatus}
             />
           ))}
@@ -283,6 +393,8 @@ const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [] }) 
 
         {/* Right: Order Notes + Essential Oils Checklist */}
         <div>
+          <PaymentCard order={order} onReconciled={() => router.refresh()} />
+
           <div style={cardStyle}>
             <div style={sectionLabelStyle}>Order Notes</div>
             <div style={{ color: '#4B5563', fontSize: '14px', lineHeight: '1.6', minHeight: '100px' }}>
