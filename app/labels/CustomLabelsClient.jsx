@@ -106,6 +106,46 @@ function getDisplayName(productName, baseType) {
   return stripped;
 }
 
+// Mini stickers are too small to safely show a full ingredient declaration.
+// Prefer purpose-written copy. Until a product is given one, create a compact,
+// comma-aware ingredient summary rather than letting the browser cut through a
+// word or ingredient. The full legal ingredient declaration remains on the
+// wrapper band / main packaging.
+function getMiniLabelDescription(label) {
+  const authored = label.mini_label_description?.trim();
+  if (authored) return authored;
+
+  const parts = getFullIngredients(label.base_type, label.ingredients)
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const limit = 48;
+  const moreSuffix = ' + more';
+  let summary = '';
+
+  for (let index = 0; index < parts.length; index += 1) {
+    const part = parts[index];
+    const candidate = summary ? `${summary}, ${part}` : part;
+    const hasMore = index < parts.length - 1;
+    if (candidate.length <= limit - (hasMore ? moreSuffix.length : 0)) {
+      summary = candidate;
+      continue;
+    }
+    if (summary) return `${summary}${moreSuffix}`;
+
+    const words = part.split(/\s+/);
+    let shortened = '';
+    for (const word of words) {
+      const wordCandidate = shortened ? `${shortened} ${word}` : word;
+      if (wordCandidate.length > limit - 1) break;
+      shortened = wordCandidate;
+    }
+    return `${shortened || part.slice(0, limit - 1).trimEnd()}…`;
+  }
+
+  return summary || 'Handmade soap';
+}
+
 // Hover-to-reveal delete button rendered on top of a printed label, so a
 // single click removes that exact instance straight from the sheet
 // preview. Screen-only (no-print) — never appears in the printed output.
@@ -159,15 +199,11 @@ function MiniProductLabel({ label, license, onRemove }) {
       >
         <div
           style={{
-            fontSize: '7.5pt',
             fontWeight: 800,
             color: COLORS.brand,
             lineHeight: 1.1,
             textAlign: 'center',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
+            fontSize: label.product_name.length > 36 ? '6.5pt' : '7.5pt',
           }}
         >
           {getDisplayName(label.product_name, label.base_type)}
@@ -200,13 +236,10 @@ function MiniProductLabel({ label, license, onRemove }) {
               color: COLORS.text,
               lineHeight: 1.2,
               letterSpacing: '0.03em',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
+              overflowWrap: 'anywhere',
             }}
           >
-            {getFullIngredients(label.base_type, label.ingredients)}
+            {getMiniLabelDescription(label)}
           </div>
         </div>
       </div>
@@ -381,7 +414,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
     (p) => !EXCLUDED_FROM_LABELS.some((re) => re.test(p.name)),
   );
 
-  // Each batch: { id, product_id, product_name, base_type, weight_grams, ingredients, qty }
+  // Each batch: { id, product_id, product_name, base_type, weight_grams, ingredients, mini_label_description, qty }
   const [batches, setBatches] = useState([]);
   // Bulk-seed amount, used only by the "Add to all" button below the
   // product palette — per-product fine-tuning happens by clicking a chip
@@ -418,6 +451,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
         base_type: product.base_type,
         weight_grams: product.weight_grams,
         ingredients: product.ingredients,
+        mini_label_description: product.mini_label_description,
         qty: amount,
       },
     ];

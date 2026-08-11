@@ -572,6 +572,23 @@ export default function ProductView({ products, allOils = [] }) {
 
               <div style={{ gridColumn: '1 / -1' }}>
                 <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
+                  Mini Sticker Description
+                </label>
+                <textarea
+                  name="mini_label_description"
+                  defaultValue={editingProduct?.mini_label_description}
+                  rows={2}
+                  maxLength={48}
+                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none resize-vertical"
+                  placeholder="e.g. Neem & Tulsi for everyday cleansing"
+                />
+                <p className="font-sans text-[11px] text-[#6B7280] mt-[5px] mb-0">
+                  Optional, max 48 characters. This complete line prints on mini stickers; it is separate from website copy and the full ingredients list.
+                </p>
+              </div>
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
                   ADDITIONAL INGREDIENTS
                 </label>
                 <textarea
