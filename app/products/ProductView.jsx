@@ -51,6 +51,7 @@ export default function ProductView({ products, allOils = [] }) {
   const [featuredList, setFeaturedList] = useState([]);
   const [formData, setFormData] = useState({
     ingredients: '',
+    mini_label_description: '',
     slug: '',
     slugManuallyEdited: false,
     texture: '',
@@ -195,6 +196,7 @@ export default function ProductView({ products, allOils = [] }) {
     setEditingProduct(product);
     setFormData({
       ingredients: product.ingredients || '',
+      mini_label_description: product.mini_label_description || '',
       slug: product.slug || '',
       slugManuallyEdited: true, // editing existing — don't auto-overwrite slug
       texture: product.texture || '',
@@ -208,7 +210,7 @@ export default function ProductView({ products, allOils = [] }) {
   const handleCancel = () => {
     setIsFormOpen(false);
     setEditingProduct(null);
-    setFormData({ ingredients: '', slug: '', slugManuallyEdited: false, texture: '' });
+    setFormData({ ingredients: '', mini_label_description: '', slug: '', slugManuallyEdited: false, texture: '' });
     setSelectedOils([]);
     setIsOilsExpanded(false);
   };
@@ -576,14 +578,15 @@ export default function ProductView({ products, allOils = [] }) {
                 </label>
                 <textarea
                   name="mini_label_description"
-                  defaultValue={editingProduct?.mini_label_description}
+                  value={formData.mini_label_description}
+                  onChange={handleChange}
                   rows={2}
-                  maxLength={48}
+                  maxLength={44}
                   className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none resize-vertical"
                   placeholder="e.g. Neem & Tulsi for everyday cleansing"
                 />
                 <p className="font-sans text-[11px] text-[#6B7280] mt-[5px] mb-0">
-                  Optional, max 48 characters. This complete line prints on mini stickers; it is separate from website copy and the full ingredients list.
+                  {formData.mini_label_description.length}/44 characters — {44 - formData.mini_label_description.length} remaining. This complete line prints on mini stickers; it is separate from website copy and the full ingredients list.
                 </p>
               </div>
 

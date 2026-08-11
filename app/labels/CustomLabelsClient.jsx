@@ -119,7 +119,7 @@ function getMiniLabelDescription(label) {
     .split(',')
     .map((part) => part.trim())
     .filter(Boolean);
-  const limit = 48;
+  const limit = 44;
   const moreSuffix = ' + more';
   let summary = '';
 
