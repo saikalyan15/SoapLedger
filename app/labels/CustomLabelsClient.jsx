@@ -119,6 +119,9 @@ function getMiniLabelDescription(label) {
     .split(',')
     .map((part) => part.trim())
     .filter(Boolean);
+  // “Base” retains the ingredient category while giving the constrained
+  // sticker enough room to show at least one actual add-in as well.
+  if (parts[0]) parts[0] = parts[0].replace(/\s+Soap\s+Base$/i, ' Base');
   const limit = 44;
   const moreSuffix = ' + more';
   let summary = '';
