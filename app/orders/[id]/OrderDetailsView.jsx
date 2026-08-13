@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Pencil, ArrowLeft, ChevronDown, Printer, Package, MapPin, Droplets, CreditCard, ShieldCheck } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
-import { reconcileRazorpayPaymentAction, updateShipmentStatusAction, updateOrderStatusAction } from '@/lib/actions/orders';
+import { markOrderComplimentaryAction, reconcileRazorpayPaymentAction, updateShipmentStatusAction, updateOrderStatusAction } from '@/lib/actions/orders';
 import { SETTABLE_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
 import { formatPhoneForDisplay } from '@/lib/utils/phone';
 
@@ -108,10 +108,13 @@ const ShipmentCard = ({ shipment, items, onStatusUpdate }) => {
 const PaymentCard = ({ order, onReconciled }) => {
   const [paymentId, setPaymentId] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isMarkingComplimentary, setIsMarkingComplimentary] = useState(false);
   const [message, setMessage] = useState(null);
   const isRazorpay = order.payment_provider === 'razorpay';
+  const isSettled = ['paid', 'manual'].includes(order.payment_status);
   const isPaid = order.payment_status === 'paid';
-  const canReconcile = isRazorpay && !isPaid && order.provider_order_id;
+  const canReconcile = isRazorpay && !isSettled && order.provider_order_id;
+  const canMarkComplimentary = !isRazorpay && !isSettled && Number(order.revenue) === 0;
   const paymentIdIsValid = /^pay_[A-Za-z0-9]+$/.test(paymentId.trim());
 
   const handleReconcile = async () => {
@@ -132,11 +135,25 @@ const PaymentCard = ({ order, onReconciled }) => {
     }
   };
 
-  const statusColor = isPaid ? '#166534' : order.payment_status === 'failed' ? '#B91C1C' : '#92400E';
-  const statusBackground = isPaid ? '#DCFCE7' : order.payment_status === 'failed' ? '#FEE2E2' : '#FEF3C7';
+  const handleMarkComplimentary = async () => {
+    if (isMarkingComplimentary) return;
+    setIsMarkingComplimentary(true);
+    setMessage(null);
+    const result = await markOrderComplimentaryAction(order.id);
+    setIsMarkingComplimentary(false);
+    if (result.success) {
+      setMessage({ type: 'success', text: 'Complimentary order recorded.' });
+      onReconciled();
+    } else {
+      setMessage({ type: 'error', text: result.error || 'Could not record this complimentary order.' });
+    }
+  };
+
+  const statusColor = isSettled ? '#166534' : order.payment_status === 'failed' ? '#B91C1C' : '#92400E';
+  const statusBackground = isSettled ? '#DCFCE7' : order.payment_status === 'failed' ? '#FEE2E2' : '#FEF3C7';
 
   return (
-    <div style={{ ...cardStyle, borderColor: isPaid ? '#BBF7D0' : '#FDE68A' }}>
+    <div style={{ ...cardStyle, borderColor: isSettled ? '#BBF7D0' : '#FDE68A' }}>
       <div style={{ ...sectionLabelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
         <CreditCard size={13} />
         Payment
@@ -148,7 +165,7 @@ const PaymentCard = ({ order, onReconciled }) => {
             {isRazorpay ? 'Razorpay' : order.payment_provider || 'Manual'}
           </div>
           <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '2px' }}>
-            {isPaid ? 'Payment recorded in SoapLedger' : 'Payment confirmation required'}
+            {isPaid ? 'Payment recorded in SoapLedger' : order.payment_status === 'manual' ? 'Complimentary or manually settled' : 'Payment confirmation required'}
           </div>
         </div>
         <span style={{ background: statusBackground, color: statusColor, padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>
@@ -204,6 +221,26 @@ const PaymentCard = ({ order, onReconciled }) => {
             style={{ width: '100%', border: 'none', borderRadius: '7px', padding: '10px 12px', background: paymentIdIsValid && !isVerifying ? '#1B4332' : '#E5E7EB', color: paymentIdIsValid && !isVerifying ? '#FFFFFF' : '#9CA3AF', fontWeight: '700', fontSize: '12px', cursor: paymentIdIsValid && !isVerifying ? 'pointer' : 'not-allowed' }}
           >
             {isVerifying ? 'Verifying with Razorpay…' : 'Verify & Confirm Paid'}
+          </button>
+          {message && (
+            <p role="status" style={{ margin: '10px 0 0', color: message.type === 'success' ? '#166534' : '#B91C1C', fontSize: '11px', fontWeight: '600', lineHeight: '1.4' }}>
+              {message.text}
+            </p>
+          )}
+        </div>
+      )}
+      {canMarkComplimentary && (
+        <div style={{ borderTop: '1px solid #F3F4F6', marginTop: '16px', paddingTop: '16px' }}>
+          <p style={{ margin: '0 0 12px', color: '#6B7280', fontSize: '11px', lineHeight: '1.5' }}>
+            This zero-value order can be recorded as complimentary, so it no longer needs payment confirmation.
+          </p>
+          <button
+            type="button"
+            onClick={handleMarkComplimentary}
+            disabled={isMarkingComplimentary}
+            style={{ width: '100%', border: 'none', borderRadius: '7px', padding: '10px 12px', background: isMarkingComplimentary ? '#E5E7EB' : '#1B4332', color: isMarkingComplimentary ? '#9CA3AF' : '#FFFFFF', fontWeight: '700', fontSize: '12px', cursor: isMarkingComplimentary ? 'wait' : 'pointer' }}
+          >
+            {isMarkingComplimentary ? 'Recording…' : 'Mark as Complimentary'}
           </button>
           {message && (
             <p role="status" style={{ margin: '10px 0 0', color: message.type === 'success' ? '#166534' : '#B91C1C', fontSize: '11px', fontWeight: '600', lineHeight: '1.4' }}>
