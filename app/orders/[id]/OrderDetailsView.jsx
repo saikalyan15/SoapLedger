@@ -116,6 +116,17 @@ const PaymentCard = ({ order, onReconciled }) => {
   const canReconcile = isRazorpay && !isSettled && order.provider_order_id;
   const canMarkComplimentary = !isRazorpay && !isSettled && Number(order.revenue) === 0;
   const paymentIdIsValid = /^pay_[A-Za-z0-9]+$/.test(paymentId.trim());
+  const failureDetails = order.payment_failure_details && typeof order.payment_failure_details === 'object'
+    ? order.payment_failure_details
+    : {};
+  const failureRows = [
+    ['Failed Payment ID', failureDetails.payment_id],
+    ['Method', failureDetails.method],
+    ['Error Code', failureDetails.code],
+    ['Error Source', failureDetails.source],
+    ['Error Step', failureDetails.step],
+    ['Reason Code', failureDetails.reason],
+  ].filter(([, value]) => value);
 
   const handleReconcile = async () => {
     if (!paymentIdIsValid || isVerifying) return;
@@ -188,6 +199,28 @@ const PaymentCard = ({ order, onReconciled }) => {
       {order.paid_at && (
         <div style={{ color: '#6B7280', fontSize: '11px', marginTop: '8px' }}>
           Confirmed {new Date(order.paid_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+        </div>
+      )}
+
+      {order.payment_status === 'failed' && (
+        <div style={{ borderTop: '1px solid #FECACA', marginTop: '16px', paddingTop: '14px' }}>
+          <div style={{ color: '#991B1B', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '7px' }}>
+            Failure diagnostics
+          </div>
+          <p style={{ margin: '0 0 10px', color: '#7F1D1D', fontSize: '12px', lineHeight: '1.5' }}>
+            {order.payment_failure_reason || 'Razorpay reported that the payment was not completed.'}
+          </p>
+          {failureRows.map(([label, value]) => (
+            <div key={label} style={{ display: 'grid', gridTemplateColumns: '105px minmax(0, 1fr)', gap: '8px', marginTop: '6px', fontSize: '11px' }}>
+              <span style={{ color: '#9CA3AF', fontWeight: '700' }}>{label}</span>
+              <code style={{ color: '#374151', overflowWrap: 'anywhere', textTransform: label === 'Method' ? 'capitalize' : 'none' }}>{value}</code>
+            </div>
+          ))}
+          {order.payment_failed_at && (
+            <div style={{ color: '#9CA3AF', fontSize: '10px', marginTop: '10px' }}>
+              Recorded {new Date(order.payment_failed_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+            </div>
+          )}
         </div>
       )}
 

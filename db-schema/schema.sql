@@ -122,6 +122,7 @@ CREATE TABLE orders (
   paid_at         TIMESTAMPTZ,
   payment_failed_at TIMESTAMPTZ,
   payment_failure_reason TEXT,
+  payment_failure_details JSONB,
   notes           TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -191,7 +192,8 @@ SELECT
   o.paid_at,
   c.email                                                AS customer_email,
   o.payment_failed_at,
-  o.payment_failure_reason
+  o.payment_failure_reason,
+  o.payment_failure_details
 FROM orders o
 JOIN customers c ON c.id = o.customer_id;
 

@@ -7,6 +7,29 @@ function refFor(id) {
   return `HS-${id.slice(0, 8).toUpperCase()}`;
 }
 
+function sanitiseFailureDetails(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+
+  const limits = {
+    payment_id: 100,
+    method: 50,
+    code: 100,
+    source: 100,
+    step: 100,
+    reason: 100,
+  };
+  const details = {};
+  for (const [key, limit] of Object.entries(limits)) {
+    if (typeof value[key] === 'string' && value[key].trim()) {
+      details[key] = value[key].trim().slice(0, limit);
+    }
+  }
+  if (details.payment_id && !/^pay_[A-Za-z0-9]+$/.test(details.payment_id)) {
+    delete details.payment_id;
+  }
+  return Object.keys(details).length > 0 ? details : null;
+}
+
 async function hydrateOrder(client, providerOrderId) {
   const orderRes = await client.query(
     `SELECT o.*, c.name AS customer_name, c.phone AS customer_phone, c.address AS customer_address
@@ -31,7 +54,7 @@ export async function POST(request) {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const client = await pool.connect();
   try {
-    const { action, provider_order_id, provider_payment_id, failure_reason } = await request.json();
+    const { action, provider_order_id, provider_payment_id, failure_reason, failure_details } = await request.json();
     if (!provider_order_id || !['confirm', 'failed', 'manual', 'status'].includes(action)) {
       return NextResponse.json({ error: 'Invalid payment update' }, { status: 400 });
     }
@@ -60,10 +83,17 @@ export async function POST(request) {
       await client.query("UPDATE shipments SET status = 'Payment Confirmed' WHERE order_id = $1", [locked.rows[0].id]);
       transitioned = true;
     } else if (action === 'failed' && ['pending', 'failed'].includes(locked.rows[0].payment_status)) {
+      const safeFailureDetails = sanitiseFailureDetails(failure_details);
       await client.query(
         `UPDATE orders SET payment_status = 'failed', payment_failed_at = NOW(),
-         payment_failure_reason = $1 WHERE id = $2`,
-        [String(failure_reason || 'Payment was not completed').slice(0, 500), locked.rows[0].id]
+         payment_failure_reason = $1,
+         payment_failure_details = COALESCE($2::jsonb, payment_failure_details)
+         WHERE id = $3`,
+        [
+          String(failure_reason || 'Payment was not completed').slice(0, 500),
+          safeFailureDetails ? JSON.stringify(safeFailureDetails) : null,
+          locked.rows[0].id,
+        ]
       );
       transitioned = locked.rows[0].payment_status !== 'failed';
     } else if (action === 'manual' && ['pending', 'failed'].includes(locked.rows[0].payment_status)) {
