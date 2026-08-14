@@ -22,7 +22,7 @@ export async function POST(request) {
   try {
     const orderResult = await client.query(
       `SELECT o.id, o.order_date, o.created_at, o.status, o.source,
-              o.payment_status, o.paid_at, o.payment_failed_at,
+              o.payment_status, o.payment_provider, o.paid_at, o.payment_failed_at,
               o.order_value, o.shipping_charge
        FROM orders o
        JOIN customers c ON c.id = o.customer_id
@@ -56,7 +56,12 @@ export async function POST(request) {
     return NextResponse.json({
       ref: `HS-${order.id.slice(0, 8).toUpperCase()}`,
       status: order.status,
-      payment_status: order.payment_status,
+      payment_provider: order.payment_provider,
+      payment_status: order.payment_provider === 'razorpay'
+        ? order.payment_status
+        : ['Payment Confirmed', 'In Manufacturing', 'Ready to Dispatch', 'Dispatched', 'Partially Dispatched', 'Partially Delivered', 'Delivered'].includes(order.status)
+          ? 'paid'
+          : 'pending',
       is_interest: order.source === 'Expression of Interest',
       order_date: order.order_date,
       created_at: order.created_at,

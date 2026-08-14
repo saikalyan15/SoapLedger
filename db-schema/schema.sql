@@ -117,6 +117,8 @@ CREATE TABLE orders (
   payment_provider TEXT,
   provider_order_id TEXT,
   provider_payment_id TEXT,
+  checkout_session_id UUID,
+  checkout_fingerprint TEXT,
   payment_status  TEXT NOT NULL DEFAULT 'unpaid'
                     CHECK (payment_status IN ('unpaid', 'pending', 'failed', 'manual', 'paid')),
   paid_at         TIMESTAMPTZ,
@@ -125,6 +127,31 @@ CREATE TABLE orders (
   payment_failure_details JSONB,
   notes           TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX orders_checkout_session_id_unique
+  ON orders(checkout_session_id)
+  WHERE checkout_session_id IS NOT NULL;
+
+-- One row per Razorpay payment attempt. A single Razorpay order can have
+-- several attempts, each with its own pay_... identifier.
+CREATE TABLE payment_attempts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  provider_order_id TEXT NOT NULL,
+  provider_payment_id TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL,
+  method TEXT,
+  error_code TEXT,
+  error_description TEXT,
+  error_source TEXT,
+  error_step TEXT,
+  error_reason TEXT,
+  amount_paise BIGINT,
+  currency TEXT,
+  provider_created_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 
@@ -188,6 +215,8 @@ SELECT
   o.payment_provider,
   o.provider_order_id,
   o.provider_payment_id,
+  o.checkout_session_id,
+  o.checkout_fingerprint,
   o.payment_status,
   o.paid_at,
   c.email                                                AS customer_email,
@@ -221,6 +250,8 @@ CREATE INDEX idx_orders_customer_id    ON orders(customer_id);
 CREATE INDEX idx_orders_status         ON orders(status);
 CREATE INDEX idx_order_items_order_id  ON order_items(order_id);
 CREATE INDEX idx_order_items_product   ON order_items(product_id);
+CREATE INDEX idx_payment_attempts_order_id ON payment_attempts(order_id, created_at DESC);
+CREATE INDEX idx_payment_attempts_provider_order_id ON payment_attempts(provider_order_id);
 CREATE INDEX idx_raw_materials_date    ON raw_materials(procured_on);
 CREATE INDEX idx_customers_phone       ON customers(phone);
 CREATE INDEX idx_expenses_date         ON expenses(expense_date);

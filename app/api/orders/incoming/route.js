@@ -8,8 +8,26 @@ function refFor(id) {
   return `HS-${id.slice(0, 8).toUpperCase()}`;
 }
 
+async function findExistingCheckout(client, { checkoutSessionId, providerOrderId }) {
+  if (!checkoutSessionId && !providerOrderId) return null;
+  const result = await client.query(
+    `SELECT id, status, payment_status, payment_provider, provider_order_id,
+            provider_payment_id, checkout_session_id, checkout_fingerprint,
+            order_value, shipping_charge
+     FROM orders
+     WHERE ($1::uuid IS NOT NULL AND checkout_session_id = $1)
+        OR ($2::text IS NOT NULL AND provider_order_id = $2)
+     ORDER BY checkout_session_id = $1 DESC
+     LIMIT 1`,
+    [checkoutSessionId, providerOrderId]
+  );
+  const order = result.rows[0];
+  return order ? { ...order, order_id: order.id, ref: refFor(order.id), existing: true } : null;
+}
+
 export async function POST(request) {
   const origin = request.headers.get('origin');
+  let requestBody = null;
 
   if (!validateApiKey(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -20,6 +38,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
+    requestBody = body;
     const { customer, items, shipping, source, attribution, notes: customNotes, payment, intent, consent } = body;
     const isInterest = intent === 'interest';
 
@@ -28,15 +47,26 @@ export async function POST(request) {
     }
 
     const providerOrderId = payment?.provider_order_id || null;
-    if (providerOrderId) {
-      const existing = await client.query(
-        'SELECT id, status, payment_status FROM orders WHERE provider_order_id = $1',
-        [providerOrderId]
-      );
-      if (existing.rows[0]) {
-        const order = existing.rows[0];
-        return NextResponse.json({ ...order, order_id: order.id, ref: refFor(order.id), existing: true });
+    const checkoutSessionId = payment?.checkout_session_id || null;
+    const checkoutFingerprint = payment?.checkout_fingerprint || null;
+    if (payment?.provider === 'razorpay' && (
+      !/^order_[A-Za-z0-9]+$/.test(providerOrderId || '')
+      || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(checkoutSessionId || '')
+      || !/^[0-9a-f]{64}$/i.test(checkoutFingerprint || '')
+    )) {
+      return NextResponse.json({ error: 'Invalid payment session' }, { status: 400 });
+    }
+
+    const existingCheckout = await findExistingCheckout(client, { checkoutSessionId, providerOrderId });
+    if (existingCheckout) {
+      if (checkoutSessionId && existingCheckout.checkout_session_id === checkoutSessionId
+          && existingCheckout.checkout_fingerprint !== checkoutFingerprint) {
+        return NextResponse.json(
+          { error: 'Checkout details changed. Start a new payment session.', code: 'CHECKOUT_CHANGED' },
+          { status: 409 }
+        );
       }
+      return NextResponse.json(existingCheckout);
     }
 
     const availability = await client.query(
@@ -50,6 +80,25 @@ export async function POST(request) {
     }
 
     await client.query('BEGIN');
+
+    // Serialize concurrent submissions for the same logical checkout. Both
+    // requests may already have created a provider-side order, but only one is
+    // allowed to become the SoapLedger order returned to Checkout.
+    if (checkoutSessionId) {
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [checkoutSessionId]);
+      const racedCheckout = await findExistingCheckout(client, { checkoutSessionId, providerOrderId: null });
+      if (racedCheckout) {
+        if (racedCheckout.checkout_fingerprint !== checkoutFingerprint) {
+          await client.query('ROLLBACK');
+          return NextResponse.json(
+            { error: 'Checkout details changed. Start a new payment session.', code: 'CHECKOUT_CHANGED' },
+            { status: 409 }
+          );
+        }
+        await client.query('COMMIT');
+        return NextResponse.json(racedCheckout);
+      }
+    }
 
     const custName = customer.name || 'Unknown';
     const custPhone = normaliseToE164(customer.phone);
@@ -124,11 +173,15 @@ export async function POST(request) {
     const orderRes = await client.query(
       `INSERT INTO orders (
         customer_id, order_date, order_value, shipping_charge, status, source,
-        notes, attribution, payment_provider, provider_order_id, payment_status
-      ) VALUES ($1, CURRENT_DATE, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10)
-      RETURNING id, status, payment_status`,
+        notes, attribution, payment_provider, provider_order_id, payment_status,
+        checkout_session_id, checkout_fingerprint
+      ) VALUES ($1, CURRENT_DATE, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12)
+      RETURNING id, status, payment_status, payment_provider, provider_order_id,
+                provider_payment_id, checkout_session_id, checkout_fingerprint,
+                order_value, shipping_charge`,
       [customerId, finalRevenue, shipCharge, status, normalizedSource || null, orderNotes,
-        normalizedAttribution, payment?.provider || null, providerOrderId, paymentStatus]
+        normalizedAttribution, payment?.provider || null, providerOrderId, paymentStatus,
+        checkoutSessionId, checkoutFingerprint]
     );
     const newOrder = orderRes.rows[0];
 
@@ -154,10 +207,25 @@ export async function POST(request) {
       ref: refFor(newOrder.id),
       status: newOrder.status,
       payment_status: newOrder.payment_status,
+      payment_provider: newOrder.payment_provider,
+      provider_order_id: newOrder.provider_order_id,
+      provider_payment_id: newOrder.provider_payment_id,
+      checkout_session_id: newOrder.checkout_session_id,
+      checkout_fingerprint: newOrder.checkout_fingerprint,
+      order_value: newOrder.order_value,
+      shipping_charge: newOrder.shipping_charge,
     }, { headers: { ...(origin && { 'Access-Control-Allow-Origin': origin }) } });
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch {}
-    if (error?.code === '23505' && error?.constraint === 'orders_provider_order_id_unique') {
+    if (error?.code === '23505' && [
+      'orders_provider_order_id_unique',
+      'orders_checkout_session_id_unique',
+    ].includes(error?.constraint)) {
+      const existing = await findExistingCheckout(client, {
+        checkoutSessionId: requestBody?.payment?.checkout_session_id || null,
+        providerOrderId: requestBody?.payment?.provider_order_id || null,
+      });
+      if (existing) return NextResponse.json(existing);
       return NextResponse.json({ error: 'Order already exists; retry the request.' }, { status: 409 });
     }
     console.error('Error creating incoming order:', error);

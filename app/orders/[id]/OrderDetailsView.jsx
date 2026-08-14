@@ -105,14 +105,24 @@ const ShipmentCard = ({ shipment, items, onStatusUpdate }) => {
   );
 };
 
-const PaymentCard = ({ order, onReconciled }) => {
+const PAYMENT_CONFIRMED_WORKFLOW_STATUSES = new Set([
+  'Payment Confirmed', 'In Manufacturing', 'Ready to Dispatch', 'Dispatched',
+  'Partially Dispatched', 'Partially Delivered', 'Delivered',
+]);
+
+const PaymentCard = ({ order, paymentAttempts = [], onReconciled }) => {
   const [paymentId, setPaymentId] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isMarkingComplimentary, setIsMarkingComplimentary] = useState(false);
   const [message, setMessage] = useState(null);
   const isRazorpay = order.payment_provider === 'razorpay';
-  const isSettled = ['paid', 'manual'].includes(order.payment_status);
-  const isPaid = order.payment_status === 'paid';
+  const displayStatus = isRazorpay
+    ? (order.payment_status || 'pending')
+    : order.status === 'Cancelled'
+      ? 'cancelled'
+      : PAYMENT_CONFIRMED_WORKFLOW_STATUSES.has(order.status) ? 'confirmed' : 'pending payment';
+  const isSettled = ['paid', 'confirmed'].includes(displayStatus);
+  const isPaid = isRazorpay && order.payment_status === 'paid';
   const isComplimentary = order.payment_status === 'manual' && Number(order.revenue) === 0;
   const canReconcile = isRazorpay && !isSettled && order.provider_order_id;
   const canMarkComplimentary = !isRazorpay && !isSettled && Number(order.revenue) === 0;
@@ -161,8 +171,8 @@ const PaymentCard = ({ order, onReconciled }) => {
     }
   };
 
-  const statusColor = isSettled ? '#166534' : order.payment_status === 'failed' ? '#B91C1C' : '#92400E';
-  const statusBackground = isSettled ? '#DCFCE7' : order.payment_status === 'failed' ? '#FEE2E2' : '#FEF3C7';
+  const statusColor = isSettled ? '#166534' : displayStatus === 'failed' || displayStatus === 'cancelled' ? '#B91C1C' : '#92400E';
+  const statusBackground = isSettled ? '#DCFCE7' : displayStatus === 'failed' || displayStatus === 'cancelled' ? '#FEE2E2' : '#FEF3C7';
 
   return (
     <div style={{ ...cardStyle, borderColor: isSettled ? '#BBF7D0' : '#FDE68A' }}>
@@ -177,11 +187,17 @@ const PaymentCard = ({ order, onReconciled }) => {
             {isRazorpay ? 'Razorpay' : order.payment_provider || 'Manual'}
           </div>
           <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '2px' }}>
-            {isPaid ? 'Razorpay payment verified' : order.payment_status === 'manual' ? (isComplimentary ? 'Complimentary order' : 'Payment confirmed manually') : 'Payment confirmation required'}
+            {isPaid
+              ? 'Captured payment verified with Razorpay'
+              : isRazorpay
+                ? 'Showing Razorpay payment state'
+                : isComplimentary
+                  ? 'Complimentary order'
+                  : 'Derived from the fulfilment workflow'}
           </div>
         </div>
         <span style={{ background: statusBackground, color: statusColor, padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>
-          {order.payment_status || 'unpaid'}
+          {displayStatus}
         </span>
       </div>
 
@@ -200,6 +216,28 @@ const PaymentCard = ({ order, onReconciled }) => {
       {order.paid_at && (
         <div style={{ color: '#6B7280', fontSize: '11px', marginTop: '8px' }}>
           Confirmed {new Date(order.paid_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+        </div>
+      )}
+
+      {paymentAttempts.length > 0 && (
+        <div style={{ borderTop: '1px solid #F3F4F6', marginTop: '16px', paddingTop: '14px' }}>
+          <div style={{ color: '#6B7280', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px' }}>
+            Payment attempts ({paymentAttempts.length})
+          </div>
+          {paymentAttempts.map((attempt) => (
+            <div key={attempt.id} style={{ background: '#F9FAFB', borderRadius: '7px', padding: '9px 10px', marginTop: '7px', fontSize: '11px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                <code style={{ color: '#374151', overflowWrap: 'anywhere' }}>{attempt.provider_payment_id}</code>
+                <strong style={{ color: attempt.status === 'captured' ? '#166534' : attempt.status === 'failed' ? '#B91C1C' : '#92400E', textTransform: 'uppercase' }}>{attempt.status}</strong>
+              </div>
+              <div style={{ color: '#6B7280', marginTop: '4px' }}>
+                {[attempt.method, new Date(attempt.provider_created_at || attempt.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })].filter(Boolean).join(' · ')}
+              </div>
+              {(attempt.error_description || attempt.error_reason) && (
+                <div style={{ color: '#7F1D1D', marginTop: '4px', lineHeight: '1.4' }}>{attempt.error_description || attempt.error_reason}</div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
@@ -287,7 +325,7 @@ const PaymentCard = ({ order, onReconciled }) => {
   );
 };
 
-const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [] }) => {
+const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [], paymentAttempts = [] }) => {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -464,7 +502,7 @@ const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [] }) 
 
         {/* Right: Order Notes + Essential Oils Checklist */}
         <div>
-          <PaymentCard order={order} onReconciled={() => router.refresh()} />
+          <PaymentCard order={order} paymentAttempts={paymentAttempts} onReconciled={() => router.refresh()} />
 
           <div style={cardStyle}>
             <div style={sectionLabelStyle}>Order Notes</div>

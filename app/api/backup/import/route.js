@@ -25,11 +25,13 @@ export async function POST(request) {
   }
 
   const { expense_categories, products, customers, settings, customer_addresses, orders, shipments, order_items, expenses } = backup.tables;
+  const payment_attempts = Array.isArray(backup.tables.payment_attempts) ? backup.tables.payment_attempts : [];
 
   try {
     // Build all queries as an array for a single atomic transaction
     const queries = [
       // ── Step 1: Clear all data in reverse FK order ──────────────────
+      sql`DELETE FROM payment_attempts`,
       sql`DELETE FROM order_items`,
       sql`DELETE FROM expenses`,
       sql`DELETE FROM shipments`,
@@ -74,8 +76,14 @@ export async function POST(request) {
 
       // orders (FK: customers)
       ...orders.map(r => sql`
-        INSERT INTO orders (id, customer_id, order_date, order_value, shipping_charge, packaging_cost, material_cost, status, source, attribution, payment_provider, provider_order_id, provider_payment_id, payment_status, paid_at, payment_failed_at, payment_failure_reason, payment_failure_details, notes, created_at, dispatched_at, delivered_at)
-        VALUES (${r.id}, ${r.customer_id}, ${r.order_date}, ${r.order_value}, ${r.shipping_charge}, ${r.packaging_cost}, ${r.material_cost ?? 0}, ${r.status}, ${r.source ?? null}, ${r.attribution ? JSON.stringify(r.attribution) : null}::jsonb, ${r.payment_provider ?? null}, ${r.provider_order_id ?? null}, ${r.provider_payment_id ?? null}, ${r.payment_status ?? 'unpaid'}, ${r.paid_at ?? null}, ${r.payment_failed_at ?? null}, ${r.payment_failure_reason ?? null}, ${r.payment_failure_details ? JSON.stringify(r.payment_failure_details) : null}::jsonb, ${r.notes ?? null}, ${r.created_at}, ${r.dispatched_at ?? null}, ${r.delivered_at ?? null})
+        INSERT INTO orders (id, customer_id, order_date, order_value, shipping_charge, packaging_cost, material_cost, status, source, attribution, payment_provider, provider_order_id, provider_payment_id, checkout_session_id, checkout_fingerprint, payment_status, paid_at, payment_failed_at, payment_failure_reason, payment_failure_details, notes, created_at, dispatched_at, delivered_at)
+        VALUES (${r.id}, ${r.customer_id}, ${r.order_date}, ${r.order_value}, ${r.shipping_charge}, ${r.packaging_cost}, ${r.material_cost ?? 0}, ${r.status}, ${r.source ?? null}, ${r.attribution ? JSON.stringify(r.attribution) : null}::jsonb, ${r.payment_provider ?? null}, ${r.provider_order_id ?? null}, ${r.provider_payment_id ?? null}, ${r.checkout_session_id ?? null}, ${r.checkout_fingerprint ?? null}, ${r.payment_status ?? 'unpaid'}, ${r.paid_at ?? null}, ${r.payment_failed_at ?? null}, ${r.payment_failure_reason ?? null}, ${r.payment_failure_details ? JSON.stringify(r.payment_failure_details) : null}::jsonb, ${r.notes ?? null}, ${r.created_at}, ${r.dispatched_at ?? null}, ${r.delivered_at ?? null})
+      `),
+
+      // payment_attempts (FK: orders)
+      ...payment_attempts.map(r => sql`
+        INSERT INTO payment_attempts (id, order_id, provider_order_id, provider_payment_id, status, method, error_code, error_description, error_source, error_step, error_reason, amount_paise, currency, provider_created_at, created_at, updated_at)
+        VALUES (${r.id}, ${r.order_id}, ${r.provider_order_id}, ${r.provider_payment_id}, ${r.status}, ${r.method ?? null}, ${r.error_code ?? null}, ${r.error_description ?? null}, ${r.error_source ?? null}, ${r.error_step ?? null}, ${r.error_reason ?? null}, ${r.amount_paise ?? null}, ${r.currency ?? null}, ${r.provider_created_at ?? null}, ${r.created_at}, ${r.updated_at ?? r.created_at})
       `),
 
       // shipments (FK: orders)
@@ -108,6 +116,7 @@ export async function POST(request) {
         settings: settings.length,
         customer_addresses: customer_addresses.length,
         orders: orders.length,
+        payment_attempts: payment_attempts.length,
         shipments: shipments.length,
         order_items: order_items.length,
         expenses: expenses.length,

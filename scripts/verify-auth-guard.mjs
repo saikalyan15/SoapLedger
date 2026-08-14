@@ -47,7 +47,9 @@ const PROTECTED_GET_ROUTES = [
 const API_KEY_ROUTES = [
   ['/api/products', 'GET'],
   ['/api/orders/incoming', 'POST'],
+  ['/api/orders/checkout-session', 'POST'],
   ['/api/orders/payment', 'POST'],
+  ['/api/orders/track', 'POST'],
   ['/api/order-availability', 'GET'],
 ];
 
