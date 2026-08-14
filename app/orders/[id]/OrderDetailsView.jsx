@@ -113,6 +113,7 @@ const PaymentCard = ({ order, onReconciled }) => {
   const isRazorpay = order.payment_provider === 'razorpay';
   const isSettled = ['paid', 'manual'].includes(order.payment_status);
   const isPaid = order.payment_status === 'paid';
+  const isComplimentary = order.payment_status === 'manual' && Number(order.revenue) === 0;
   const canReconcile = isRazorpay && !isSettled && order.provider_order_id;
   const canMarkComplimentary = !isRazorpay && !isSettled && Number(order.revenue) === 0;
   const paymentIdIsValid = /^pay_[A-Za-z0-9]+$/.test(paymentId.trim());
@@ -176,7 +177,7 @@ const PaymentCard = ({ order, onReconciled }) => {
             {isRazorpay ? 'Razorpay' : order.payment_provider || 'Manual'}
           </div>
           <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '2px' }}>
-            {isPaid ? 'Payment recorded in SoapLedger' : order.payment_status === 'manual' ? 'Complimentary or manually settled' : 'Payment confirmation required'}
+            {isPaid ? 'Razorpay payment verified' : order.payment_status === 'manual' ? (isComplimentary ? 'Complimentary order' : 'Payment confirmed manually') : 'Payment confirmation required'}
           </div>
         </div>
         <span style={{ background: statusBackground, color: statusColor, padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>

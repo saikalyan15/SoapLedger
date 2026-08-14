@@ -76,7 +76,7 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Payment ID is required' }, { status: 400 });
       }
       await client.query(
-        `UPDATE orders SET status = 'Payment Confirmed', payment_status = 'paid',
+        `UPDATE orders SET status = 'Payment Confirmed', payment_provider = 'razorpay', payment_status = 'paid',
          provider_payment_id = $1, paid_at = COALESCE(paid_at, NOW()) WHERE id = $2`,
         [provider_payment_id, locked.rows[0].id]
       );
@@ -97,7 +97,10 @@ export async function POST(request) {
       );
       transitioned = locked.rows[0].payment_status !== 'failed';
     } else if (action === 'manual' && ['pending', 'failed'].includes(locked.rows[0].payment_status)) {
-      await client.query("UPDATE orders SET status = 'Order Placed', payment_status = 'manual' WHERE id = $1", [locked.rows[0].id]);
+      await client.query(
+        "UPDATE orders SET status = 'Order Placed', payment_provider = 'manual', payment_status = 'unpaid' WHERE id = $1",
+        [locked.rows[0].id]
+      );
       await client.query("UPDATE shipments SET status = 'Order Placed' WHERE order_id = $1", [locked.rows[0].id]);
       transitioned = true;
     }
