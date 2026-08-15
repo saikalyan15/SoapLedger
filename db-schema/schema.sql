@@ -125,6 +125,9 @@ CREATE TABLE orders (
   payment_failed_at TIMESTAMPTZ,
   payment_failure_reason TEXT,
   payment_failure_details JSONB,
+  interest_contact_channel TEXT CHECK (interest_contact_channel IS NULL OR interest_contact_channel = 'whatsapp'),
+  interest_consent_at TIMESTAMPTZ,
+  interest_contacted_at TIMESTAMPTZ,
   notes           TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -185,7 +188,8 @@ INSERT INTO settings (key, value, description) VALUES
   ('default_packaging_cost',  '30',   'Default packaging cost per order in INR'),
   ('free_shipping_threshold', '1000', 'Orders at or above this value get free shipping'),
   ('shipping_charge_below',   '100',  'Shipping charge for orders below the threshold'),
-  ('accepting_orders',         'true', 'Allow new website orders. Turn off to pause Razorpay and manual fallback immediately.');
+  ('accepting_orders',         'true', 'Allow new website orders. Turn off to pause Razorpay and manual fallback immediately.'),
+  ('orders_reopen_date',       '',     'Optional estimated website-order reopening date (YYYY-MM-DD). Ordering resumes only through the manual switch.');
 
 
 -- ============================================================
@@ -215,14 +219,17 @@ SELECT
   o.payment_provider,
   o.provider_order_id,
   o.provider_payment_id,
-  o.checkout_session_id,
-  o.checkout_fingerprint,
   o.payment_status,
   o.paid_at,
   c.email                                                AS customer_email,
   o.payment_failed_at,
   o.payment_failure_reason,
-  o.payment_failure_details
+  o.payment_failure_details,
+  o.checkout_session_id,
+  o.checkout_fingerprint,
+  o.interest_contact_channel,
+  o.interest_consent_at,
+  o.interest_contacted_at
 FROM orders o
 JOIN customers c ON c.id = o.customer_id;
 

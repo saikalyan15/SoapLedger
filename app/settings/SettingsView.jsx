@@ -1,8 +1,16 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Save, Settings as SettingsIcon, CheckCircle2, Loader2, Download, Upload, AlertTriangle, ShieldCheck, Building2 } from 'lucide-react';
+import { Save, CheckCircle2, Loader2, Download, Upload, AlertTriangle, ShieldCheck, Building2 } from 'lucide-react';
 import { updateSettingAction, saveBusinessConfigAction } from '@/lib/actions/settings';
+
+function indiaDateString() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const value = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+}
 
 export default function SettingsView({ settings, businessConfig }) {
   const [savingKey, setSavingKey] = useState(null);
@@ -12,6 +20,10 @@ export default function SettingsView({ settings, businessConfig }) {
   const [monthlyCapacity, setMonthlyCapacity] = useState(initialCapacity);
   const initialAcceptingOrders = settings.find(s => s.key === 'accepting_orders')?.value !== 'false';
   const [acceptingOrders, setAcceptingOrders] = useState(initialAcceptingOrders);
+  const initialReopenDate = settings.find(s => s.key === 'orders_reopen_date')?.value || '';
+  const [reopenDate, setReopenDate] = useState(initialReopenDate);
+  const [savedReopenDate, setSavedReopenDate] = useState(initialReopenDate);
+  const [todayInIndia] = useState(indiaDateString);
 
   // ── Backup state ───────────────────────────────────────────────────
   const [isExporting, setIsExporting] = useState(false);
@@ -135,8 +147,10 @@ export default function SettingsView({ settings, businessConfig }) {
       await updateSettingAction(key, value);
       setSuccessKey(key);
       setTimeout(() => setSuccessKey(null), 2000);
-    } catch (e) {
+      return true;
+    } catch {
       alert("Failed to update setting");
+      return false;
     } finally {
       setSavingKey(null);
     }
@@ -144,7 +158,7 @@ export default function SettingsView({ settings, businessConfig }) {
 
   const saveCapacity = () => handleUpdate('monthly_capacity', monthlyCapacity);
 
-  const mainSettings = settings.filter(s => !['monthly_capacity', 'accepting_orders'].includes(s.key));
+  const mainSettings = settings.filter(s => !['monthly_capacity', 'accepting_orders', 'orders_reopen_date'].includes(s.key));
 
   const toggleOrders = async () => {
     const next = !acceptingOrders;
@@ -205,6 +219,42 @@ export default function SettingsView({ settings, businessConfig }) {
           <p className="mt-3 font-sans text-xs text-[#6B7280]">
             This takes effect immediately. Existing orders and carts are not changed.
           </p>
+          <div className="mt-5 border-t border-black/10 pt-5">
+            <label htmlFor="orders-reopen-date" className="block font-sans text-[13px] font-bold text-[#374151]">
+              Estimated reopening date (optional)
+            </label>
+            <p className="mt-1 font-sans text-xs text-[#6B7280]">
+              Shown to customers while checkout is paused. This date never resumes ordering automatically.
+            </p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <input
+                id="orders-reopen-date"
+                type="date"
+                value={reopenDate}
+                onChange={(event) => setReopenDate(event.target.value)}
+                className="rounded-lg border border-border bg-white px-3.5 py-2.5 font-sans text-sm font-semibold text-[#1A1A1A] outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  if (await handleUpdate('orders_reopen_date', reopenDate)) {
+                    setSavedReopenDate(reopenDate);
+                  }
+                }}
+                disabled={savingKey === 'orders_reopen_date' || reopenDate === savedReopenDate}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 font-sans text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-50"
+              >
+                {savingKey === 'orders_reopen_date' ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                Save date
+              </button>
+              {successKey === 'orders_reopen_date' && <CheckCircle2 size={18} className="text-[#10B981]" />}
+            </div>
+            {reopenDate && reopenDate < todayInIndia && (
+              <p className="mt-2 font-sans text-xs font-semibold text-[#B45309]">
+                This date has passed. Customers will see the generic paused message until you choose a new date.
+              </p>
+            )}
+          </div>
         </div>
 
         {mainSettings.map((setting) => (

@@ -39,10 +39,18 @@ export async function POST(request) {
   try {
     const body = await request.json();
     requestBody = body;
-    const { customer, items, shipping, source, attribution, notes: customNotes, payment, intent, consent } = body;
+    const {
+      customer, items, shipping, source, attribution, notes: customNotes,
+      payment, intent, consent, consent_channel: consentChannel,
+    } = body;
     const isInterest = intent === 'interest';
 
-    if (!customer?.phone || !Array.isArray(items) || items.length === 0 || (isInterest && (!customer.email || consent !== true))) {
+    if (
+      !customer?.phone
+      || !Array.isArray(items)
+      || items.length === 0
+      || (isInterest && (!customer.name?.trim() || consent !== true || consentChannel !== 'whatsapp'))
+    ) {
       return NextResponse.json({ error: 'Invalid order data' }, { status: 400 });
     }
 
@@ -72,10 +80,17 @@ export async function POST(request) {
     const availability = await client.query(
       "SELECT COALESCE((SELECT value FROM settings WHERE key = 'accepting_orders'), 'true') AS value"
     );
-    if (availability.rows[0]?.value !== 'true' && !isInterest) {
+    const acceptingOrders = availability.rows[0]?.value === 'true';
+    if (!acceptingOrders && !isInterest) {
       return NextResponse.json(
         { error: 'Orders are temporarily paused while we catch up.', code: 'ORDERS_PAUSED' },
         { status: 503 }
+      );
+    }
+    if (acceptingOrders && isInterest) {
+      return NextResponse.json(
+        { error: 'Ordering is open. Please place your order through checkout.', code: 'ORDERS_OPEN' },
+        { status: 409 }
       );
     }
 
@@ -100,10 +115,14 @@ export async function POST(request) {
       }
     }
 
-    const custName = customer.name || 'Unknown';
+    const custName = customer.name?.trim() || 'Unknown';
     const custPhone = normaliseToE164(customer.phone);
-    const custAddress = customer.address || 'No address provided';
+    const custAddress = isInterest ? null : (customer.address || 'No address provided');
     const custEmail = customer.email ? String(customer.email).trim().toLowerCase() : null;
+
+    if (isInterest) {
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`interest:${custPhone}`]);
+    }
 
     let customerId;
     const custResult = await client.query(
@@ -118,28 +137,22 @@ export async function POST(request) {
       customerId = insertCust.rows[0].id;
     } else {
       customerId = custResult.rows[0].id;
-      await client.query(
-        'UPDATE customers SET name = $1, address = $2, email = COALESCE($3, email) WHERE id = $4',
-        [custName, custAddress, custEmail, customerId]
-      );
-    }
-
-    if (isInterest) {
-      const existingInterest = await client.query(
-        "SELECT id, status, payment_status FROM orders WHERE customer_id = $1 AND status = 'Awaiting Payment' AND source = 'Expression of Interest' ORDER BY created_at DESC LIMIT 1",
-        [customerId]
-      );
-      if (existingInterest.rows[0]) {
-        await client.query('COMMIT');
-        const order = existingInterest.rows[0];
-        return NextResponse.json({ ...order, order_id: order.id, ref: refFor(order.id), existing: true });
+      if (isInterest) {
+        await client.query('UPDATE customers SET name = $1 WHERE id = $2', [custName, customerId]);
+      } else {
+        await client.query(
+          'UPDATE customers SET name = $1, address = $2, email = COALESCE($3, email) WHERE id = $4',
+          [custName, custAddress, custEmail, customerId]
+        );
       }
     }
 
-    await client.query(
-      'INSERT INTO customer_addresses (customer_id, label, address_text, is_default) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
-      [customerId, 'Primary', custAddress, true]
-    );
+    if (!isInterest) {
+      await client.query(
+        'INSERT INTO customer_addresses (customer_id, label, address_text, is_default) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
+        [customerId, 'Primary', custAddress, true]
+      );
+    }
 
     const resolvedItems = [];
     let totalValue = 0;
@@ -166,39 +179,92 @@ export async function POST(request) {
     const isPendingPayment = payment?.provider === 'razorpay' && providerOrderId;
     const status = (isInterest || isPendingPayment) ? 'Awaiting Payment' : 'Order Placed';
     const paymentStatus = isPendingPayment ? 'pending' : 'unpaid';
-    const orderNotes = isInterest
-      ? [customNotes, `Order-reopen email consent recorded at ${new Date().toISOString()}`].filter(Boolean).join(' | ')
-      : (customNotes || null);
+    const orderNotes = customNotes || null;
+
+    if (isInterest) {
+      const existingInterest = await client.query(
+        `SELECT id, status, payment_status, interest_contacted_at
+         FROM orders
+         WHERE customer_id = $1
+           AND status = 'Awaiting Payment'
+           AND source = 'Expression of Interest'
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [customerId]
+      );
+      const existing = existingInterest.rows[0];
+      if (existing) {
+        const existingItems = await client.query(
+          'SELECT product_id, quantity FROM order_items WHERE order_id = $1 ORDER BY product_id',
+          [existing.id]
+        );
+        const previous = existingItems.rows.map(item => `${item.product_id}:${Number(item.quantity)}`).sort();
+        const next = resolvedItems.map(item => `${item.id}:${item.qty}`).sort();
+        const cartChanged = previous.length !== next.length || previous.some((item, index) => item !== next[index]);
+
+        await client.query('DELETE FROM order_items WHERE order_id = $1', [existing.id]);
+        await client.query('DELETE FROM shipments WHERE order_id = $1', [existing.id]);
+        for (const item of resolvedItems) {
+          await client.query(
+            'INSERT INTO order_items (order_id, product_id, quantity, unit_price, shipment_id) VALUES ($1, $2, $3, $4, NULL)',
+            [existing.id, item.id, item.qty, item.price]
+          );
+        }
+        const updated = await client.query(
+          `UPDATE orders
+           SET order_date = CURRENT_DATE,
+               created_at = NOW(),
+               order_value = $2,
+               shipping_charge = 0,
+               notes = $3,
+               attribution = $4::jsonb,
+               interest_contact_channel = 'whatsapp',
+               interest_consent_at = NOW(),
+               interest_contacted_at = $5
+           WHERE id = $1
+           RETURNING id, status, payment_status, order_value, shipping_charge`,
+          [existing.id, totalValue, orderNotes, normalizedAttribution,
+            cartChanged ? null : existing.interest_contacted_at]
+        );
+        await client.query('COMMIT');
+        revalidatePath('/interests');
+        const order = updated.rows[0];
+        return NextResponse.json({ ...order, order_id: order.id, ref: refFor(order.id), existing: true });
+      }
+    }
 
     const orderRes = await client.query(
       `INSERT INTO orders (
         customer_id, order_date, order_value, shipping_charge, status, source,
         notes, attribution, payment_provider, provider_order_id, payment_status,
-        checkout_session_id, checkout_fingerprint
-      ) VALUES ($1, CURRENT_DATE, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12)
+        checkout_session_id, checkout_fingerprint, interest_contact_channel,
+        interest_consent_at
+      ) VALUES ($1, CURRENT_DATE, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $13, $14)
       RETURNING id, status, payment_status, payment_provider, provider_order_id,
                 provider_payment_id, checkout_session_id, checkout_fingerprint,
                 order_value, shipping_charge`,
       [customerId, finalRevenue, shipCharge, status, normalizedSource || null, orderNotes,
         normalizedAttribution, payment?.provider || null, providerOrderId, paymentStatus,
-        checkoutSessionId, checkoutFingerprint]
+        checkoutSessionId, checkoutFingerprint,
+        isInterest ? 'whatsapp' : null, isInterest ? new Date().toISOString() : null]
     );
     const newOrder = orderRes.rows[0];
 
-    const shipRes = await client.query(
+    const shipmentId = isInterest ? null : (await client.query(
       'INSERT INTO shipments (order_id, status, address_text, label) VALUES ($1, $2, $3, $4) RETURNING id',
       [newOrder.id, status, custAddress, custName]
-    );
+    )).rows[0].id;
 
     for (const item of resolvedItems) {
       await client.query(
         'INSERT INTO order_items (order_id, product_id, quantity, unit_price, shipment_id) VALUES ($1, $2, $3, $4, $5)',
-        [newOrder.id, item.id, item.qty, item.price, shipRes.rows[0].id]
+        [newOrder.id, item.id, item.qty, item.price, shipmentId]
       );
     }
 
     await client.query('COMMIT');
     revalidatePath('/orders');
+    revalidatePath('/interests');
     revalidatePath('/customers');
     revalidatePath('/dashboard');
 
