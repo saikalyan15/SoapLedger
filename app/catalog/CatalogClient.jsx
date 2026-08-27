@@ -182,16 +182,6 @@ export default function CatalogClient({ sections, brand }) {
           margin: 0;
           color: ${INK};
         }
-        .cover-scentnote {
-          font-size: 12.5px;
-          line-height: 1.6;
-          color: ${GREEN};
-          background: ${CREAM};
-          border-radius: 10px;
-          padding: 14px 18px;
-          margin: 0 0 30px;
-          text-align: left;
-        }
         .cover-foot {
           font-size: 11px;
           letter-spacing: 0.06em;
@@ -229,14 +219,15 @@ export default function CatalogClient({ sections, brand }) {
 
         .soap {
           display: grid;
-          grid-template-columns: 38% 1fr;
-          gap: 26px;
-          padding: 22px 0;
+          grid-template-columns: 32% 1fr;
+          gap: 24px;
+          padding: 20px 0;
+          align-items: start;
         }
         .soap + .soap { border-top: 1px solid rgba(27, 67, 50, 0.12); }
         .soap-photo {
           width: 100%;
-          aspect-ratio: 3 / 4;
+          aspect-ratio: 1 / 1;
           object-fit: cover;
           border-radius: 12px;
           border: 1px solid rgba(27, 67, 50, 0.12);
@@ -280,21 +271,6 @@ export default function CatalogClient({ sections, brand }) {
           margin: 0 0 5px;
         }
         .soap-ing { font-size: 12.5px; line-height: 1.55; margin: 0; color: ${INK}; }
-        .scent-list { display: flex; flex-wrap: wrap; gap: 6px; }
-        .scent {
-          font-size: 11.5px;
-          color: ${INK};
-          background: #fff;
-          border: 1px solid rgba(27, 67, 50, 0.18);
-          border-radius: 999px;
-          padding: 3px 9px;
-        }
-        .scent[data-default='true'] {
-          background: ${GREEN};
-          color: #fff;
-          border-color: ${GREEN};
-          font-weight: 600;
-        }
 
         @media (max-width: 720px) {
           .cat-page { padding: 32px 22px; }
@@ -407,8 +383,6 @@ export default function CatalogClient({ sections, brand }) {
               <p>{t.ethosBody}</p>
             </div>
 
-            <p className="cover-scentnote">{t.scentNote}</p>
-
             <div className="cover-foot">
               <span>{brand?.website || 'healingsoil.in'}</span>
               <span>{t.madeIn}</span>
@@ -446,23 +420,6 @@ export default function CatalogClient({ sections, brand }) {
                         <p className="soap-label">{t.ingredients}</p>
                         <p className="soap-ing">{c.ingredients}</p>
                       </div>
-                      {p.scents.length > 0 && (
-                        <div className="soap-block">
-                          <p className="soap-label">{t.scent}</p>
-                          <div className="scent-list">
-                            {p.scents.map((s) => (
-                              <span
-                                key={s.name}
-                                className="scent"
-                                data-default={s.isDefault}
-                              >
-                                {s.name}
-                                {s.isDefault ? ` · ${t.defaultTag}` : ''}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </article>
                 );

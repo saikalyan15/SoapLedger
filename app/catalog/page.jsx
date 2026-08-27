@@ -1,7 +1,7 @@
 import sql from '@/lib/db';
 import CatalogClient from './CatalogClient';
 import { getBusinessConfigAction } from '@/lib/actions/settings';
-import { CATALOG_PRODUCTS, parseScents } from '@/lib/catalog/catalog-content';
+import { CATALOG_PRODUCTS } from '@/lib/catalog/catalog-content';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +11,7 @@ const BASE_ORDER = ['Glycerine', 'Goat Milk', 'Papaya Cucumber', 'Shea Butter'];
 export default async function CatalogPage() {
   const [rows, businessConfig] = await Promise.all([
     sql`
-      SELECT slug, name, base_type, notes, display_order
+      SELECT slug, name, base_type, display_order
       FROM products
       WHERE is_active = true
       ORDER BY display_order ASC NULLS LAST, name ASC
@@ -32,7 +32,6 @@ export default async function CatalogPage() {
         image: entry.image,
         price: entry.price ?? null,
         order: entry.order ?? p.display_order ?? 999,
-        scents: parseScents(p.notes),
         content: entry.content,
       };
     })
