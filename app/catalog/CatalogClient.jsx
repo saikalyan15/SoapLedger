@@ -11,7 +11,7 @@ const INK = '#3A3A34';
 
 export default function CatalogClient({ products, brand }) {
   const [lang, setLang] = useState('en');
-  const [showPrices, setShowPrices] = useState(false);
+  const [showPrices, setShowPrices] = useState(true);
 
   const t = UI[lang];
   const hasAnyPrice = products.some((p) => p.price != null);
