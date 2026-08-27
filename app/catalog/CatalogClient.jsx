@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Download, Check } from 'lucide-react';
 import { LANGUAGES, UI } from '@/lib/catalog/catalog-content';
 
@@ -9,17 +9,13 @@ const GOLD = '#B8860B';
 const CREAM = '#F7F3EA';
 const INK = '#3A3A34';
 
-export default function CatalogClient({ sections, brand }) {
+export default function CatalogClient({ products, brand }) {
   const [lang, setLang] = useState('en');
   const [showPrices, setShowPrices] = useState(false);
 
   const t = UI[lang];
-  const allProducts = useMemo(
-    () => sections.flatMap((s) => s.products),
-    [sections],
-  );
-  const hasAnyPrice = allProducts.some((p) => p.price != null);
-  const totalCount = allProducts.length;
+  const hasAnyPrice = products.some((p) => p.price != null);
+  const totalCount = products.length;
 
   return (
     <div className="catalog" data-lang={lang}>
@@ -197,31 +193,13 @@ export default function CatalogClient({ sections, brand }) {
         }
         .cover-foot span:not(:last-child)::after { content: '·'; margin-left: 10px; opacity: 0.5; }
 
-        /* ---------- Sections + soaps ---------- */
-        .section { padding-top: 8px; }
-        .section + .section { margin-top: 46px; }
-        .section-head {
-          display: flex;
-          align-items: baseline;
-          gap: 14px;
-          margin: 0 0 24px;
-        }
-        .section-head h2 {
-          font-family: var(--font-display);
-          font-weight: 500;
-          color: ${GREEN};
-          font-size: 26px;
-          margin: 0;
-          white-space: nowrap;
-        }
-        .section-head .rule { flex: 1; height: 1px; background: rgba(27, 67, 50, 0.2); }
-        .section-head .count { font-size: 12px; color: ${GOLD}; font-weight: 700; }
-
+        /* ---------- Soaps ---------- */
+        .soap-list { margin-top: 8px; }
         .soap {
           display: grid;
           grid-template-columns: 32% 1fr;
           gap: 24px;
-          padding: 20px 0;
+          padding: 22px 0;
           align-items: start;
         }
         .soap + .soap { border-top: 1px solid rgba(27, 67, 50, 0.12); }
@@ -298,11 +276,8 @@ export default function CatalogClient({ sections, brand }) {
             break-after: page;
           }
           .cover-strip img, .soap-photo, .cover-mark { break-inside: avoid; }
-          .section { break-before: page; padding-top: 0; }
-          .section:first-of-type { break-before: auto; }
-          .section + .section { margin-top: 0; }
           .soap { break-inside: avoid; }
-          .section-head h2, .soap-name, .cover-title, .cover-ethos h2 {
+          .soap-name, .cover-title, .cover-ethos h2 {
             color: ${GREEN} !important;
           }
           * {
@@ -373,9 +348,9 @@ export default function CatalogClient({ sections, brand }) {
             <p className="cover-tagline">{t.tagline}</p>
 
             <div className="cover-strip">
-              <img src="/50g-soap-squares/images/neem-tulsi-glycerine-50g.png" alt="" />
-              <img src="/50g-soap-squares/images/kesar-gulab-sheabutter-50g.png" alt="" />
-              <img src="/50g-soap-squares/images/orange-goatmilk-50g.png" alt="" />
+              <img src="/50g-soap-squares/images/honey-oats-goatmilk-50g.png" alt="" />
+              <img src="/50g-soap-squares/images/ginger-rosemary-glycerin-50g.png" alt="" />
+              <img src="/50g-soap-squares/images/red-rose-50g.png" alt="" />
             </div>
 
             <div className="cover-ethos">
@@ -390,42 +365,32 @@ export default function CatalogClient({ sections, brand }) {
             </div>
           </section>
 
-          {/* Sections */}
-          {sections.map((section) => (
-            <section className="section" key={section.key}>
-              <div className="section-head">
-                <h2>{t.base[section.key] || section.key}</h2>
-                <div className="rule" />
-                <span className="count">
-                  {String(section.products.length).padStart(2, '0')}
-                </span>
-              </div>
-
-              {section.products.map((p) => {
-                const c = p.content[lang] || p.content.en;
-                return (
-                  <article className="soap" key={p.slug}>
-                    <img className="soap-photo" src={p.image} alt={c.name} />
-                    <div>
-                      <h3 className="soap-name">{c.name}</h3>
-                      <div className="soap-meta">
-                        <span className="chip">{t.weight}</span>
-                        {showPrices && hasAnyPrice && p.price != null && (
-                          <span className="soap-price">₹{p.price}</span>
-                        )}
-                      </div>
-                      <p className="soap-desc">{c.description}</p>
-                      <div className="soap-divider" />
-                      <div className="soap-block">
-                        <p className="soap-label">{t.ingredients}</p>
-                        <p className="soap-ing">{c.ingredients}</p>
-                      </div>
+          {/* Soaps */}
+          <div className="soap-list">
+            {products.map((p) => {
+              const c = p.content[lang] || p.content.en;
+              return (
+                <article className="soap" key={p.slug}>
+                  <img className="soap-photo" src={p.image} alt={c.name} />
+                  <div>
+                    <h3 className="soap-name">{c.name}</h3>
+                    <div className="soap-meta">
+                      <span className="chip">{t.weight}</span>
+                      {showPrices && hasAnyPrice && p.price != null && (
+                        <span className="soap-price">₹{p.price}</span>
+                      )}
                     </div>
-                  </article>
-                );
-              })}
-            </section>
-          ))}
+                    <p className="soap-desc">{c.description}</p>
+                    <div className="soap-divider" />
+                    <div className="soap-block">
+                      <p className="soap-label">{t.ingredients}</p>
+                      <p className="soap-ing">{c.ingredients}</p>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         </div>
       </div>
 
