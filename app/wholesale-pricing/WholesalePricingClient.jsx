@@ -57,21 +57,21 @@ const PRICING_COMBINATIONS = {
   quote: {
     title: 'Quotation Builder',
     formula: 'Uses the selected pricing combination below, then calculates line total = quoted unit price x quantity.',
-    rationale: 'Use this when an enquiry arrives and you need a clean PDF-ready quote for eligible 50g soap variants.',
+    rationale: 'Use this when an enquiry arrives and you need a clean PDF-ready quote for eligible soap variants in 50g or 100g.',
   },
   standard: {
     title: 'Standard Wholesale',
-    formula: 'Per SKU: 50g retail anchor x 75% at MOQ 50, x 70% at MOQ 100, x 65% at MOQ 150. Unit prices round to nearest ₹5.',
+    formula: 'Per SKU: retail anchor for the quoted size (50g or 100g) x 75% at MOQ 50, x 70% at MOQ 100, x 65% at MOQ 150. Unit prices round to nearest ₹5.',
     rationale: 'Best for single-variety wholesale because each product must independently meet the MOQ, keeping batching and inventory planning simple.',
   },
   mixed: {
     title: 'Mixed Assortment',
-    formula: 'Same 50g unit discounts as standard wholesale, but MOQ is met by total units across products.',
+    formula: 'Same per-size unit discounts as standard wholesale, but MOQ is met by total units across products.',
     rationale: 'Best for retailers who want variety. It supports discovery orders while still protecting production volume.',
   },
   bulk: {
     title: 'Bulk / Unlabelled',
-    formula: '50g retail anchor x 70% at MOQ 50, x 65% at MOQ 100, x 60% at MOQ 150. Unit prices round to nearest ₹5.',
+    formula: 'Retail anchor for the quoted size (50g or 100g) x 70% at MOQ 50, x 65% at MOQ 100, x 60% at MOQ 150. Unit prices round to nearest ₹5.',
     rationale: 'Best when soaps do not need retail labels or custom packaging. Lower finishing effort allows a deeper discount.',
   },
   private: {
@@ -104,6 +104,17 @@ const BASE_COLOURS = {
   Travel: '#0E7490',
   Other: '#6B7280',
 };
+
+const SIZE_OPTIONS_GRAMS = [50, 100];
+const MAX_SAMPLE_VARIETIES = 6;
+
+const DIFFERENTIATION_POINTS = [
+  'Made to order in small batches, not mass-produced and held in stock ahead of demand.',
+  'Organic and hand-sourced ingredients bought in limited quantity, not bulk industrial supply.',
+  'Free of SLS and parabens in every bar.',
+  'Formulas and packaging can be adjusted to your specification — most manufacturers require large minimums to customize.',
+  'Batch sizes are limited by ingredient availability, not held back artificially; lead times reflect real sourcing, not manufactured scarcity.',
+];
 
 const th = {
   padding: '10px 12px',
@@ -167,19 +178,19 @@ function isWholesaleEligible(product) {
   );
 }
 
-function getWholesaleVariantPrice(product) {
+function getWholesaleVariantPrice(product, sizeGrams = 50) {
   const retailPrice = Number(product?.unit_price || 0);
   const weight = Number(product?.weight_grams || 0);
 
-  if (weight > 0 && weight !== 50) {
-    return roundToNearestFive((retailPrice / weight) * 50);
+  if (weight > 0 && weight !== sizeGrams) {
+    return roundToNearestFive((retailPrice / weight) * sizeGrams);
   }
 
   return roundToNearestFive(retailPrice);
 }
 
-function getQuoteUnitPrice(product, mode, lineQuantity, totalQuantity) {
-  const retailPrice = getWholesaleVariantPrice(product);
+function getQuoteUnitPrice(product, mode, sizeGrams, lineQuantity, totalQuantity) {
+  const retailPrice = getWholesaleVariantPrice(product, sizeGrams);
   const tiers = mode === 'bulk' ? BULK_TIERS : STANDARD_TIERS;
   const basisQuantity = mode === 'mixed' || mode === 'bulk' ? totalQuantity : lineQuantity;
   const tier = getApplicableTier(basisQuantity, tiers);
@@ -266,15 +277,15 @@ function PricingGuidance({ mode, compact = false }) {
   );
 }
 
-function BaseTypePriceMatrix({ products }) {
-  const rows = Object.values(products.reduce((groups, product) => {
+function buildPriceMatrixRows(products, sizeGrams) {
+  return Object.values(products.reduce((groups, product) => {
     const type = product.base_type || 'Other';
     if (!groups[type]) groups[type] = {
       baseType: type,
       retailAnchors: [],
     };
 
-    groups[type].retailAnchors.push(getWholesaleVariantPrice(product));
+    groups[type].retailAnchors.push(getWholesaleVariantPrice(product, sizeGrams));
     return groups;
   }, {})).map((row) => {
     const retailAnchor = Math.max(...row.retailAnchors);
@@ -286,15 +297,12 @@ function BaseTypePriceMatrix({ products }) {
       ])),
     };
   }).sort((a, b) => a.baseType.localeCompare(b.baseType));
+}
 
+function PriceMatrixTable({ title, rows }) {
   return (
-    <div style={{ marginBottom: '24px' }}>
-      <div style={{ marginBottom: '10px' }}>
-        <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: '#1B4332' }}>Wholesale price report</h2>
-        <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px' }}>
-          Wholesale prices by soap base type and order quantity.
-        </p>
-      </div>
+    <div style={{ marginBottom: '18px' }}>
+      <div style={{ fontSize: '13px', fontWeight: 800, color: '#111827', marginBottom: '8px' }}>{title}</div>
       <ScrollFrame>
         <table style={{ width: '100%', minWidth: '620px', borderCollapse: 'collapse', background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E5E7EB', overflow: 'hidden' }}>
           <thead>
@@ -314,13 +322,31 @@ function BaseTypePriceMatrix({ products }) {
                   <TypeBadge type={row.baseType} />
                 </td>
                 {STANDARD_TIERS.map((tier) => (
-                  <td key={`standard-${tier.qty}`} style={{ ...tdRight, fontWeight: 800, color: '#111827' }}>{fmtCurrency(row.prices[tier.qty])}</td>
+                  <td key={`tier-${tier.qty}`} style={{ ...tdRight, fontWeight: 800, color: '#111827' }}>{fmtCurrency(row.prices[tier.qty])}</td>
                 ))}
               </tr>
             ))}
           </tbody>
         </table>
       </ScrollFrame>
+    </div>
+  );
+}
+
+function BaseTypePriceMatrix({ products }) {
+  const rows50 = buildPriceMatrixRows(products, 50);
+  const rows100 = buildPriceMatrixRows(products, 100);
+
+  return (
+    <div style={{ marginBottom: '24px' }}>
+      <div style={{ marginBottom: '10px' }}>
+        <h2 style={{ fontFamily: 'DM Serif Display, serif', fontSize: '24px', color: '#1B4332' }}>Wholesale price report</h2>
+        <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '2px' }}>
+          Wholesale prices by soap base type, size, and order quantity.
+        </p>
+      </div>
+      <PriceMatrixTable title="50g bars" rows={rows50} />
+      <PriceMatrixTable title="100g bars" rows={rows100} />
     </div>
   );
 }
@@ -359,6 +385,94 @@ function labelStyle() {
   };
 }
 
+function ProductSelectionGrid({ groupTypes, productsByType, items, onToggle, onSetSize, onSetQuantity, onSelectAllInType, onClearType }) {
+  return (
+    <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', background: '#FFFFFF', padding: '12px', marginBottom: '14px' }}>
+      <div style={{ fontSize: '12px', fontWeight: 900, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+        Select soaps for this quote
+      </div>
+      <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '10px', lineHeight: 1.45 }}>
+        Check each soap you want to quote, then set its size (50g or 100g) and quantity.
+      </div>
+      {groupTypes.map((type) => {
+        const groupProducts = productsByType[type] || [];
+        return (
+          <div key={type} style={{ marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '8px' }}>
+              <TypeBadge type={type} />
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button type="button" onClick={() => onSelectAllInType(type)} style={{ minHeight: '28px', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '4px 8px', background: '#FFFFFF', color: '#374151', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}>
+                  Select all
+                </button>
+                <button type="button" onClick={() => onClearType(type)} style={{ minHeight: '28px', border: '1px solid #FCA5A5', borderRadius: '6px', padding: '4px 8px', background: '#FEF2F2', color: '#991B1B', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}>
+                  Clear
+                </button>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gap: '6px' }}>
+              {groupProducts.map((product) => {
+                const entry = items[product.id];
+                const checked = Boolean(entry);
+                return (
+                  <div
+                    key={product.id}
+                    onClick={() => onToggle(product.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 10px',
+                      border: checked ? '1px solid #1B4332' : '1px solid #E5E7EB',
+                      borderRadius: '6px',
+                      background: checked ? '#F0FDF4' : '#FFFFFF',
+                      cursor: 'pointer',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={() => onToggle(product.id)}
+                      style={{ accentColor: '#1B4332', width: '16px', height: '16px', flexShrink: 0 }}
+                    />
+                    <div style={{ flex: 1, minWidth: '160px', fontSize: '13px', fontWeight: checked ? 800 : 600, color: '#111827' }}>
+                      {product.name}
+                    </div>
+                    {checked && (
+                      <>
+                        <select
+                          value={entry.size}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => onSetSize(product.id, Number(e.target.value))}
+                          style={{ ...inputStyle(), width: '90px', minHeight: '34px' }}
+                        >
+                          {SIZE_OPTIONS_GRAMS.map((size) => (
+                            <option key={size} value={size}>{size}g</option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={entry.quantity}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => onSetQuantity(product.id, e.target.value)}
+                          style={{ ...inputStyle(), width: '80px', minHeight: '34px' }}
+                        />
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function QuotationBuilder({ products }) {
   const activeProducts = useMemo(() => products.filter(isWholesaleEligible), [products]);
   const productById = useMemo(() => {
@@ -390,156 +504,101 @@ function QuotationBuilder({ products }) {
   const [notes, setNotes] = useState('Unit prices include the selected packaging and shipping buffer. Custom artwork, stamping, inserts, and rush work are quoted separately where applicable.');
   const [bulkQty, setBulkQty] = useState(50);
   const [bulkTotal, setBulkTotal] = useState(0);
-  const [selectedIds, setSelectedIds] = useState(new Set());
-  const [items, setItems] = useState(() => activeProducts.slice(0, 1).map((product) => ({
-    id: crypto.randomUUID(),
-    productId: product.id,
-    quantity: 50,
-  })));
+  const [bulkSize, setBulkSize] = useState(50);
+  const [includeSamples, setIncludeSamples] = useState(true);
+  // items is keyed by productId (one line per product); a buyer wanting both 50g and 100g
+  // of the same soap in one quote isn't representable today — out of scope, not requested.
+  const [items, setItems] = useState({});
 
-  const addLine = () => {
-    const firstProduct = activeProducts[0];
-    if (!firstProduct) return;
-    setItems((current) => [...current, {
-      id: crypto.randomUUID(),
-      productId: firstProduct.id,
-      quantity: 50,
-    }]);
-  };
-
-  const updateLine = (id, field, value) => {
-    setItems((current) => current.map((item) => (
-      item.id === id
-        ? { ...item, [field]: field === 'quantity' ? Math.max(0, Number(value || 0)) : value }
-        : item
-    )));
-  };
-
-  const removeLine = (id) => {
-    setItems((current) => current.filter((item) => item.id !== id));
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      next.delete(id);
-      return next;
-    });
-  };
-
-  const addProducts = (selectedProducts, quantity = 50) => {
+  const toggleProduct = (productId) => {
     setItems((current) => {
-      const existing = new Set(current.map((item) => item.productId));
-      const additions = selectedProducts
-        .filter((product) => !existing.has(product.id))
-        .map((product) => ({
-          id: crypto.randomUUID(),
-          productId: product.id,
-          quantity,
-        }));
-      return [...current, ...additions];
+      if (current[productId]) {
+        const next = { ...current };
+        delete next[productId];
+        return next;
+      }
+      return { ...current, [productId]: { size: 50, quantity: 50 } };
     });
   };
 
-  const removeByType = (type) => {
-    setItems((current) => {
-      const next = current.filter((item) => productById[item.productId]?.base_type !== type);
-      const nextIds = new Set(next.map((item) => item.id));
-      setSelectedIds((selected) => new Set([...selected].filter((id) => nextIds.has(id))));
-      return next;
-    });
-  };
-
-  const removeSelected = () => {
-    setItems((current) => current.filter((item) => !selectedIds.has(item.id)));
-    setSelectedIds(new Set());
-  };
-
-  const clearQuote = () => {
-    setItems([]);
-    setSelectedIds(new Set());
-  };
-
-  const toggleLine = (id) => {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const selectAllLines = () => {
-    setSelectedIds(new Set(items.map((item) => item.id)));
-  };
-
-  const clearSelection = () => {
-    setSelectedIds(new Set());
-  };
-
-  const applyBulkQuantity = () => {
-    const quantity = Math.max(0, Number(bulkQty || 0));
-    setItems((current) => current.map((item) => (
-      selectedIds.size === 0 || selectedIds.has(item.id)
-        ? { ...item, quantity }
-        : item
-    )));
-  };
-
-  const distributeBulkTotal = () => {
-    const total = Math.max(0, Number(bulkTotal || 0));
-    const targetItems = selectedIds.size > 0
-      ? items.filter((item) => selectedIds.has(item.id))
-      : items;
-    if (!targetItems.length) return;
-
-    const baseQty = Math.floor(total / targetItems.length);
-    const remainder = total % targetItems.length;
-    const targetIds = new Set(targetItems.map((item) => item.id));
-
-    setItems((current) => {
-      let index = 0;
-      return current.map((item) => {
-        if (!targetIds.has(item.id)) return item;
-        const quantity = baseQty + (index < remainder ? 1 : 0);
-        index += 1;
-        return { ...item, quantity };
-      });
-    });
-  };
-
-  const loadAllVarietiesPreset = () => {
-    setQuoteMode('mixed');
-    setItems(activeProducts.map((product) => ({
-      id: crypto.randomUUID(),
-      productId: product.id,
-      quantity: 50,
-    })));
-    setSelectedIds(new Set());
-  };
-
-  const loadGlycerinePreset = () => {
-    setQuoteMode('mixed');
-    const selected = activeProducts.filter((product) => (
-      ['Neem Tulsi Glycerin Soap', 'Honey Oats Glycerin Soap'].includes(product.name)
+  const setItemSize = (productId, size) => {
+    setItems((current) => (
+      current[productId] ? { ...current, [productId]: { ...current[productId], size } } : current
     ));
-    setItems(selected.map((product) => ({
-      id: crypto.randomUUID(),
-      productId: product.id,
-      quantity: 100,
-    })));
-    setSelectedIds(new Set());
   };
 
-  const quoteLines = items
-    .map((item) => ({ ...item, product: productById[item.productId] }))
-    .filter((item) => item.product && item.quantity > 0);
+  const setItemQuantity = (productId, quantity) => {
+    setItems((current) => (
+      current[productId]
+        ? { ...current, [productId]: { ...current[productId], quantity: Math.max(0, Number(quantity || 0)) } }
+        : current
+    ));
+  };
+
+  const selectAllInType = (type) => {
+    setItems((current) => {
+      const next = { ...current };
+      for (const product of productsByType[type] || []) {
+        if (!next[product.id]) next[product.id] = { size: 50, quantity: 50 };
+      }
+      return next;
+    });
+  };
+
+  const clearType = (type) => {
+    setItems((current) => {
+      const next = { ...current };
+      for (const product of productsByType[type] || []) {
+        delete next[product.id];
+      }
+      return next;
+    });
+  };
+
+  const clearAll = () => setItems({});
+
+  const setQuantityForAll = () => {
+    const quantity = Math.max(0, Number(bulkQty || 0));
+    setItems((current) => Object.fromEntries(
+      Object.entries(current).map(([id, entry]) => [id, { ...entry, quantity }])
+    ));
+  };
+
+  const distributeTotalAcrossAll = () => {
+    const total = Math.max(0, Number(bulkTotal || 0));
+    const ids = Object.keys(items);
+    if (!ids.length) return;
+    const baseQty = Math.floor(total / ids.length);
+    const remainder = total % ids.length;
+    setItems((current) => {
+      const next = {};
+      ids.forEach((id, index) => {
+        next[id] = { ...current[id], quantity: baseQty + (index < remainder ? 1 : 0) };
+      });
+      return next;
+    });
+  };
+
+  const setSizeForAll = () => {
+    setItems((current) => Object.fromEntries(
+      Object.entries(current).map(([id, entry]) => [id, { ...entry, size: bulkSize }])
+    ));
+  };
+
+  const quoteLines = Object.entries(items)
+    .map(([productId, entry]) => ({ productId, ...entry, product: productById[productId] }))
+    .filter((line) => line.product && line.quantity > 0);
   const totalQuantity = quoteLines.reduce((sum, item) => sum + item.quantity, 0);
   const packaging = PACKAGING_OPTIONS[packagingMode] || PACKAGING_OPTIONS.standard;
   const pricedLines = quoteLines.map((item) => {
-    const price = getQuoteUnitPrice(item.product, quoteMode, item.quantity, totalQuantity);
+    const price = getQuoteUnitPrice(item.product, quoteMode, item.size, item.quantity, totalQuantity);
+    const anchorPrice = getWholesaleVariantPrice(item.product, item.size);
     const fulfillmentUnitCost = packaging.unitCost + packaging.shippingUnitCost;
     const quotedUnitPrice = price.unitPrice + fulfillmentUnitCost;
     return {
       ...item,
       ...price,
+      anchorPrice,
       fulfillmentUnitCost,
       quotedUnitPrice,
       lineTotal: quotedUnitPrice * item.quantity,
@@ -551,6 +610,13 @@ function QuotationBuilder({ products }) {
   const quoteModeLabel = QUOTE_MODE_LABELS[quoteMode];
   const shippingBox = getShippingBox(totalQuantity);
   const belowMoq = pricedLines.some((item) => item.discount === 0);
+
+  // Complimentary sample selection is presentation-only: it is never added into
+  // quoteTotal / baseSubtotal / fulfillmentTotal above.
+  const sortedForSampling = [...quoteLines].sort((a, b) => a.product.name.localeCompare(b.product.name));
+  const sampleVarietyCount = quoteLines.length;
+  const sampledLines = sortedForSampling.slice(0, MAX_SAMPLE_VARIETIES);
+  const sampleOverflowCount = Math.max(0, sampleVarietyCount - MAX_SAMPLE_VARIETIES);
 
   return (
     <div>
@@ -646,40 +712,27 @@ function QuotationBuilder({ products }) {
             </div>
           </div>
 
+          <ProductSelectionGrid
+            groupTypes={groupTypes}
+            productsByType={productsByType}
+            items={items}
+            onToggle={toggleProduct}
+            onSetSize={setItemSize}
+            onSetQuantity={setItemQuantity}
+            onSelectAllInType={selectAllInType}
+            onClearType={clearType}
+          />
+
           <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', background: '#F9FAFB', padding: '12px', marginBottom: '14px' }}>
             <div style={{ fontSize: '12px', fontWeight: 900, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
-              Fast add eligible 50g soap variants
-            </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-              <button onClick={loadAllVarietiesPreset} style={{ minHeight: '36px', border: '1px solid #1B4332', borderRadius: '6px', padding: '7px 11px', background: '#F0FDF4', color: '#1B4332', fontWeight: 800, cursor: 'pointer' }}>
-                Replace with all varieties x 50
-              </button>
-              <button onClick={loadGlycerinePreset} style={{ minHeight: '36px', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '7px 11px', background: '#FFFFFF', color: '#374151', fontWeight: 700, cursor: 'pointer' }}>
-                Neem Tulsi + Honey Oats x 100
-              </button>
-              <button onClick={addLine} style={{ minHeight: '36px', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '7px 11px', background: '#FFFFFF', color: '#374151', fontWeight: 700, cursor: 'pointer' }}>
-                Add one line
-              </button>
-            </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {groupTypes.map((type) => (
-                <button key={type} onClick={() => addProducts(productsByType[type], 50)} style={{ minHeight: '34px', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '6px 10px', background: '#FFFFFF', color: '#374151', fontWeight: 700, cursor: 'pointer' }}>
-                  Add all {type}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', background: '#FFFFFF', padding: '12px', marginBottom: '14px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 900, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
-              Bulk edit selected lines
+              Bulk edit quote lines
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '10px', alignItems: 'end' }}>
               <div>
-                <label style={labelStyle()}>Set qty per selected line</label>
+                <label style={labelStyle()}>Set qty for all lines</label>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <input type="number" min="0" step="1" value={bulkQty} onChange={(e) => setBulkQty(e.target.value)} style={inputStyle()} />
-                  <button onClick={applyBulkQuantity} style={{ minHeight: '40px', border: '1px solid #1B4332', borderRadius: '6px', padding: '8px 10px', background: '#1B4332', color: '#FFFFFF', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  <button onClick={setQuantityForAll} style={{ minHeight: '40px', border: '1px solid #1B4332', borderRadius: '6px', padding: '8px 10px', background: '#1B4332', color: '#FFFFFF', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                     Apply
                   </button>
                 </div>
@@ -688,61 +741,31 @@ function QuotationBuilder({ products }) {
                 <label style={labelStyle()}>Distribute total units</label>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <input type="number" min="0" step="1" value={bulkTotal} onChange={(e) => setBulkTotal(e.target.value)} placeholder="e.g. 500" style={inputStyle()} />
-                  <button onClick={distributeBulkTotal} style={{ minHeight: '40px', border: '1px solid #1B4332', borderRadius: '6px', padding: '8px 10px', background: '#F0FDF4', color: '#1B4332', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  <button onClick={distributeTotalAcrossAll} style={{ minHeight: '40px', border: '1px solid #1B4332', borderRadius: '6px', padding: '8px 10px', background: '#F0FDF4', color: '#1B4332', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                     Split
                   </button>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button onClick={selectAllLines} style={{ minHeight: '36px', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '7px 10px', background: '#FFFFFF', color: '#374151', fontWeight: 700, cursor: 'pointer' }}>
-                  Select all
-                </button>
-                <button onClick={clearSelection} style={{ minHeight: '36px', border: '1px solid #D1D5DB', borderRadius: '6px', padding: '7px 10px', background: '#FFFFFF', color: '#374151', fontWeight: 700, cursor: 'pointer' }}>
-                  Clear selection
-                </button>
-                <button onClick={removeSelected} disabled={selectedIds.size === 0} style={{ minHeight: '36px', border: '1px solid #FCA5A5', borderRadius: '6px', padding: '7px 10px', background: selectedIds.size ? '#FEF2F2' : '#F3F4F6', color: selectedIds.size ? '#991B1B' : '#9CA3AF', fontWeight: 800, cursor: selectedIds.size ? 'pointer' : 'not-allowed' }}>
-                  Remove selected
-                </button>
-                <button onClick={clearQuote} style={{ minHeight: '36px', border: '1px solid #FCA5A5', borderRadius: '6px', padding: '7px 10px', background: '#FFFFFF', color: '#991B1B', fontWeight: 800, cursor: 'pointer' }}>
-                  Clear quote
-                </button>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
-              {groupTypes.map((type) => (
-                <button key={type} onClick={() => removeByType(type)} style={{ minHeight: '32px', border: '1px solid #FCA5A5', borderRadius: '6px', padding: '5px 9px', background: '#FEF2F2', color: '#991B1B', fontWeight: 700, cursor: 'pointer' }}>
-                  Remove {type}
-                </button>
-              ))}
-            </div>
-            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '8px', lineHeight: 1.45 }}>
-              Bulk actions apply to selected lines. If nothing is selected, quantity updates apply to all quote lines.
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gap: '10px' }}>
-            {items.map((item) => (
-              <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '32px minmax(220px, 1fr) 110px 44px', gap: '8px', alignItems: 'end', padding: '10px', border: selectedIds.has(item.id) ? '1px solid #1B4332' : '1px solid #E5E7EB', borderRadius: '8px', background: selectedIds.has(item.id) ? '#F0FDF4' : '#FFFFFF' }}>
-                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '40px' }}>
-                  <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleLine(item.id)} />
-                </label>
-                <div>
-                  <label style={labelStyle()}>50g Soap Variant</label>
-                  <select value={item.productId} onChange={(e) => updateLine(item.id, 'productId', e.target.value)} style={inputStyle()}>
-                    {activeProducts.map((product) => (
-                      <option key={product.id} value={product.id}>{product.name}</option>
+              <div>
+                <label style={labelStyle()}>Set size for all lines</label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <select value={bulkSize} onChange={(e) => setBulkSize(Number(e.target.value))} style={inputStyle()}>
+                    {SIZE_OPTIONS_GRAMS.map((size) => (
+                      <option key={size} value={size}>{size}g</option>
                     ))}
                   </select>
+                  <button onClick={setSizeForAll} style={{ minHeight: '40px', border: '1px solid #1B4332', borderRadius: '6px', padding: '8px 10px', background: '#1B4332', color: '#FFFFFF', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    Apply
+                  </button>
                 </div>
-                <div>
-                  <label style={labelStyle()}>Qty</label>
-                  <input type="number" min="0" step="1" value={item.quantity} onChange={(e) => updateLine(item.id, 'quantity', e.target.value)} style={inputStyle()} />
-                </div>
-                <button onClick={() => removeLine(item.id)} style={{ minHeight: '40px', border: '1px solid #FCA5A5', borderRadius: '6px', background: '#FEF2F2', color: '#991B1B', fontWeight: 800, cursor: 'pointer' }}>
-                  x
-                </button>
               </div>
-            ))}
+              <button onClick={clearAll} style={{ minHeight: '36px', border: '1px solid #FCA5A5', borderRadius: '6px', padding: '7px 10px', background: '#FFFFFF', color: '#991B1B', fontWeight: 800, cursor: 'pointer' }}>
+                Clear quote
+              </button>
+            </div>
+            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '8px', lineHeight: 1.45 }}>
+              Bulk actions apply to every line currently in the quote. Use the checkboxes above, or the &ldquo;Clear&rdquo; button per soap type, to change what&apos;s in the quote first.
+            </div>
           </div>
 
           <div style={{ marginTop: '14px' }}>
@@ -768,6 +791,39 @@ function QuotationBuilder({ products }) {
               One or more lines are below MOQ 50, so retail price is shown for those lines.
             </div>
           )}
+
+          <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid #E5E7EB' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '8px' }}>
+              <input type="checkbox" checked={includeSamples} onChange={(e) => setIncludeSamples(e.target.checked)} style={{ accentColor: '#1B4332', width: '16px', height: '16px' }} />
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#111827' }}>Include complimentary evaluation samples</span>
+            </label>
+            <div style={{ fontSize: '12px', color: '#6B7280', lineHeight: 1.5 }}>
+              {quoteLines.length === 0 ? (
+                'Add products to the quote to see which sample pieces would be included.'
+              ) : (
+                <>
+                  One small sample piece per variety, no charge. Full-size soaps are always purchased separately.
+                  <div style={{ marginTop: '6px', fontWeight: 700, color: '#374151' }}>
+                    {sampledLines.map((line) => line.product.name).join(', ')}
+                  </div>
+                  {sampleOverflowCount > 0 && (
+                    <div style={{ marginTop: '6px', color: '#991B1B' }}>
+                      Capped at {MAX_SAMPLE_VARIETIES} varieties &mdash; {sampleOverflowCount} more {sampleOverflowCount === 1 ? 'variety is' : 'varieties are'} quoted but not sampled.
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid #E5E7EB' }}>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#111827', marginBottom: '8px' }}>Value points included in printed quote</div>
+            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: '#4B5563', lineHeight: 1.6 }}>
+              {DIFFERENTIATION_POINTS.map((point) => (
+                <li key={point}>{point}</li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -797,24 +853,26 @@ function QuotationBuilder({ products }) {
         </div>
 
         <div style={{ overflowX: 'auto', marginBottom: '18px' }}>
-        <table style={{ width: '100%', minWidth: '760px', borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', minWidth: '820px', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
               <th style={th}>Product</th>
               <th style={th}>Type</th>
+              <th style={th}>Size</th>
               <th style={thRight}>Qty</th>
-              <th style={thRight}>50g Anchor</th>
+              <th style={thRight}>Wholesale Anchor</th>
               <th style={thRight}>Quoted Unit</th>
               <th style={thRight}>Total</th>
             </tr>
           </thead>
           <tbody>
             {pricedLines.map((item) => (
-              <tr key={item.id}>
+              <tr key={item.productId}>
                 <td style={{ ...td, whiteSpace: 'normal', fontWeight: 800, color: '#111827' }}>{item.product.name}</td>
                 <td style={td}>{item.product.base_type}</td>
+                <td style={td}>{item.size}g</td>
                 <td style={tdRight}>{fmt(item.quantity)}</td>
-                <td style={tdRight}>{fmtCurrency(item.product.unit_price)}</td>
+                <td style={tdRight}>{fmtCurrency(item.anchorPrice)}</td>
                 <td style={tdRight}>
                   <div style={{ fontWeight: 800, color: '#111827' }}>{fmtCurrency(item.quotedUnitPrice)}</div>
                   <div style={{ fontSize: '10px', color: '#6B7280' }}>
@@ -827,7 +885,7 @@ function QuotationBuilder({ products }) {
           </tbody>
           <tfoot>
             <tr>
-              <td style={{ ...td, fontWeight: 900, color: '#111827', background: '#F9FAFB' }} colSpan={2}>Total</td>
+              <td style={{ ...td, fontWeight: 900, color: '#111827', background: '#F9FAFB' }} colSpan={3}>Total</td>
               <td style={{ ...tdRight, fontWeight: 900, color: '#111827', background: '#F9FAFB' }}>{fmt(totalQuantity)}</td>
               <td style={{ ...td, background: '#F9FAFB' }} />
               <td style={{ ...td, background: '#F9FAFB' }} />
@@ -835,6 +893,32 @@ function QuotationBuilder({ products }) {
             </tr>
           </tfoot>
         </table>
+        </div>
+
+        {includeSamples && sampleVarietyCount > 0 && (
+          <div style={{ border: '1px solid #D1FAE5', borderRadius: '8px', background: '#F0FDF4', padding: '12px', marginBottom: '14px', pageBreakInside: 'avoid' }}>
+            <div style={{ fontSize: '11px', color: '#047857', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Complimentary evaluation samples (no charge)</div>
+            <div style={{ fontSize: '12px', color: '#064E3B', lineHeight: 1.55, marginTop: '4px', whiteSpace: 'normal' }}>
+              One small sample piece is included per soap variety quoted, at no cost, so you can check scent, texture, and finish before ordering full-size units. Full-size bars are <strong>not</strong> complimentary &mdash; they are priced per the line items above and must be purchased separately.
+            </div>
+            <div style={{ fontSize: '12px', color: '#064E3B', marginTop: '8px', whiteSpace: 'normal' }}>
+              <strong>Varieties sampled with this quote:</strong> {sampledLines.map((line) => line.product.name).join(', ')}.
+            </div>
+            {sampleOverflowCount > 0 && (
+              <div style={{ fontSize: '12px', color: '#064E3B', marginTop: '6px', whiteSpace: 'normal' }}>
+                Sample pieces are capped at {MAX_SAMPLE_VARIETIES} varieties per quote. This quote lists {sampleVarietyCount} varieties, so {sampleOverflowCount} additional {sampleOverflowCount === 1 ? 'variety is' : 'varieties are'} quoted above but not included as a sample.
+              </div>
+            )}
+          </div>
+        )}
+
+        <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', marginBottom: '14px', pageBreakInside: 'avoid' }}>
+          <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Why Healing Soil pricing differs from mass-produced soap</div>
+          <ul style={{ margin: '6px 0 0', paddingLeft: '18px', fontSize: '12px', color: '#4B5563', lineHeight: 1.6, whiteSpace: 'normal' }}>
+            {DIFFERENTIATION_POINTS.map((point) => (
+              <li key={point}>{point}</li>
+            ))}
+          </ul>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '14px' }}>
@@ -911,7 +995,7 @@ export default function WholesalePricingClient({ products }) {
           fontSize: '13px',
           lineHeight: 1.55,
         }}>
-          Base prices are for 50g handmade soap wholesale orders before fulfilment buffer. Use the quotation builder below to bake packaging, carton, and shipping allowance into the quoted unit price. Recommended individual kraft box size for 50g bars is 90 x 62 x 25 mm; ship 50-unit wholesale cases in a 12 x 9 x 4 in carton, moving to 12 x 9 x 6 in cartons for 100 units.
+          Base prices are shown for both 50g and 100g handmade soap wholesale orders, before fulfilment buffer. Use the quotation builder below to bake packaging, carton, and shipping allowance into the quoted unit price. Recommended individual kraft box size for 50g bars is 90 x 62 x 25 mm; ship 50-unit wholesale cases in a 12 x 9 x 4 in carton, moving to 12 x 9 x 6 in cartons for 100 units.
         </div>
 
         <BaseTypePriceMatrix products={wholesaleProducts} />
