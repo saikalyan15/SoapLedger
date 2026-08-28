@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { Pool } from '@neondatabase/serverless';
 import { normaliseToE164 } from '@/lib/utils/phone';
 import { revalidatePath } from 'next/cache';
+import { sendOrderWhatsAppAlert } from '@/lib/notifications/whatsapp';
 
 function refFor(id) {
   return `HS-${id.slice(0, 8).toUpperCase()}`;
@@ -267,6 +268,16 @@ export async function POST(request) {
     revalidatePath('/interests');
     revalidatePath('/customers');
     revalidatePath('/dashboard');
+
+    if (!isInterest) {
+      await sendOrderWhatsAppAlert({
+        orderId: newOrder.id,
+        customerName: custName,
+        orderValue: finalRevenue,
+        itemCount: resolvedItems.length,
+        source: normalizedSource || 'Website',
+      });
+    }
 
     return NextResponse.json({
       order_id: newOrder.id,

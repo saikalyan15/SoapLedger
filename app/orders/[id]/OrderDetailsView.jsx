@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Pencil, ArrowLeft, ChevronDown, Printer, Package, MapPin, Droplets, CreditCard, ShieldCheck } from 'lucide-react';
+import { Pencil, ArrowLeft, ChevronDown, Printer, Package, MapPin, Droplets, CreditCard, ShieldCheck, MessageCircle } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
-import { markOrderComplimentaryAction, reconcileRazorpayPaymentAction, updateShipmentStatusAction, updateOrderStatusAction } from '@/lib/actions/orders';
+import { markOrderComplimentaryAction, reconcileRazorpayPaymentAction, updateShipmentStatusAction, updateOrderStatusAction, sendOrderStatusAlertAction } from '@/lib/actions/orders';
 import { SETTABLE_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
 import { formatPhoneForDisplay } from '@/lib/utils/phone';
 
@@ -110,7 +110,7 @@ const PAYMENT_CONFIRMED_WORKFLOW_STATUSES = new Set([
   'Partially Dispatched', 'Partially Delivered', 'Delivered',
 ]);
 
-const PaymentCard = ({ order, paymentAttempts = [], onReconciled }) => {
+const PaymentCard = ({ order, paymentAttempts = [], amountCollected = null, paymentCharge = null, onReconciled }) => {
   const [paymentId, setPaymentId] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isMarkingComplimentary, setIsMarkingComplimentary] = useState(false);
@@ -216,6 +216,28 @@ const PaymentCard = ({ order, paymentAttempts = [], onReconciled }) => {
       {order.paid_at && (
         <div style={{ color: '#6B7280', fontSize: '11px', marginTop: '8px' }}>
           Confirmed {new Date(order.paid_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+        </div>
+      )}
+      {amountCollected != null && (
+        <div style={{ borderTop: '1px solid #F3F4F6', marginTop: '12px', paddingTop: '12px' }}>
+          <div style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: '8px' }}>Payment breakdown</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4B5563' }}>
+              <span>Order value</span>
+              <span style={{ fontWeight: '600' }}>₹{(Number(order.revenue) || 0).toLocaleString('en-IN')}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4B5563' }}>
+              <span>Online payment charge (2.5%)</span>
+              <span style={{ fontWeight: '600' }}>{paymentCharge > 0 ? `+₹${paymentCharge.toLocaleString('en-IN')}` : '₹0'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #F3F4F6', paddingTop: '6px', color: '#166534', fontWeight: '800' }}>
+              <span>Collected from customer</span>
+              <span>₹{amountCollected.toLocaleString('en-IN')}</span>
+            </div>
+          </div>
+          <div style={{ color: '#9CA3AF', fontSize: '10px', marginTop: '6px' }}>
+            The payment charge is passed to Razorpay and is not revenue.
+          </div>
         </div>
       )}
 
@@ -329,6 +351,7 @@ const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [], pa
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [notifyState, setNotifyState] = useState(null); // null | 'sending' | 'sent' | 'error'
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -343,6 +366,21 @@ const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [], pa
   const shipping = Number(order.shipping_charge) || 0;
   const customization = Number(order.customization_amount) || 0;
   const discount = Math.max(0, subtotal + shipping + customization - revenue);
+
+  // What Razorpay actually took from the customer. The storefront adds an online
+  // payment charge on top of the order value and collects the rounded total, but
+  // SoapLedger keeps recording the order at its own value — so the real figure
+  // only lives on the captured payment attempt.
+  const capturedAttempt = paymentAttempts.find(
+    (attempt) => attempt.status === 'captured'
+      && (attempt.currency == null || attempt.currency === 'INR')
+      && Number.isFinite(Number(attempt.amount_paise))
+      && Number(attempt.amount_paise) > 0
+  );
+  const amountCollected = capturedAttempt ? Number(capturedAttempt.amount_paise) / 100 : null;
+  const paymentCharge = amountCollected != null
+    ? Math.round((amountCollected - revenue) * 100) / 100
+    : null;
 
   const handleUpdateShipmentStatus = async (shipmentId, status) => {
     const result = await updateShipmentStatusAction(shipmentId, status);
@@ -361,6 +399,13 @@ const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [], pa
     } else {
       alert(result.error);
     }
+  };
+
+  const handleSendWhatsAppNotice = async () => {
+    setNotifyState('sending');
+    const result = await sendOrderStatusAlertAction(order.id, order.customer_name, order.status);
+    setNotifyState(result.success ? 'sent' : 'error');
+    setTimeout(() => setNotifyState(null), 3000);
   };
 
   return (
@@ -407,6 +452,32 @@ const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [], pa
             <ChevronDown size={12} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
           </div>
           {isUpdatingStatus && <span style={{ fontSize: '10px', color: '#1B4332', fontWeight: 700 }}>Updating...</span>}
+
+          <button
+            type="button"
+            onClick={handleSendWhatsAppNotice}
+            disabled={notifyState === 'sending'}
+            title="Send this order's current status to the founder on WhatsApp"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '20px',
+              fontSize: '11px',
+              fontWeight: '700',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              background: notifyState === 'sent' ? '#D8F3DC' : notifyState === 'error' ? '#FEE2E2' : '#FFFFFF',
+              color: notifyState === 'sent' ? '#1B4332' : notifyState === 'error' ? '#B91C1C' : '#374151',
+              border: '1px solid #E5E7EB',
+              cursor: notifyState === 'sending' ? 'wait' : 'pointer',
+              fontFamily: '"Plus Jakarta Sans", sans-serif'
+            }}
+          >
+            <MessageCircle size={13} />
+            {notifyState === 'sending' ? 'Sending…' : notifyState === 'sent' ? 'Sent' : notifyState === 'error' ? 'Failed' : 'Notify WhatsApp'}
+          </button>
         </div>
 
         <div style={{ display: 'flex', gap: '12px', width: isMobile ? '100%' : 'auto' }}>
@@ -496,13 +567,34 @@ const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [], pa
                 <span style={{ fontWeight: '700', color: '#111827' }}>Total Revenue</span>
                 <span style={{ fontWeight: '800', fontSize: '24px', color: '#1B4332' }}>₹{revenue.toLocaleString()}</span>
               </div>
+              {paymentCharge > 0 && (
+                <>
+                  <div style={{ ...summaryLineStyle, fontSize: '13px', color: '#6B7280' }}>
+                    <span>Online payment charge (2.5%)</span>
+                    <span>+₹{paymentCharge.toLocaleString()}</span>
+                  </div>
+                  <div style={summaryLineStyle}>
+                    <span style={{ fontWeight: '700', color: '#111827' }}>Collected from customer</span>
+                    <span style={{ fontWeight: '700', color: '#111827' }}>₹{amountCollected.toLocaleString()}</span>
+                  </div>
+                  <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#9CA3AF', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+                    The payment charge is passed to Razorpay and is not revenue.
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
 
         {/* Right: Order Notes + Essential Oils Checklist */}
         <div>
-          <PaymentCard order={order} paymentAttempts={paymentAttempts} onReconciled={() => router.refresh()} />
+          <PaymentCard
+            order={order}
+            paymentAttempts={paymentAttempts}
+            amountCollected={amountCollected}
+            paymentCharge={paymentCharge}
+            onReconciled={() => router.refresh()}
+          />
 
           <div style={cardStyle}>
             <div style={sectionLabelStyle}>Order Notes</div>
