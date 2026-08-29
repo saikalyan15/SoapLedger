@@ -146,19 +146,22 @@ export default function DashboardClient({
   const healthTone = thisMonthNet < 0 ? 'red'
     : ordersNeedingAction > 0 || lifetimeNet < 0 ? 'amber'
       : 'green';
-  const healthTitle = thisMonthNet < 0
-    ? 'More cash went out than came in this month.'
-    : ordersNeedingAction > 0
-      ? `${ordersNeedingAction} order${ordersNeedingAction === 1 ? '' : 's'} need attention.`
-      : lifetimeNet < 0
-        ? 'Cash-positive this month; lifetime costs are not fully recovered.'
-        : 'Recorded cash is positive this month and overall.';
 
-  const healthCopy = thisMonthNet < 0
-    ? `${fmtCurrency(Math.abs(thisMonthNet))} more went out than came in during ${monthName}.`
-    : lifetimeNet < 0
-      ? `${fmtCurrency(thisMonthNet)} more came in than went out in ${monthName}. ${fmtCurrency(recoveryGap)} of recorded spend still needs to be earned back.`
-      : `${fmtCurrency(thisMonthNet)} more came in than went out in ${monthName}. Recorded lifetime cash is ahead by ${fmtCurrency(lifetimeNet)}.`;
+  const overallVerdict = lifetimeNet >= 0
+    ? `You're ${fmtCurrency(lifetimeNet)} ahead overall`
+    : `You're ${fmtCurrency(recoveryGap)} behind overall`;
+
+  const healthTitle = thisMonthNet < 0
+    ? `More went out than came in during ${monthName}.`
+    : ordersNeedingAction > 0
+      ? `${overallVerdict}. ${ordersNeedingAction} order${ordersNeedingAction === 1 ? '' : 's'} need attention.`
+      : `${overallVerdict}.`;
+
+  const monthPhrase = thisMonthNet >= 0
+    ? `${monthName} is positive so far — ${fmtCurrency(thisMonthNet)} kept`
+    : `${monthName} is behind so far — ${fmtCurrency(Math.abs(thisMonthNet))} short`;
+
+  const healthCopy = `Sold ${fmtCurrency(initialRevenue.total_revenue)}, spent ${fmtCurrency(initialRevenue.total_expenses)} since you started. ${monthPhrase}.`;
 
   const changeCopy = (value, comparison, noun = '') => {
     const delta = value - comparison;
@@ -223,39 +226,59 @@ export default function DashboardClient({
         <a href="#money-definition">See how this is calculated <ChevronRight size={15} /></a>
       </section>
 
-      <section className="money-scoreboard" aria-label="Current month cash summary">
+      <section className="money-scoreboard" aria-label="Cash summary">
+        <p className="money-scoreboard-group">Overall · since your first sale</p>
         <div className="money-scoreboard-primary">
           <CashMetric
-            label="Money in"
-            value={fmtCurrency(thisMonth.revenue)}
-            note={dayOfMonth >= 7 ? changeCopy(thisMonth.revenue, paceComparison.revenue) : 'Month still too early for a fair comparison'}
+            label="Total sold"
+            value={fmtCurrency(initialRevenue.total_revenue)}
+            note={`${fmtNumber(initialRevenue.total_soaps_sold)} soaps · ${fmtNumber(initialRevenue.orders_count)} orders`}
+            helper="Paid orders — some may still be in production or transit"
             tone="green"
           />
           <CashMetric
-            label="Money out"
-            value={fmtCurrency(thisMonth.expenses)}
-            note={dayOfMonth >= 7 ? changeCopy(thisMonth.expenses, paceComparison.expenses || 0) : 'Recorded expenses so far'}
+            label="Total spent"
+            value={fmtCurrency(initialRevenue.total_expenses)}
+            helper="Everything — ingredients, packaging, shipping, tools"
             tone="red"
           />
           <CashMetric
-            label="Net cash"
+            label="Where you stand"
+            value={signedCurrency(lifetimeNet)}
+            note="Total sold minus total spent"
+            helper={lifetimeNet < 0 ? `${fmtCurrency(recoveryGap)} still to earn back` : 'Above zero means you are ahead overall'}
+            tone={lifetimeNet >= 0 ? 'green' : 'red'}
+          />
+        </div>
+
+        <p className="money-scoreboard-group">This month · {monthName}, day {dayOfMonth} of {daysInMonth}</p>
+        <div className="money-scoreboard-primary">
+          <CashMetric
+            label="Came in"
+            value={fmtCurrency(thisMonth.revenue)}
+            note={dayOfMonth >= 7 ? changeCopy(thisMonth.revenue, paceComparison.revenue) : 'Too early this month for a fair comparison'}
+            tone="green"
+          />
+          <CashMetric
+            label="Went out"
+            value={fmtCurrency(thisMonth.expenses)}
+            note={dayOfMonth >= 7 ? changeCopy(thisMonth.expenses, paceComparison.expenses || 0) : 'Recorded spend so far'}
+            tone="red"
+          />
+          <CashMetric
+            label="Difference"
             value={signedCurrency(thisMonthNet)}
-            note={dayOfMonth >= 7 ? changeCopy(thisMonthNet, comparisonNet) : 'Money in minus money out'}
-            helper="Recorded cash, not accounting profit"
+            note={dayOfMonth >= 7 ? changeCopy(thisMonthNet, comparisonNet) : 'Came in minus went out'}
+            helper="Money kept this month so far"
             tone={thisMonthNet >= 0 ? 'green' : 'red'}
           />
         </div>
-        <div className="money-scoreboard-secondary">
+
+        <div className="money-scoreboard-strip">
           <CashMetric
             label="Money waiting"
             value={fmtCurrency(initialRevenue.pending_revenue)}
-            helper="Unpaid orders; not counted as money in"
-          />
-          <CashMetric
-            label="Lifetime cash position"
-            value={signedCurrency(lifetimeNet)}
-            helper="All recorded money in minus all recorded spend"
-            tone={lifetimeNet >= 0 ? 'green' : 'red'}
+            helper={`${fmtNumber(initialRevenue.pending_soaps)} soaps in unpaid orders — not counted in Total sold`}
           />
           <CashMetric
             label="Orders needing action"
@@ -317,33 +340,32 @@ export default function DashboardClient({
         <div className="money-readiness-copy">
           {operationsAreProfitable ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
           <div>
-            <span>Last {initialUnitEconomics.window_days} days · recorded operations</span>
-            <h2>
-              You {operatingResultWord}{initialUnitEconomics.operating_result !== 0 && ` ${fmtUnitCurrency(Math.abs(initialUnitEconomics.operating_result))}`} from normal operations.
-            </h2>
+            <span>Last {initialUnitEconomics.window_days} days · normal running of the business</span>
+            <h2>Is each soap making money right now?</h2>
             <p>
-              {fmtUnitCurrency(initialUnitEconomics.recognised_revenue)} sales − {fmtUnitCurrency(initialUnitEconomics.operating_spend)} normal operating costs
-              {' '}= {signedUnitCurrency(initialUnitEconomics.operating_result)}. One-time costs of {fmtUnitCurrency(initialUnitEconomics.one_time_spend)} are excluded.
-              {initialUnitEconomics.labour_spend === 0 && ' Labour is recorded as ₹0, so add your time as a cost if it is currently missing.'}
+              Over the last {initialUnitEconomics.window_days} days you {operatingResultWord}
+              {initialUnitEconomics.operating_result !== 0 && ` about ${fmtUnitCurrency(Math.abs(initialUnitEconomics.operating_result))}`} running the business day to day:
+              {' '}{fmtUnitCurrency(initialUnitEconomics.recognised_revenue)} of sales minus {fmtUnitCurrency(initialUnitEconomics.operating_spend)} of normal running costs.
+              {' '}One-time costs of {fmtUnitCurrency(initialUnitEconomics.one_time_spend)} (tools, equipment) are not counted here.
+              {initialUnitEconomics.labour_spend === 0 && ' Your own time is recorded as ₹0 — add it as a cost if that is missing.'}
             </p>
           </div>
         </div>
         <div className="money-readiness-metric">
-          <span>You spend</span>
+          <span>You spend to make + ship</span>
           <strong>{fmtUnitCurrency(initialUnitEconomics.unit_cost)} per soap</strong>
           <small>{fmtUnitCurrency(initialUnitEconomics.production_cost_per_soap)} to make + {fmtUnitCurrency(initialUnitEconomics.shipping_cost_per_soap)} shipping</small>
         </div>
         <div className="money-readiness-metric">
           <span>You sell for</span>
           <strong>{fmtUnitCurrency(initialUnitEconomics.avg_selling_price)} per soap</strong>
-          <small>Actual recorded sales ÷ {fmtNumber(initialUnitEconomics.equivalent_soaps, 1)} soap-equivalents</small>
+          <small>Actual recorded sales ÷ {fmtNumber(initialUnitEconomics.equivalent_soaps, 1)} soaps</small>
         </div>
         <div className={`money-readiness-metric money-readiness-result ${operationsAreProfitable ? 'is-positive' : 'is-negative'}`}>
-          <span>Operating {operationsAreProfitable ? 'profit' : 'loss'}</span>
+          <span>{operationsAreProfitable ? 'Profit per soap' : 'Loss per soap'}</span>
           <strong>{signedUnitCurrency(initialUnitEconomics.operating_result_per_soap)} per soap</strong>
           <small>
             {fmtUnitCurrency(initialUnitEconomics.avg_selling_price)} selling price − {fmtUnitCurrency(initialUnitEconomics.operating_cost_per_soap)} normal costs
-            {initialUnitEconomics.operating_margin_pct != null && ` · ${Math.round(initialUnitEconomics.operating_margin_pct)}% margin`}
           </small>
         </div>
       </section>
