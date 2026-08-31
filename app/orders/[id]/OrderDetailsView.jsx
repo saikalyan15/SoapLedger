@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Pencil, ArrowLeft, ChevronDown, Printer, Package, MapPin, Droplets, CreditCard, ShieldCheck, MessageCircle } from 'lucide-react';
+import { Pencil, ArrowLeft, ChevronDown, Printer, Package, MapPin, Droplets, CreditCard, ShieldCheck } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
-import { markOrderComplimentaryAction, reconcileRazorpayPaymentAction, updateShipmentStatusAction, updateOrderStatusAction, sendOrderStatusAlertAction } from '@/lib/actions/orders';
+import { markOrderComplimentaryAction, reconcileRazorpayPaymentAction, updateShipmentStatusAction, updateOrderStatusAction } from '@/lib/actions/orders';
 import { SETTABLE_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
 import { formatPhoneForDisplay } from '@/lib/utils/phone';
 
@@ -351,7 +351,8 @@ const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [], pa
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [notifyState, setNotifyState] = useState(null); // null | 'sending' | 'sent' | 'error'
+  // WhatsApp status notice disabled — blocked on getting Meta message templates approved.
+  // const [notifyState, setNotifyState] = useState(null); // null | 'sending' | 'sent' | 'error'
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -401,12 +402,13 @@ const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [], pa
     }
   };
 
-  const handleSendWhatsAppNotice = async () => {
-    setNotifyState('sending');
-    const result = await sendOrderStatusAlertAction(order.id, order.customer_name, order.status);
-    setNotifyState(result.success ? 'sent' : 'error');
-    setTimeout(() => setNotifyState(null), 3000);
-  };
+  // WhatsApp status notice disabled — blocked on getting Meta message templates approved.
+  // const handleSendWhatsAppNotice = async () => {
+  //   setNotifyState('sending');
+  //   const result = await sendOrderStatusAlertAction(order.id, order.customer_name, order.status);
+  //   setNotifyState(result.success ? 'sent' : 'error');
+  //   setTimeout(() => setNotifyState(null), 3000);
+  // };
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
@@ -453,6 +455,7 @@ const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [], pa
           </div>
           {isUpdatingStatus && <span style={{ fontSize: '10px', color: '#1B4332', fontWeight: 700 }}>Updating...</span>}
 
+          {/* WhatsApp status notice disabled — blocked on getting Meta message templates approved.
           <button
             type="button"
             onClick={handleSendWhatsAppNotice}
@@ -478,6 +481,7 @@ const OrderDetailsView = ({ order, items, shipments = [], essentialOils = [], pa
             <MessageCircle size={13} />
             {notifyState === 'sending' ? 'Sending…' : notifyState === 'sent' ? 'Sent' : notifyState === 'error' ? 'Failed' : 'Notify WhatsApp'}
           </button>
+          */}
         </div>
 
         <div style={{ display: 'flex', gap: '12px', width: isMobile ? '100%' : 'auto' }}>
