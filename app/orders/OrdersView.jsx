@@ -324,7 +324,7 @@ const OrdersView = ({ orders }) => {
               style={{
                 width: '100%',
                 borderCollapse: 'collapse',
-                minWidth: '990px',
+                minWidth: '860px',
                 tableLayout: 'fixed'
               }}
             >
@@ -335,15 +335,14 @@ const OrdersView = ({ orders }) => {
                   <th style={{ ...thStyle, width: '180px' }}>Customer</th>
                   <th style={{ ...thStyle }}>Items</th>
                   <th style={{ ...thStyle, width: '100px' }}>Total</th>
-                  <th style={{ ...thStyle, width: '120px' }}>Status</th>
-                  <th style={{ ...thStyle, width: '130px' }}>Shipped</th>
+                  <th style={{ ...thStyle, width: '140px' }}>Status</th>
                   <th style={{ ...thStyle, width: '120px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>
+                    <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>
                       No orders found
                     </td>
                   </tr>
@@ -381,15 +380,12 @@ const OrdersView = ({ orders }) => {
                       </td>
                       <td style={{ ...tdStyle, minWidth: '100px' }}>
                         <StatusBadge status={order.status} short />
-                      </td>
-                      <td style={tdStyle}>
                         {(() => {
                           const shipped = formatShipped(order.shipped_at);
-                          if (!shipped) return <span style={{ color: '#9CA3AF' }}>—</span>;
+                          if (!shipped) return null;
                           return (
-                            <div>
-                              <div style={{ color: '#111827' }}>{shipped.date}</div>
-                              <div style={{ fontSize: '12px', color: '#6B7280' }}>{shipped.ago}</div>
+                            <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px', lineHeight: 1.3 }}>
+                              Shipped {shipped.date}<br />{shipped.ago}
                             </div>
                           );
                         })()}
