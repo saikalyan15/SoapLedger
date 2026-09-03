@@ -9,6 +9,20 @@ import StatusBadge from '@/components/StatusBadge';
 import { deleteOrderAction } from '@/lib/actions/orders';
 import { ORDER_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
 
+const formatShipped = (shippedAt) => {
+  if (!shippedAt) return null;
+  const shipDate = new Date(shippedAt);
+  if (Number.isNaN(shipDate.getTime())) return null;
+  const date = shipDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const daysPassed = Math.round(
+    (startOfDay(new Date()) - startOfDay(shipDate)) / 86400000
+  );
+  const ago =
+    daysPassed <= 0 ? 'today' : daysPassed === 1 ? '1 day ago' : `${daysPassed} days ago`;
+  return { date, ago };
+};
+
 const OrdersView = ({ orders }) => {
   const router = useRouter();
   const [filter, setFilter] = useState('All');
@@ -231,6 +245,20 @@ const OrdersView = ({ orders }) => {
                       {firstProduct}{additionalCount > 0 ? ` +${additionalCount} more` : ''}
                     </div>
 
+                    {(() => {
+                      const shipped = formatShipped(order.shipped_at);
+                      if (!shipped) return null;
+                      return (
+                        <div style={{
+                          fontFamily: 'Plus Jakarta Sans, sans-serif',
+                          fontSize: '12px',
+                          color: '#6B7280',
+                        }}>
+                          Shipped {shipped.date} · {shipped.ago}
+                        </div>
+                      );
+                    })()}
+
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -296,7 +324,7 @@ const OrdersView = ({ orders }) => {
               style={{
                 width: '100%',
                 borderCollapse: 'collapse',
-                minWidth: '860px',
+                minWidth: '990px',
                 tableLayout: 'fixed'
               }}
             >
@@ -308,13 +336,14 @@ const OrdersView = ({ orders }) => {
                   <th style={{ ...thStyle }}>Items</th>
                   <th style={{ ...thStyle, width: '100px' }}>Total</th>
                   <th style={{ ...thStyle, width: '120px' }}>Status</th>
+                  <th style={{ ...thStyle, width: '130px' }}>Shipped</th>
                   <th style={{ ...thStyle, width: '120px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>
+                    <td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>
                       No orders found
                     </td>
                   </tr>
@@ -352,6 +381,18 @@ const OrdersView = ({ orders }) => {
                       </td>
                       <td style={{ ...tdStyle, minWidth: '100px' }}>
                         <StatusBadge status={order.status} short />
+                      </td>
+                      <td style={tdStyle}>
+                        {(() => {
+                          const shipped = formatShipped(order.shipped_at);
+                          if (!shipped) return <span style={{ color: '#9CA3AF' }}>—</span>;
+                          return (
+                            <div>
+                              <div style={{ color: '#111827' }}>{shipped.date}</div>
+                              <div style={{ fontSize: '12px', color: '#6B7280' }}>{shipped.ago}</div>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td style={{ ...tdStyle, width: '80px', textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
