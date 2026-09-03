@@ -101,7 +101,20 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   );
   const [status, setStatus] = useState(initialData?.order?.status || 'Order Placed');
   const [shipping, setShipping] = useState(Number(initialData?.order?.shipping_charge) || 0);
-  const [hasManualShipping, setHasManualShipping] = useState(false);
+  // In edit mode, treat the saved shipping charge as a manual override only when it
+  // doesn't match what the free-shipping rule would have produced for the order as
+  // loaded. Otherwise leave it free to re-derive as the items (subtotal) change.
+  const [hasManualShipping, setHasManualShipping] = useState(() => {
+    if (!isEdit || !initialData?.items) return false;
+    const loadSubtotal = initialData.items.reduce(
+      (sum, item) => sum + ((parseInt(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)),
+      0
+    );
+    const threshold = Number(settings?.free_shipping_threshold) || 1000;
+    const belowCharge = Number(settings?.shipping_charge_below) || 100;
+    const autoAtLoad = loadSubtotal >= threshold ? 0 : belowCharge;
+    return (Number(initialData?.order?.shipping_charge) || 0) !== autoAtLoad;
+  });
   const [packaging, setPackaging] = useState(Number(initialData?.order?.packaging_cost) || (settings?.default_packaging_cost || 0));
   const [customization, setCustomization] = useState(Number(initialData?.order?.customization_amount) || 0);
   const [discount, setDiscount] = useState(0);
@@ -245,7 +258,7 @@ const OrderForm = ({ products, settings, initialData = null }) => {
   const freeShippingThreshold = Number(settings?.free_shipping_threshold) || 1000;
   const shippingChargeBelow = Number(settings?.shipping_charge_below) || 100;
   const autoShipping = subtotal >= freeShippingThreshold ? 0 : shippingChargeBelow;
-  const effectiveShipping = (!isEdit && !hasManualShipping) ? autoShipping : parseFloat(shipping || 0);
+  const effectiveShipping = !hasManualShipping ? autoShipping : parseFloat(shipping || 0);
   const orderValue = Math.max(0, subtotal - parseFloat(discount || 0) + parseFloat(effectiveShipping || 0) + parseFloat(customization || 0));
 
   const handleSubmit = async (e) => {
