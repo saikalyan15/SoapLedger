@@ -86,20 +86,14 @@ function getMiniLabelDescription(label) {
 // wraps to at most 3 lines without clipping at this size.
 const MINI_INGREDIENT_FONT_SIZE = '10pt';
 
-// product_name has no length cap, so the title tiers down for longer names
-// — and is still forced to one line (see the title's own whiteSpace/
-// textOverflow below): if a name is so long even the smallest tier would
-// wrap to 2 lines, it ellipsizes instead. A wrapped 2-line title would eat
-// into the fixed-height sticker's budget for the description below it,
-// which is worse than a rare ellipsis on an unusually long name. Tiers are
-// calibrated (and verified via rendered test stickers) so every current
-// product name — up to 29 chars — still gets shown in full, not ellipsized.
-function getMiniTitleFontSize(displayName) {
-  if (displayName.length > 32) return '5pt';
-  if (displayName.length > 22) return '6pt';
-  if (displayName.length > 15) return '8pt';
-  return '10pt';
-}
+// One fixed size for every title, same reasoning as the description above —
+// a sheet with a mix of products reads better with a consistent title size
+// than one that visibly shrinks per product. product_name has no length
+// cap, so long names wrap to a 2nd line instead (verified via rendered test
+// stickers against the actual longest current product name, 35 chars, with
+// a max-length 44-char description on the same label — still fits with
+// room to spare).
+const MINI_TITLE_FONT_SIZE = '8pt';
 
 // 40mm x 20mm — the physical size of the pre-cut adhesive sticker sheet in
 // hand (measured, not derived from the band). Coincidentally the same
@@ -171,10 +165,7 @@ function MiniProductLabel({ label, license, onRemove }) {
             color: COLORS.brand,
             lineHeight: 1.05,
             textAlign: 'center',
-            fontSize: getMiniTitleFontSize(displayName),
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            fontSize: MINI_TITLE_FONT_SIZE,
           }}
         >
           {displayName}
