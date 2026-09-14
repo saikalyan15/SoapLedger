@@ -80,25 +80,30 @@ function getMiniLabelDescription(label) {
 
 // The description field is already capped at 44 chars (see
 // MAX_MINI_LABEL_DESCRIPTION_LENGTH in lib/actions/products.js), so it gets
-// one fixed size. product_name has no length cap, so the title still tiers
-// down for long names — see getMiniTitleFontSize.
-const MINI_INGREDIENT_FONT_SIZE = '4.6pt';
+// one fixed size — the 40x10mm sticker has enough room for that to always
+// wrap to at most 2 lines without crowding anything else.
+const MINI_INGREDIENT_FONT_SIZE = '6pt';
 
+// product_name has no length cap, so the title tiers down for longer names
+// — and is still forced to one line (see the title's own whiteSpace/
+// textOverflow below): if a name is so long even the smallest tier would
+// wrap to 2 lines, it ellipsizes instead. A wrapped 2-line title would eat
+// into the fixed-height sticker's budget for the description below it,
+// which is worse than a rare ellipsis on an unusually long name.
 function getMiniTitleFontSize(displayName) {
-  if (displayName.length > 30) return '4.5pt';
-  return '5.5pt';
+  if (displayName.length > 32) return '5pt';
+  if (displayName.length > 20) return '6pt';
+  return '7pt';
 }
 
-// 35mm x 7mm fits inside the 50g Square band's clear space (~36mm wide x
-// ~7.6mm tall — the front panel's 40x20mm footprint minus the logo and
-// license line, see BAND_SIZES/SoapBand above), which is the tighter of the
-// two band sizes — sizing for it means the sticker also fits inside the
-// roomier 100g band. 35mm doesn't divide the 297mm A4 width evenly (8 cols
-// x 35mm = 280mm, leaving a 17mm margin the sheet auto-centers) — widened
-// from the exactly-tiling 33mm because the text was reading too small to
-// print clearly at that width.
-const MINI_LABEL_SIZE_MM = { width: 35, height: 7 };
-const MINI_LABEL_GRID = { columns: 8, rows: 30 };
+// 40mm x 10mm — legibility took priority over fitting the 50g Square band's
+// tiny ~36x7.6mm clear space (its front panel is only 40x20mm total), so
+// this size no longer fits inside that band; it does still fit inside the
+// 100g band's roomier ~50x17.7mm clear space. Neither dimension tiles the
+// 297x210mm A4 sheet edge-to-edge at this size (7 cols x 40mm = 280mm, 21
+// rows x 10mm = 210mm exactly) — the leftover width auto-centers.
+const MINI_LABEL_SIZE_MM = { width: 40, height: 10 };
+const MINI_LABEL_GRID = { columns: 7, rows: 21 };
 
 // Hover-to-reveal delete button rendered on top of a printed label, so a
 // single click removes that exact instance straight from the sheet
@@ -149,7 +154,7 @@ function MiniProductLabel({ label, license, onRemove }) {
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          padding: '0.4mm 1mm',
+          padding: '0.6mm 1.5mm',
           boxSizing: 'border-box',
         }}
       >
@@ -160,6 +165,9 @@ function MiniProductLabel({ label, license, onRemove }) {
             lineHeight: 1.05,
             textAlign: 'center',
             fontSize: getMiniTitleFontSize(displayName),
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
           }}
         >
           {displayName}
@@ -169,9 +177,9 @@ function MiniProductLabel({ label, license, onRemove }) {
           style={{
             width: '55%',
             alignSelf: 'center',
-            borderBottom: `0.1mm solid ${COLORS.brand}`,
+            borderBottom: `0.12mm solid ${COLORS.brand}`,
             opacity: 0.3,
-            margin: '0.15mm 0',
+            margin: '0.3mm 0',
           }}
         />
 
@@ -380,11 +388,10 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   const [bandSize, setBandSize] = useState('100g'); // '100g' | '50g'
   const [addressCount, setAddressCount] = useState(21);
 
-  // Mini: 35x7mm (see MINI_LABEL_SIZE_MM above), 8x30 grid on a 297x210mm
-  // landscape A4 sheet (240/sheet, auto-centered — width doesn't tile
-  // edge-to-edge at this size). Sized to fit inside the 50g band's clear
-  // space (the tighter of the two band sizes), so a sticker cut from this
-  // sheet fits either band.
+  // Mini: 40x10mm (see MINI_LABEL_SIZE_MM above), 7x21 grid on a 297x210mm
+  // landscape A4 sheet (147/sheet, auto-centered — width doesn't tile
+  // edge-to-edge at this size). Fits inside the 100g band's clear space but
+  // not the smaller 50g band's — legibility was prioritized over that fit.
   // Bands: 35mm-tall 100g bands fit 8 per sheet; 20mm-tall 50g bands fit 14.
   // Address: 62x36mm, 3x7 grid, 21 per sheet (8mm padding + 3mm gaps:
   // 7*36 + 6*3 = 270mm fits inside the 281mm usable height of a 297mm-tall
