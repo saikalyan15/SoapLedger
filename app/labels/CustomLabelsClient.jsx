@@ -38,51 +38,12 @@ const FONTS = {
   sans: '"Plus Jakarta Sans", "Inter", Arial, sans-serif',
 };
 
-// Some products' free-text ingredients were typed with an old habit of
-// spelling out "...and Glycerin soap base" at the end — now redundant since
-// the base is always injected as its own leading ingredient below. Built
-// from the product's own base_type (not a fixed list) so it strips
-// correctly no matter what base_type gets typed on the Products page; the
-// trailing e? absorbs the Glycerin/Glycerine spelling variance.
-function stripRedundantBasePhrase(baseType, text) {
-  if (!baseType || !text) return text;
-  const escaped = baseType
-    .trim()
-    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    .replace(/\s+/g, '\\s*');
-  const stem = escaped.replace(/e$/i, '');
-  return text.replace(new RegExp(`\\b(?:and\\s+)?${stem}e?\\s+soap\\s*base\\b`, 'gi'), '');
-}
-
-// Base type is free text on the product (Products page) — whatever's typed
-// there becomes its own leading ingredient, e.g. "Papaya Cucumber Soap
-// Base", so a new base_type never silently drops the base line. "Travel"
-// is the one exception: travel minis don't carry a soap-base ingredient.
-function getFullIngredients(baseType, additionalIngredients) {
-  const base = baseType && baseType !== 'Travel' ? `${baseType} Soap Base` : '';
-  const cleanedAdditional = stripRedundantBasePhrase(baseType, additionalIngredients)
-    ?.replace(/,\s*,/g, ',')
-    .replace(/,\s*$/, '')
-    .trim();
-  const combined = [base, cleanedAdditional].filter(Boolean).join(', ');
-  const seen = new Set();
-  return combined
-    .split(',')
-    .map((s) => s.trim())
-    .filter((s) => {
-      if (!s || seen.has(s.toLowerCase())) return false;
-      seen.add(s.toLowerCase());
-      return true;
-    })
-    .join(', ');
-}
-
 // Product names were authored with the base type baked in (e.g. "Neem Tulsi
-// Glycerin Soap"), but the base now always shows up as the first ingredient
-// (see getFullIngredients above) — so it's stripped from the title to avoid
-// saying it twice. \s* (not \s+) so it matches both "Shea Butter" and the
-// no-space "Sheabutter" some product names use; the trailing "e?" on
-// glycerine matches both "Glycerin" and "Glycerine" spellings.
+// Glycerin Soap"), which reads redundant next to the base_type shown right
+// below it — so it's stripped from the title. \s* (not \s+) so it matches
+// both "Shea Butter" and the no-space "Sheabutter" some product names use;
+// the trailing "e?" on glycerine matches both "Glycerin" and "Glycerine"
+// spellings.
 const BASE_NAME_PATTERNS = {
   Glycerine: /\bglycerine?\b/gi,
   'Goat Milk': /\bgoat\s*milk\b/gi,
@@ -109,37 +70,18 @@ function getDisplayName(productName, baseType) {
 // The mini sticker has to physically fit in the wrapper band's clear space
 // (~36x7.6mm on the 50g band — see MINI_LABEL_SIZE_MM below), which is too
 // small to show a full legal ingredient declaration at any legible size.
-// Prefer the short, purpose-written copy; when a product doesn't have one
-// yet, build a summary from only whole ingredient names that fit within the
-// cap — never a cut-off word or a "+ more" ellipsis, so whatever prints is
-// always the complete, un-truncated string it claims to be.
-const MINI_AUTO_SUMMARY_CAP = 44;
-
+// Always use the short, purpose-written "Mini Sticker Description" field —
+// no code-side attempt to stitch a summary out of the ingredients list;
+// that's editorial content, not something to derive. A product without one
+// authored yet just shows a plain placeholder until someone writes it.
 function getMiniLabelDescription(label) {
-  const authored = label.mini_label_description?.trim();
-  if (authored) return authored;
-
-  const parts = getFullIngredients(label.base_type, label.ingredients)
-    .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean);
-  // “Base” retains the ingredient category while giving the constrained
-  // sticker enough room to show at least one actual add-in as well.
-  if (parts[0]) parts[0] = parts[0].replace(/\s+Soap\s+Base$/i, ' Base');
-
-  let summary = '';
-  for (const part of parts) {
-    const candidate = summary ? `${summary}, ${part}` : part;
-    if (candidate.length > MINI_AUTO_SUMMARY_CAP) break;
-    summary = candidate;
-  }
-  return summary || parts[0]?.slice(0, MINI_AUTO_SUMMARY_CAP) || 'Handmade soap';
+  return label.mini_label_description?.trim() || 'Handmade soap';
 }
 
-// The ingredient line's length is already bounded (MINI_AUTO_SUMMARY_CAP /
-// the 44-char mini_label_description field), so it gets one fixed size.
-// product_name has no length cap, so the title still tiers down for long
-// names — see getMiniTitleFontSize.
+// The description field is already capped at 44 chars (see
+// MAX_MINI_LABEL_DESCRIPTION_LENGTH in lib/actions/products.js), so it gets
+// one fixed size. product_name has no length cap, so the title still tiers
+// down for long names — see getMiniTitleFontSize.
 const MINI_INGREDIENT_FONT_SIZE = '4.3pt';
 
 function getMiniTitleFontSize(displayName) {
