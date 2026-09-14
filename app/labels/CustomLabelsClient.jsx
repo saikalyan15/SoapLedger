@@ -106,10 +106,15 @@ function getDisplayName(productName, baseType) {
   return stripped;
 }
 
-// The full ingredient declaration always renders on the mini sticker now —
-// "+ more" truncation read as broken/incomplete. A fixed font (see
-// MINI_INGREDIENT_FONT_SIZE) keeps the whole list inside the sticker
-// regardless of length.
+// The mini sticker has to physically fit in the wrapper band's clear space
+// (~36x7.6mm on the 50g band — see MINI_LABEL_SIZE_MM below), which is too
+// small to show a full legal ingredient declaration at any legible size.
+// Prefer the short, purpose-written copy; when a product doesn't have one
+// yet, build a summary from only whole ingredient names that fit within the
+// cap — never a cut-off word or a "+ more" ellipsis, so whatever prints is
+// always the complete, un-truncated string it claims to be.
+const MINI_AUTO_SUMMARY_CAP = 44;
+
 function getMiniLabelDescription(label) {
   const authored = label.mini_label_description?.trim();
   if (authored) return authored;
@@ -121,24 +126,35 @@ function getMiniLabelDescription(label) {
   // “Base” retains the ingredient category while giving the constrained
   // sticker enough room to show at least one actual add-in as well.
   if (parts[0]) parts[0] = parts[0].replace(/\s+Soap\s+Base$/i, ' Base');
-  return parts.join(', ') || 'Handmade soap';
+
+  let summary = '';
+  for (const part of parts) {
+    const candidate = summary ? `${summary}, ${part}` : part;
+    if (candidate.length > MINI_AUTO_SUMMARY_CAP) break;
+    summary = candidate;
+  }
+  return summary || parts[0]?.slice(0, MINI_AUTO_SUMMARY_CAP) || 'Handmade soap';
 }
 
-// One fixed size for every sticker (not tiered by content length) so the
-// printed sheet reads consistently. The sticker was sized up (see
-// MINI_LABEL_SIZE_MM below) specifically so this could be a legible 7pt
-// instead of the ~4pt a small sticker would force; verified via rendered
-// test stickers to still fit ~238 chars without clipping — comfortable
-// margin above the 200-char ingredients cap (MAX_INGREDIENTS_LENGTH in
-// lib/actions/products.js) plus a typical base_type prefix.
-const MINI_INGREDIENT_FONT_SIZE = '7pt';
+// The ingredient line's length is already bounded (MINI_AUTO_SUMMARY_CAP /
+// the 44-char mini_label_description field), so it gets one fixed size.
+// product_name has no length cap, so the title still tiers down for long
+// names — see getMiniTitleFontSize.
+const MINI_INGREDIENT_FONT_SIZE = '4.3pt';
 
-// 49.5mm x 30mm divides a 297x210mm landscape A4 sheet exactly (6 cols x 7
-// rows = 42 labels, zero wasted paper) while giving the ingredient text
-// enough room to stay at a readable 7pt — bigger than the old 38.1x14mm /
-// 98-per-sheet layout, traded down in count for legibility.
-const MINI_LABEL_SIZE_MM = { width: 49.5, height: 30 };
-const MINI_LABEL_GRID = { columns: 6, rows: 7 };
+function getMiniTitleFontSize(displayName) {
+  if (displayName.length > 30) return '4pt';
+  return '5pt';
+}
+
+// 33mm x 7mm divides a 297x210mm landscape A4 sheet exactly (9 cols x 30
+// rows = 270 labels, zero wasted paper) and fits inside the 50g Square
+// band's clear space (~36mm wide x ~7.6mm tall — the front panel's 40x20mm
+// footprint minus the logo and license line, see BAND_SIZES/SoapBand
+// above), which is the tighter of the two band sizes. A sticker sized for
+// the 50g band therefore also fits inside the roomier 100g band.
+const MINI_LABEL_SIZE_MM = { width: 33, height: 7 };
+const MINI_LABEL_GRID = { columns: 9, rows: 30 };
 
 // Hover-to-reveal delete button rendered on top of a printed label, so a
 // single click removes that exact instance straight from the sheet
@@ -180,6 +196,7 @@ function RemoveLabelButton({ onRemove }) {
 
 function MiniProductLabel({ label, license, onRemove }) {
   const ingredientText = getMiniLabelDescription(label);
+  const displayName = getDisplayName(label.product_name, label.base_type);
   return (
     <div className="mini-label">
       {onRemove && <RemoveLabelButton onRemove={onRemove} />}
@@ -188,7 +205,7 @@ function MiniProductLabel({ label, license, onRemove }) {
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          padding: '1.5mm 2mm',
+          padding: '0.4mm 1mm',
           boxSizing: 'border-box',
         }}
       >
@@ -196,21 +213,21 @@ function MiniProductLabel({ label, license, onRemove }) {
           style={{
             fontWeight: 800,
             color: COLORS.brand,
-            lineHeight: 1.1,
+            lineHeight: 1.05,
             textAlign: 'center',
-            fontSize: label.product_name.length > 46 ? '8pt' : '9pt',
+            fontSize: getMiniTitleFontSize(displayName),
           }}
         >
-          {getDisplayName(label.product_name, label.base_type)}
+          {displayName}
         </div>
 
         <div
           style={{
             width: '55%',
             alignSelf: 'center',
-            borderBottom: `0.15mm solid ${COLORS.brand}`,
+            borderBottom: `0.1mm solid ${COLORS.brand}`,
             opacity: 0.3,
-            margin: '0.5mm 0',
+            margin: '0.15mm 0',
           }}
         />
 
@@ -229,8 +246,7 @@ function MiniProductLabel({ label, license, onRemove }) {
               fontSize: MINI_INGREDIENT_FONT_SIZE,
               fontWeight: 500,
               color: COLORS.text,
-              lineHeight: 1.2,
-              letterSpacing: '0.03em',
+              lineHeight: 1.1,
               overflowWrap: 'anywhere',
             }}
           >
@@ -420,8 +436,10 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   const [bandSize, setBandSize] = useState('100g'); // '100g' | '50g'
   const [addressCount, setAddressCount] = useState(21);
 
-  // Mini: 49.5x30mm (see MINI_LABEL_SIZE_MM above), 6x7 grid (landscape,
-  // edge-to-edge, exactly fills a 297x210mm A4 sheet).
+  // Mini: 33x7mm (see MINI_LABEL_SIZE_MM above), 9x30 grid (landscape,
+  // edge-to-edge, exactly fills a 297x210mm A4 sheet). Sized to fit inside
+  // the 50g band's clear space (the tighter of the two band sizes), so a
+  // sticker cut from this sheet fits either band.
   // Bands: 35mm-tall 100g bands fit 8 per sheet; 20mm-tall 50g bands fit 14.
   // Address: 62x36mm, 3x7 grid, 21 per sheet (8mm padding + 3mm gaps:
   // 7*36 + 6*3 = 270mm fits inside the 281mm usable height of a 297mm-tall
