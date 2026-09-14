@@ -81,30 +81,28 @@ function getMiniLabelDescription(label) {
 // The description field is already capped at 44 chars (see
 // MAX_MINI_LABEL_DESCRIPTION_LENGTH in lib/actions/products.js), so it gets
 // one fixed size, sized to the sticker's width (the binding constraint on
-// how much of the 44 chars fits per line) rather than its generous 20mm
-// height. Kept a couple points under the title so the title reads as the
-// more prominent line — verified via rendered test stickers that the
-// worst-case combo (the actual longest current product name, 35 chars,
-// wrapping to 2 title lines, paired with a max-length 44-char description)
-// still fits without clipping at 10pt title / 8pt description; a point
-// higher on the title starts clipping that same worst case.
-const MINI_INGREDIENT_FONT_SIZE = '8pt';
+// how much of the 44 chars fits per line) rather than its 18mm height. Kept
+// under the title so the title reads as the more prominent line — verified
+// via rendered test stickers that the worst-case combo (the actual longest
+// current product name, 35 chars, wrapping to 3 title lines, paired with a
+// max-length 44-char description) still fits without clipping at 9pt title
+// / 7pt description; the previous 10pt/8pt (sized for a 20mm-tall sticker)
+// clips that same worst case at 18mm.
+const MINI_INGREDIENT_FONT_SIZE = '7pt';
 
 // One fixed size for every title, same reasoning as the description above —
 // a sheet with a mix of products reads better with a consistent title size
 // than one that visibly shrinks per product. product_name has no length
-// cap, so long names wrap to a 2nd line instead.
-const MINI_TITLE_FONT_SIZE = '10pt';
+// cap, so long names wrap to further lines instead.
+const MINI_TITLE_FONT_SIZE = '9pt';
 
-// 40mm x 20mm — the physical size of the pre-cut adhesive sticker sheet in
-// hand (measured, not derived from the band). Coincidentally the same
-// 40x20mm as the 50g Square band's whole front panel, not just its clear
-// space, so it no longer fits inside either band unless trimmed down after
-// printing; legibility on the sticker itself is the priority here. 7x10
-// grid on a 297x210mm landscape A4 sheet (70/sheet, auto-centered — width
-// doesn't tile edge-to-edge; height does, 10 x 20mm = 200mm).
-const MINI_LABEL_SIZE_MM = { width: 40, height: 20 };
-const MINI_LABEL_GRID = { columns: 7, rows: 10 };
+// 40mm x 18mm — the measured size of the pre-cut adhesive sticker sheet in
+// hand (4x1.8cm), sized down from the initial 4x2cm measurement. 7x11 grid
+// on a 297x210mm landscape A4 sheet (77/sheet, auto-centered — neither
+// dimension tiles the sheet edge-to-edge at this size: 7 x 40mm = 280mm,
+// 11 x 18mm = 198mm).
+const MINI_LABEL_SIZE_MM = { width: 40, height: 18 };
+const MINI_LABEL_GRID = { columns: 7, rows: 11 };
 
 // Hover-to-reveal delete button rendered on top of a printed label, so a
 // single click removes that exact instance straight from the sheet
