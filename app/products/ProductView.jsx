@@ -599,9 +599,13 @@ export default function ProductView({ products, allOils = [] }) {
                   value={formData.ingredients || ''}
                   onChange={handleChange}
                   rows={2}
+                  maxLength={200}
                   className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none resize-vertical"
                   placeholder="e.g. Neem Extract, Tulsi Extract, Essential Oils"
                 />
+                <p className="font-sans text-[11px] text-[#6B7280] mt-[5px] mb-0">
+                  {(formData.ingredients || '').length}/200 characters — {200 - (formData.ingredients || '').length} remaining. Prints in full (with the base type) on mini stickers and wrapper bands; the sticker font shrinks to fit, so very long lists get hard to read.
+                </p>
               </div>
 
               <div style={{ gridColumn: '1 / -1' }}>

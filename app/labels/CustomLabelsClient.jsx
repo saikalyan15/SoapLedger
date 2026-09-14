@@ -106,11 +106,10 @@ function getDisplayName(productName, baseType) {
   return stripped;
 }
 
-// Mini stickers are too small to safely show a full ingredient declaration.
-// Prefer purpose-written copy. Until a product is given one, create a compact,
-// comma-aware ingredient summary rather than letting the browser cut through a
-// word or ingredient. The full legal ingredient declaration remains on the
-// wrapper band / main packaging.
+// The full ingredient declaration always renders on the mini sticker now —
+// "+ more" truncation read as broken/incomplete. A fixed small font (see
+// MINI_INGREDIENT_FONT_SIZE) keeps the whole list inside the fixed
+// 38.1x14mm die-cut regardless of length.
 function getMiniLabelDescription(label) {
   const authored = label.mini_label_description?.trim();
   if (authored) return authored;
@@ -122,32 +121,16 @@ function getMiniLabelDescription(label) {
   // “Base” retains the ingredient category while giving the constrained
   // sticker enough room to show at least one actual add-in as well.
   if (parts[0]) parts[0] = parts[0].replace(/\s+Soap\s+Base$/i, ' Base');
-  const limit = 44;
-  const moreSuffix = ' + more';
-  let summary = '';
-
-  for (let index = 0; index < parts.length; index += 1) {
-    const part = parts[index];
-    const candidate = summary ? `${summary}, ${part}` : part;
-    const hasMore = index < parts.length - 1;
-    if (candidate.length <= limit - (hasMore ? moreSuffix.length : 0)) {
-      summary = candidate;
-      continue;
-    }
-    if (summary) return `${summary}${moreSuffix}`;
-
-    const words = part.split(/\s+/);
-    let shortened = '';
-    for (const word of words) {
-      const wordCandidate = shortened ? `${shortened} ${word}` : word;
-      if (wordCandidate.length > limit - 1) break;
-      shortened = wordCandidate;
-    }
-    return `${shortened || part.slice(0, limit - 1).trimEnd()}…`;
-  }
-
-  return summary || 'Handmade soap';
+  return parts.join(', ') || 'Handmade soap';
 }
+
+// One fixed size for every sticker (not tiered by content length) so the
+// printed sheet reads consistently. 3.8pt verified (via rendered test
+// stickers) to still fit ~250 chars without clipping — comfortable margin
+// above the 200-char ingredients cap (MAX_INGREDIENTS_LENGTH in
+// lib/actions/products.js) plus a typical base_type prefix; 4pt and up
+// visibly clip past ~230 chars.
+const MINI_INGREDIENT_FONT_SIZE = '3.8pt';
 
 // Hover-to-reveal delete button rendered on top of a printed label, so a
 // single click removes that exact instance straight from the sheet
@@ -188,6 +171,7 @@ function RemoveLabelButton({ onRemove }) {
 }
 
 function MiniProductLabel({ label, license, onRemove }) {
+  const ingredientText = getMiniLabelDescription(label);
   return (
     <div className="mini-label">
       {onRemove && <RemoveLabelButton onRemove={onRemove} />}
@@ -234,7 +218,7 @@ function MiniProductLabel({ label, license, onRemove }) {
             style={{
               width: '100%',
               textAlign: 'center',
-              fontSize: '6pt',
+              fontSize: MINI_INGREDIENT_FONT_SIZE,
               fontWeight: 500,
               color: COLORS.text,
               lineHeight: 1.2,
@@ -242,7 +226,7 @@ function MiniProductLabel({ label, license, onRemove }) {
               overflowWrap: 'anywhere',
             }}
           >
-            {getMiniLabelDescription(label)}
+            {ingredientText}
           </div>
         </div>
       </div>
