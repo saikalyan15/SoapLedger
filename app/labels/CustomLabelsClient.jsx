@@ -80,30 +80,36 @@ function getMiniLabelDescription(label) {
 
 // The description field is already capped at 44 chars (see
 // MAX_MINI_LABEL_DESCRIPTION_LENGTH in lib/actions/products.js), so it gets
-// one fixed size — the 40x10mm sticker has enough room for that to always
-// wrap to at most 2 lines without crowding anything else.
-const MINI_INGREDIENT_FONT_SIZE = '6pt';
+// one fixed size, sized to the sticker's width (the binding constraint on
+// how much of the 44 chars fits per line) rather than its generous 20mm
+// height — verified via rendered test stickers that a 44-char string still
+// wraps to at most 3 lines without clipping at this size.
+const MINI_INGREDIENT_FONT_SIZE = '10pt';
 
 // product_name has no length cap, so the title tiers down for longer names
 // — and is still forced to one line (see the title's own whiteSpace/
 // textOverflow below): if a name is so long even the smallest tier would
 // wrap to 2 lines, it ellipsizes instead. A wrapped 2-line title would eat
 // into the fixed-height sticker's budget for the description below it,
-// which is worse than a rare ellipsis on an unusually long name.
+// which is worse than a rare ellipsis on an unusually long name. Tiers are
+// calibrated (and verified via rendered test stickers) so every current
+// product name — up to 29 chars — still gets shown in full, not ellipsized.
 function getMiniTitleFontSize(displayName) {
   if (displayName.length > 32) return '5pt';
-  if (displayName.length > 20) return '6pt';
-  return '7pt';
+  if (displayName.length > 22) return '6pt';
+  if (displayName.length > 15) return '8pt';
+  return '10pt';
 }
 
-// 40mm x 10mm — legibility took priority over fitting the 50g Square band's
-// tiny ~36x7.6mm clear space (its front panel is only 40x20mm total), so
-// this size no longer fits inside that band; it does still fit inside the
-// 100g band's roomier ~50x17.7mm clear space. Neither dimension tiles the
-// 297x210mm A4 sheet edge-to-edge at this size (7 cols x 40mm = 280mm, 21
-// rows x 10mm = 210mm exactly) — the leftover width auto-centers.
-const MINI_LABEL_SIZE_MM = { width: 40, height: 10 };
-const MINI_LABEL_GRID = { columns: 7, rows: 21 };
+// 40mm x 20mm — the physical size of the pre-cut adhesive sticker sheet in
+// hand (measured, not derived from the band). Coincidentally the same
+// 40x20mm as the 50g Square band's whole front panel, not just its clear
+// space, so it no longer fits inside either band unless trimmed down after
+// printing; legibility on the sticker itself is the priority here. 7x10
+// grid on a 297x210mm landscape A4 sheet (70/sheet, auto-centered — width
+// doesn't tile edge-to-edge; height does, 10 x 20mm = 200mm).
+const MINI_LABEL_SIZE_MM = { width: 40, height: 20 };
+const MINI_LABEL_GRID = { columns: 7, rows: 10 };
 
 // Hover-to-reveal delete button rendered on top of a printed label, so a
 // single click removes that exact instance straight from the sheet
@@ -153,6 +159,7 @@ function MiniProductLabel({ label, license, onRemove }) {
         style={{
           display: 'flex',
           flexDirection: 'column',
+          justifyContent: 'center',
           height: '100%',
           padding: '0.6mm 1.5mm',
           boxSizing: 'border-box',
@@ -179,31 +186,23 @@ function MiniProductLabel({ label, license, onRemove }) {
             alignSelf: 'center',
             borderBottom: `0.12mm solid ${COLORS.brand}`,
             opacity: 0.3,
-            margin: '0.3mm 0',
+            margin: '0.6mm 0',
           }}
         />
 
         <div
           style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
+            width: '100%',
+            textAlign: 'center',
+            fontSize: MINI_INGREDIENT_FONT_SIZE,
+            fontWeight: 500,
+            color: COLORS.text,
+            lineHeight: 1.1,
+            overflowWrap: 'anywhere',
             overflow: 'hidden',
           }}
         >
-          <div
-            style={{
-              width: '100%',
-              textAlign: 'center',
-              fontSize: MINI_INGREDIENT_FONT_SIZE,
-              fontWeight: 500,
-              color: COLORS.text,
-              lineHeight: 1.1,
-              overflowWrap: 'anywhere',
-            }}
-          >
-            {ingredientText}
-          </div>
+          {ingredientText}
         </div>
       </div>
     </div>
