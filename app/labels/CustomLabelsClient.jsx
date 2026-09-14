@@ -107,9 +107,9 @@ function getDisplayName(productName, baseType) {
 }
 
 // The full ingredient declaration always renders on the mini sticker now —
-// "+ more" truncation read as broken/incomplete. A fixed small font (see
-// MINI_INGREDIENT_FONT_SIZE) keeps the whole list inside the fixed
-// 38.1x14mm die-cut regardless of length.
+// "+ more" truncation read as broken/incomplete. A fixed font (see
+// MINI_INGREDIENT_FONT_SIZE) keeps the whole list inside the sticker
+// regardless of length.
 function getMiniLabelDescription(label) {
   const authored = label.mini_label_description?.trim();
   if (authored) return authored;
@@ -125,12 +125,20 @@ function getMiniLabelDescription(label) {
 }
 
 // One fixed size for every sticker (not tiered by content length) so the
-// printed sheet reads consistently. 3.8pt verified (via rendered test
-// stickers) to still fit ~250 chars without clipping — comfortable margin
-// above the 200-char ingredients cap (MAX_INGREDIENTS_LENGTH in
-// lib/actions/products.js) plus a typical base_type prefix; 4pt and up
-// visibly clip past ~230 chars.
-const MINI_INGREDIENT_FONT_SIZE = '3.8pt';
+// printed sheet reads consistently. The sticker was sized up (see
+// MINI_LABEL_SIZE_MM below) specifically so this could be a legible 7pt
+// instead of the ~4pt a small sticker would force; verified via rendered
+// test stickers to still fit ~238 chars without clipping — comfortable
+// margin above the 200-char ingredients cap (MAX_INGREDIENTS_LENGTH in
+// lib/actions/products.js) plus a typical base_type prefix.
+const MINI_INGREDIENT_FONT_SIZE = '7pt';
+
+// 49.5mm x 30mm divides a 297x210mm landscape A4 sheet exactly (6 cols x 7
+// rows = 42 labels, zero wasted paper) while giving the ingredient text
+// enough room to stay at a readable 7pt — bigger than the old 38.1x14mm /
+// 98-per-sheet layout, traded down in count for legibility.
+const MINI_LABEL_SIZE_MM = { width: 49.5, height: 30 };
+const MINI_LABEL_GRID = { columns: 6, rows: 7 };
 
 // Hover-to-reveal delete button rendered on top of a printed label, so a
 // single click removes that exact instance straight from the sheet
@@ -180,7 +188,7 @@ function MiniProductLabel({ label, license, onRemove }) {
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          padding: '0.8mm 1mm',
+          padding: '1.5mm 2mm',
           boxSizing: 'border-box',
         }}
       >
@@ -190,7 +198,7 @@ function MiniProductLabel({ label, license, onRemove }) {
             color: COLORS.brand,
             lineHeight: 1.1,
             textAlign: 'center',
-            fontSize: label.product_name.length > 36 ? '6.5pt' : '7.5pt',
+            fontSize: label.product_name.length > 46 ? '8pt' : '9pt',
           }}
         >
           {getDisplayName(label.product_name, label.base_type)}
@@ -202,7 +210,7 @@ function MiniProductLabel({ label, license, onRemove }) {
             alignSelf: 'center',
             borderBottom: `0.15mm solid ${COLORS.brand}`,
             opacity: 0.3,
-            margin: '0.3mm 0',
+            margin: '0.5mm 0',
           }}
         />
 
@@ -412,15 +420,16 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   const [bandSize, setBandSize] = useState('100g'); // '100g' | '50g'
   const [addressCount, setAddressCount] = useState(21);
 
-  // Mini: 38.1x14mm (widened from 0.5in to fit larger ingredient text),
-  // 7x14 grid (landscape, edge-to-edge).
+  // Mini: 49.5x30mm (see MINI_LABEL_SIZE_MM above), 6x7 grid (landscape,
+  // edge-to-edge, exactly fills a 297x210mm A4 sheet).
   // Bands: 35mm-tall 100g bands fit 8 per sheet; 20mm-tall 50g bands fit 14.
   // Address: 62x36mm, 3x7 grid, 21 per sheet (8mm padding + 3mm gaps:
   // 7*36 + 6*3 = 270mm fits inside the 281mm usable height of a 297mm-tall
   // A4 page).
   const bandsPerPage = bandSize === '50g' ? 14 : 8;
+  const miniPerPage = MINI_LABEL_GRID.columns * MINI_LABEL_GRID.rows;
   const labelsPerPage =
-    printMode === 'mini' ? 98 : printMode === 'address' ? 21 : bandsPerPage;
+    printMode === 'mini' ? miniPerPage : printMode === 'address' ? 21 : bandsPerPage;
 
   const bumpBatch = (prev, product, amount) => {
     const idx = prev.findIndex((b) => b.product_id === product.id);
@@ -547,8 +556,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
     printMode === 'mini'
       ? {
           display: 'grid',
-          gridTemplateColumns: 'repeat(7, 38.1mm)',
-          gridAutoRows: '14mm',
+          gridTemplateColumns: `repeat(${MINI_LABEL_GRID.columns}, ${MINI_LABEL_SIZE_MM.width}mm)`,
+          gridAutoRows: `${MINI_LABEL_SIZE_MM.height}mm`,
           gap: 0,
           justifyContent: 'center',
           alignContent: 'center',
@@ -596,8 +605,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
         }
 
         .mini-label {
-          width: 38.1mm;
-          height: 14mm;
+          width: ${MINI_LABEL_SIZE_MM.width}mm;
+          height: ${MINI_LABEL_SIZE_MM.height}mm;
           border: 1px dashed #ccc;
           display: flex;
           flex-direction: column;
@@ -705,8 +714,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
 
           .mini-page-sheet {
             display: grid !important;
-            grid-template-columns: repeat(7, 38.1mm) !important;
-            grid-auto-rows: 14mm !important;
+            grid-template-columns: repeat(${MINI_LABEL_GRID.columns}, ${MINI_LABEL_SIZE_MM.width}mm) !important;
+            grid-auto-rows: ${MINI_LABEL_SIZE_MM.height}mm !important;
             gap: 0 !important;
             justify-content: center !important;
             align-content: center !important;
@@ -779,8 +788,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           }
 
           .mini-label {
-            width: 38.1mm !important;
-            height: 14mm !important;
+            width: ${MINI_LABEL_SIZE_MM.width}mm !important;
+            height: ${MINI_LABEL_SIZE_MM.height}mm !important;
             /* Cut lines: every label keeps its own dashed border so, tiled
                edge-to-edge with zero gap, adjoining borders form a full
                cutting grid across the whole sheet. */
