@@ -82,18 +82,19 @@ function getMiniLabelDescription(label) {
 // MAX_MINI_LABEL_DESCRIPTION_LENGTH in lib/actions/products.js), so it gets
 // one fixed size, sized to the sticker's width (the binding constraint on
 // how much of the 44 chars fits per line) rather than its generous 20mm
-// height — verified via rendered test stickers that a 44-char string still
-// wraps to at most 3 lines without clipping at this size.
-const MINI_INGREDIENT_FONT_SIZE = '10pt';
+// height. Kept a couple points under the title so the title reads as the
+// more prominent line — verified via rendered test stickers that the
+// worst-case combo (the actual longest current product name, 35 chars,
+// wrapping to 2 title lines, paired with a max-length 44-char description)
+// still fits without clipping at 10pt title / 8pt description; a point
+// higher on the title starts clipping that same worst case.
+const MINI_INGREDIENT_FONT_SIZE = '8pt';
 
 // One fixed size for every title, same reasoning as the description above —
 // a sheet with a mix of products reads better with a consistent title size
 // than one that visibly shrinks per product. product_name has no length
-// cap, so long names wrap to a 2nd line instead (verified via rendered test
-// stickers against the actual longest current product name, 35 chars, with
-// a max-length 44-char description on the same label — still fits with
-// room to spare).
-const MINI_TITLE_FONT_SIZE = '8pt';
+// cap, so long names wrap to a 2nd line instead.
+const MINI_TITLE_FONT_SIZE = '10pt';
 
 // 40mm x 20mm — the physical size of the pre-cut adhesive sticker sheet in
 // hand (measured, not derived from the band). Coincidentally the same
