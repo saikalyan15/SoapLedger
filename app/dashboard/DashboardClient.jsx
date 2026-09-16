@@ -75,11 +75,12 @@ const signedCurrency = (value) => {
 
 const periodLabel = (filter) => filter === 'All Time' ? 'All available records' : filter;
 
-const CashMetric = ({ label, value, note, tone = 'ink', helper }) => (
+const CashMetric = ({ label, value, note, breakdown, tone = 'ink', helper }) => (
   <div className="money-metric">
     <div className="money-metric-label">{label}</div>
     <div className={`money-metric-value money-tone-${tone}`}>{value}</div>
     {note && <div className="money-metric-note">{note}</div>}
+    {breakdown && <div className="money-metric-note">{breakdown}</div>}
     {helper && <div className="money-metric-helper">{helper}</div>}
   </div>
 );
@@ -233,12 +234,22 @@ export default function DashboardClient({
             label="Total sold"
             value={fmtCurrency(initialRevenue.total_revenue)}
             note={`${fmtNumber(initialRevenue.total_soaps_sold)} soaps · ${fmtNumber(initialRevenue.orders_count)} orders`}
+            breakdown={
+              initialRevenue.total_revenue_before_this_year > 0
+                ? `${fmtCurrency(initialRevenue.total_revenue_this_year)} in ${now.getFullYear()} · ${fmtCurrency(initialRevenue.total_revenue_before_this_year)} before`
+                : null
+            }
             helper="Paid orders — some may still be in production or transit"
             tone="green"
           />
           <CashMetric
             label="Total spent"
             value={fmtCurrency(initialRevenue.total_expenses)}
+            breakdown={
+              initialRevenue.total_expenses_before_this_year > 0
+                ? `${fmtCurrency(initialRevenue.total_expenses_this_year)} in ${now.getFullYear()} · ${fmtCurrency(initialRevenue.total_expenses_before_this_year)} before`
+                : null
+            }
             helper="Everything — ingredients, packaging, shipping, tools"
             tone="red"
           />
