@@ -43,7 +43,7 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
         .section-header { color: ${COLORS.brand}; margin: 20px 0 10px 0; display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; }
 
         .address-label {
-          background: white; border: 1px dashed #000; padding: 8mm; width: 115mm;
+          background: white; border: 1px dashed #000; padding: 5mm; width: 92mm;
           display: flex; flex-direction: column; cursor: pointer; position: relative; box-sizing: border-box;
         }
 
@@ -66,12 +66,26 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
           .dispatch-report-page { background: white !important; padding: 0 !important; min-height: 0 !important; }
           .deselected { display: none !important; }
 
-          .shipping-section { display: flex; flex-wrap: wrap; gap: 5mm; page-break-inside: avoid; }
-          .address-label { border: 0.3mm dashed #000 !important; box-sizing: border-box !important; padding: 8mm !important; width: 115mm !important; height: auto !important; page-break-inside: avoid; }
+          /* CSS columns (not flex-wrap/inline-flex) — Chromium's print pagination engine
+             reliably fills a multi-column layout, but unpredictably collapses flex-wrap
+             rows to one column and drops fragmented items' borders. Verified against
+             actual paginated PDF output, not just on-screen layout. */
+          .shipping-section { display: block !important; column-count: 2; column-gap: 3mm; }
+          .address-label {
+            display: block !important;
+            border: 0.3mm dashed #000 !important; box-sizing: border-box !important;
+            padding: 5mm !important; width: 100% !important; height: auto !important;
+            margin: 0 0 3mm 0;
+            break-inside: avoid; page-break-inside: avoid;
+          }
 
           .checklist-page-break { page-break-before: always; padding-top: 12mm; font-size: 13px; }
-          .checklist-section { display: flex; flex-wrap: wrap; gap: 5mm; }
-          .checklist-card { border: 0.3mm solid #000 !important; page-break-inside: avoid; }
+          .checklist-section { display: block !important; column-count: 2; column-gap: 3mm; }
+          .checklist-card {
+            display: block !important;
+            border: 0.3mm solid #000 !important; width: 100% !important; margin: 0 0 3mm 0;
+            break-inside: avoid; page-break-inside: avoid;
+          }
 
           * { color: #000000 !important; border-color: #000000 !important; }
           .address-label div { background: none !important; }
@@ -125,7 +139,7 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
             Nothing pending — every order has been dispatched.
           </div>
         ) : (
-          <div className="shipping-section" style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-start' }}>
+          <div className="shipping-section" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-start' }}>
             {shipments.map((s) => {
               const isSelected = selectedIds.has(s.shipment_id);
               const formattedDate = new Date(s.order_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -153,21 +167,21 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
                   </div>
 
                   {/* Brand row */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '2.5mm', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '2.5mm', marginBottom: '4px' }}>
                     <img src="/logo/healing-soil-v2.1.png" style={{ width: '13mm', height: 'auto' }} alt="" />
                     <div style={{ fontSize: '13px', fontWeight: 800, color: COLORS.brand, letterSpacing: '0.04em' }}>{businessConfig.brand.name}</div>
                   </div>
                   {/* TO heading with rule */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0 12px 0' }}>
-                    <span className="addr-tag" style={{ fontSize: '22px', padding: '3px 16px' }}>TO</span>
-                    <div style={{ flex: 1, borderTop: '2.5px solid black' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '2px 0 7px 0' }}>
+                    <span className="addr-tag" style={{ fontSize: '17px', padding: '2px 12px' }}>TO</span>
+                    <div style={{ flex: 1, borderTop: '2px solid black' }} />
                   </div>
                   {/* Recipient */}
-                  <div style={{ fontSize: '24px', fontWeight: 800, color: 'black', marginBottom: '6px', lineHeight: 1.05 }}>{s.customer_name}</div>
-                  <div style={{ fontSize: '15px', lineHeight: 1.5, color: 'black', fontWeight: 500, marginBottom: '10px' }}>
+                  <div style={{ fontSize: '19px', fontWeight: 800, color: 'black', marginBottom: '4px', lineHeight: 1.1 }}>{s.customer_name}</div>
+                  <div style={{ fontSize: '13px', lineHeight: 1.4, color: 'black', fontWeight: 500, marginBottom: '6px' }}>
                     {s.address_text}
                   </div>
-                  <div style={{ fontSize: '17px', fontWeight: 800, color: 'black' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: 'black' }}>
                     Phone: {formatPhoneForDisplay(s.customer_phone)}
                   </div>
                 </div>
@@ -182,14 +196,15 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
             <div className="checklist-section" style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', alignItems: 'flex-start' }}>
               {shipments.map((s) => {
                 const isSelected = selectedIds.has(s.shipment_id);
+                const items = typeof s.items === 'string' ? JSON.parse(s.items) : (s.items || []);
                 return (
                   <div key={s.shipment_id} className={`checklist-card ${isSelected ? '' : 'deselected'}`}>
                     <div style={{ fontSize: '13px', fontWeight: 800, color: 'black', marginBottom: '4px' }}>
                       {s.customer_name}
                       <span style={{ fontWeight: 600, color: COLORS.muted }}> · #{s.order_id.slice(0, 8)}{s.shipment_label ? ` · ${s.shipment_label}` : ''}</span>
                     </div>
-                    {s.items?.length > 0 ? (
-                      s.items.map((item, idx) => (
+                    {items.length > 0 ? (
+                      items.map((item, idx) => (
                         <div
                           key={idx}
                           style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: 'black', padding: '2px 0' }}
