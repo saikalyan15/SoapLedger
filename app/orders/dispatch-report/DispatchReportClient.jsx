@@ -56,6 +56,11 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
         .selection-overlay { position: absolute; top: 2px; right: 2px; z-index: 10; background: white; border-radius: 4px; }
         .deselected { opacity: 0.2 !important; }
 
+        .checklist-card {
+          background: white; border: 1px solid #D1D5DB; border-radius: 8px; padding: 10px 12px;
+          width: 90mm; box-sizing: border-box;
+        }
+
         @media print {
           .no-print { display: none !important; }
           .dispatch-report-page { background: white !important; padding: 0 !important; min-height: 0 !important; }
@@ -63,6 +68,10 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
 
           .shipping-section { display: flex; flex-wrap: wrap; gap: 5mm; page-break-inside: avoid; }
           .address-label { border: 0.3mm dashed #000 !important; box-sizing: border-box !important; padding: 8mm !important; width: 115mm !important; height: auto !important; page-break-inside: avoid; }
+
+          .checklist-page-break { page-break-before: always; padding-top: 12mm; font-size: 13px; }
+          .checklist-section { display: flex; flex-wrap: wrap; gap: 5mm; }
+          .checklist-card { border: 0.3mm solid #000 !important; page-break-inside: avoid; }
 
           * { color: #000000 !important; border-color: #000000 !important; }
           .address-label div { background: none !important; }
@@ -158,13 +167,29 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
                   <div style={{ fontSize: '15px', lineHeight: 1.5, color: 'black', fontWeight: 500, marginBottom: '10px' }}>
                     {s.address_text}
                   </div>
-                  <div style={{ fontSize: '17px', fontWeight: 800, color: 'black', marginBottom: s.items?.length ? '10px' : 0 }}>
+                  <div style={{ fontSize: '17px', fontWeight: 800, color: 'black' }}>
                     Phone: {formatPhoneForDisplay(s.customer_phone)}
                   </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-                  {s.items?.length > 0 && (
-                    <div style={{ borderTop: '1px dashed #000', paddingTop: '6px' }}>
-                      {s.items.map((item, idx) => (
+        {shipments.length > 0 && (
+          <>
+            <h3 className="section-header checklist-page-break"><ListChecks size={18} /> Packing Checklist (internal — do not include in parcel)</h3>
+            <div className="checklist-section" style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', alignItems: 'flex-start' }}>
+              {shipments.map((s) => {
+                const isSelected = selectedIds.has(s.shipment_id);
+                return (
+                  <div key={s.shipment_id} className={`checklist-card ${isSelected ? '' : 'deselected'}`}>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: 'black', marginBottom: '4px' }}>
+                      {s.customer_name}
+                      <span style={{ fontWeight: 600, color: COLORS.muted }}> · #{s.order_id.slice(0, 8)}{s.shipment_label ? ` · ${s.shipment_label}` : ''}</span>
+                    </div>
+                    {s.items?.length > 0 ? (
+                      s.items.map((item, idx) => (
                         <div
                           key={idx}
                           style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: 'black', padding: '2px 0' }}
@@ -173,13 +198,15 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
                           <span style={{ flex: 1 }}>{item.product_name}</span>
                           <span style={{ fontWeight: 800 }}>x{item.quantity}</span>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                      ))
+                    ) : (
+                      <div style={{ fontSize: '12px', color: COLORS.muted }}>No items recorded</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>
