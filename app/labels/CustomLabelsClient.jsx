@@ -166,46 +166,6 @@ function LineIcon({ children, size = 10 }) {
   );
 }
 
-// One hero icon per base_type product family — a designed identity mark
-// per product line, standing in for the per-ingredient icons that were
-// ruled out. Ink use scales with covered area, not how small or "subtle"
-// something looks, so five reusable single-stroke marks (built once,
-// reused across every product in that family) are what actually stays
-// cheap, where a literal icon per ingredient would not have.
-const BASE_TYPE_ICONS = {
-  Glycerine: (props) => (
-    <LineIcon {...props}>
-      <path d="M12 3c3 4 6 7.5 6 11a6 6 0 1 1-12 0c0-3.5 3-7 6-11z" />
-    </LineIcon>
-  ),
-  'Goat Milk': (props) => (
-    <LineIcon {...props}>
-      <path d="M12 4c2.5 2.8 5 6.4 5 9.5a5 5 0 1 1-10 0C7 10.4 9.5 6.8 12 4z" />
-      <path d="M12 12.5v4" />
-    </LineIcon>
-  ),
-  'Shea Butter': (props) => (
-    <LineIcon {...props}>
-      <ellipse cx="12" cy="13" rx="6" ry="5" />
-      <path d="M12 8c1.5-2 3-3.2 4.5-3.5" />
-    </LineIcon>
-  ),
-  'Red Wine': (props) => (
-    <LineIcon {...props}>
-      <circle cx="9" cy="10" r="3" />
-      <circle cx="14.5" cy="14" r="3" />
-      <circle cx="9.5" cy="16" r="2.2" />
-      <path d="M9 7c1-1.6 2.4-2.4 4-2.6" />
-    </LineIcon>
-  ),
-  Loofah: (props) => (
-    <LineIcon {...props}>
-      <ellipse cx="12" cy="12" rx="5" ry="8" />
-      <path d="M8 8c2 1 6 1 8 0M7.5 12c2 1 7 1 9 0M8 16c2 1 6 1 8 0" />
-    </LineIcon>
-  ),
-};
-
 const DiyaIcon = (props) => (
   <LineIcon {...props}>
     <path d="M4 15c2 2.5 5 3.5 8 3.5s6-1 8-3.5" />
@@ -534,7 +494,6 @@ function AddressSticker({ address, brandName, onRemove }) {
 // extra ink — full name + full ingredients, not the 44-char mini-sticker
 // blurb, since this label has the room for both.
 function PremiumProductLabel({ label, sizeMm, onRemove }) {
-  const BaseIcon = BASE_TYPE_ICONS[label.base_type];
   const ingredientsText = label.fragranceFree ? stripFragrance(label.ingredients) : (label.ingredients || '');
   return (
     <div className="premium-label" style={{ width: `${sizeMm.width}mm`, height: `${sizeMm.height}mm` }}>
@@ -553,14 +512,18 @@ function PremiumProductLabel({ label, sizeMm, onRemove }) {
             textAlign: 'center',
           }}
         >
-          {BaseIcon && <BaseIcon size={7} />}
+          <img
+            src="/logo/healing-soil-v2.1-transparent.png"
+            alt=""
+            style={{ width: '11mm', height: 'auto', marginBottom: '0.6mm' }}
+          />
           <div
             style={{
               fontWeight: 800,
               color: COLORS.brand,
-              fontSize: '8pt',
-              lineHeight: 1.1,
-              marginTop: '0.5mm',
+              fontSize: '9pt',
+              lineHeight: 1.15,
+              marginTop: '0.2mm',
             }}
           >
             {label.product_name}
@@ -1028,7 +991,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           height: 100%;
           width: 100%;
           box-sizing: border-box;
-          border: 0.5px solid ${COLORS.brand};
+          border: 0.3mm solid ${COLORS.brand};
           border-radius: 1.5mm;
         }
 
@@ -1049,7 +1012,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           height: 100%;
           width: 100%;
           box-sizing: border-box;
-          border: 0.5px solid ${COLORS.brand};
+          border: 0.3mm solid ${COLORS.brand};
           border-radius: 50%;
         }
 
