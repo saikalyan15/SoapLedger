@@ -583,7 +583,7 @@ function PremiumProductLabel({ label, sizeMm, onRemove }) {
 function OccasionSealLabel({ seal, onRemove }) {
   const preset = OCCASION_PRESETS.find((p) => p.id === seal.iconId);
   const accent = preset?.color || COLORS.brand;
-  const iconEl = preset ? preset.Icon({ size: 9, color: accent }) : SparkleIcon({ size: 9, color: accent });
+  const iconEl = preset ? preset.Icon({ size: 11, color: accent }) : SparkleIcon({ size: 11, color: accent });
   return (
     <div className="seal-label">
       {onRemove && <RemoveLabelButton onRemove={onRemove} />}
@@ -599,7 +599,7 @@ function OccasionSealLabel({ seal, onRemove }) {
             justifyContent: 'center',
             height: '100%',
             width: '100%',
-            padding: '2mm',
+            padding: '1.5mm',
             boxSizing: 'border-box',
             textAlign: 'center',
           }}
@@ -607,16 +607,16 @@ function OccasionSealLabel({ seal, onRemove }) {
           <img
             src="/logo/healing-soil-v2.1-transparent.png"
             alt=""
-            style={{ width: '11mm', height: 'auto', marginBottom: '1mm' }}
+            style={{ width: '13mm', height: 'auto', marginBottom: '1.2mm' }}
           />
           {iconEl}
           <div
             style={{
               fontWeight: 800,
               color: accent,
-              fontSize: '9pt',
-              lineHeight: 1.1,
-              marginTop: '1mm',
+              fontSize: '11pt',
+              lineHeight: 1.15,
+              marginTop: '1.2mm',
             }}
           >
             {seal.message}
