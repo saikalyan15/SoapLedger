@@ -121,21 +121,15 @@ const MINI_LABEL_GRID = { columns: 7, rows: 11 };
 // Premium soap label — a standalone, occasional premium tier (gift sets,
 // festive runs), NOT a replacement for the wrapper band + mini sticker
 // combo used on regular stock, and not fitted into the band's cutout.
-// Sized against the bar's own faces already measured for the band above
-// (~54x35mm for the 100g bar's front face, ~40x40mm for the 50g bar's
-// square top face), trimmed down a little so the label sits inside the
-// face with a small margin instead of overhanging the edge. One size
-// active per print run (see premiumBarSize below), same toggle pattern as
-// bandSize — verify against the actual bars with a plain-paper test print
-// before committing sticker stock.
-const PREMIUM_LABEL_SIZE_MM = {
-  '100g': { width: 48, height: 30 },
-  '50g': { width: 38, height: 38 },
-};
-const PREMIUM_LABEL_GRID = {
-  '100g': { columns: 4, rows: 8 },
-  '50g': { columns: 5, rows: 7 },
-};
+// One size fits both bar shapes rather than a per-bar-size toggle — sized
+// to sit inside the smaller dimension of each bar face already measured
+// for the band above (100g bar's front face ~54x35mm, 50g bar's square
+// top face ~40x40mm), with margin to spare on both: 36x30mm clears the
+// 50g bar's 40mm width with 2mm either side, and the 100g bar's 35mm
+// height with 2.5mm top and bottom. Verify against the actual bars with a
+// plain-paper test print before committing sticker stock.
+const PREMIUM_LABEL_SIZE_MM = { width: 36, height: 30 };
+const PREMIUM_LABEL_GRID = { columns: 5, rows: 8 };
 
 // Occasion "seal" sticker — round, sized to hold shut a folded sheet of
 // brown paper (a "topper wrap" laid over a bundle of already cling- and
@@ -149,15 +143,15 @@ const SEAL_GRID = { columns: 3, rows: 5 };
 // Shared wrapper for the small single-stroke line icons used on both new
 // sticker types. One brand-green stroke, no fill — kept deliberately
 // simple so ink stays negligible regardless of how many print.
-function LineIcon({ children, size = 10 }) {
+function LineIcon({ children, size = 10, color = COLORS.brand }) {
   return (
     <svg
       width={`${size}mm`}
       height={`${size}mm`}
       viewBox="0 0 24 24"
       fill="none"
-      stroke={COLORS.brand}
-      strokeWidth="1.3"
+      stroke={color}
+      strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -225,16 +219,19 @@ const SparkleIcon = (props) => (
 // Curated defaults, matching the Hindi/Kannada catalog audience plus a
 // couple of general occasions. A plain config array, not a DB table —
 // seasonal content that doesn't need to be editable outside of code, and
-// grows by adding an entry here.
+// grows by adding an entry here. Each has its own accent color — this
+// sticker is low-volume (one per gift box, not per bar), so the ink-cost
+// argument that ruled out color on the soap label doesn't apply here, and
+// "festive" reads better with real color than brand-green monochrome.
 const OCCASION_PRESETS = [
-  { id: 'diwali', label: 'Diwali', message: 'Happy Diwali', Icon: DiyaIcon },
-  { id: 'ganesh-chaturthi', label: 'Ganesh Chaturthi', message: 'Happy Ganesh Chaturthi', Icon: ModakIcon },
-  { id: 'ugadi', label: 'Ugadi', message: 'Happy Ugadi', Icon: ToranIcon },
-  { id: 'sankranti', label: 'Sankranti', message: 'Happy Sankranti', Icon: KiteIcon },
-  { id: 'raksha-bandhan', label: 'Raksha Bandhan', message: 'Happy Raksha Bandhan', Icon: RakhiIcon },
-  { id: 'holi', label: 'Holi', message: 'Happy Holi', Icon: HoliIcon },
-  { id: 'christmas', label: 'Christmas', message: 'Merry Christmas', Icon: ChristmasTreeIcon },
-  { id: 'new-year', label: 'New Year', message: 'Happy New Year', Icon: FireworkIcon },
+  { id: 'diwali', label: 'Diwali', message: 'Happy Diwali', Icon: DiyaIcon, color: '#B45309' },
+  { id: 'ganesh-chaturthi', label: 'Ganesh Chaturthi', message: 'Happy Ganesh Chaturthi', Icon: ModakIcon, color: '#C2410C' },
+  { id: 'ugadi', label: 'Ugadi', message: 'Happy Ugadi', Icon: ToranIcon, color: '#65A30D' },
+  { id: 'sankranti', label: 'Sankranti', message: 'Happy Sankranti', Icon: KiteIcon, color: '#EA580C' },
+  { id: 'raksha-bandhan', label: 'Raksha Bandhan', message: 'Happy Raksha Bandhan', Icon: RakhiIcon, color: '#B91C1C' },
+  { id: 'holi', label: 'Holi', message: 'Happy Holi', Icon: HoliIcon, color: '#C2185B' },
+  { id: 'christmas', label: 'Christmas', message: 'Merry Christmas', Icon: ChristmasTreeIcon, color: '#B91C1C' },
+  { id: 'new-year', label: 'New Year', message: 'Happy New Year', Icon: FireworkIcon, color: '#B45309' },
 ];
 
 // Hover-to-reveal delete button rendered on top of a printed label, so a
@@ -585,11 +582,15 @@ function PremiumProductLabel({ label, sizeMm, onRemove }) {
 // per bar. Round, like a wax seal, one size regardless of box size.
 function OccasionSealLabel({ seal, onRemove }) {
   const preset = OCCASION_PRESETS.find((p) => p.id === seal.iconId);
-  const iconEl = preset ? preset.Icon({ size: 9 }) : SparkleIcon({ size: 9 });
+  const accent = preset?.color || COLORS.brand;
+  const iconEl = preset ? preset.Icon({ size: 9, color: accent }) : SparkleIcon({ size: 9, color: accent });
   return (
     <div className="seal-label">
       {onRemove && <RemoveLabelButton onRemove={onRemove} />}
-      <div className="seal-label-frame">
+      <div
+        className="seal-label-frame"
+        style={{ borderColor: accent, background: `${accent}14` }}
+      >
         <div
           style={{
             display: 'flex',
@@ -607,7 +608,7 @@ function OccasionSealLabel({ seal, onRemove }) {
           <div
             style={{
               fontWeight: 800,
-              color: COLORS.brand,
+              color: accent,
               fontSize: '9pt',
               lineHeight: 1.1,
               marginTop: '1mm',
@@ -661,7 +662,6 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   const [bandPages, setBandPages] = useState(1);
   const [bandSize, setBandSize] = useState('100g'); // '100g' | '50g'
   const [addressCount, setAddressCount] = useState(21);
-  const [premiumBarSize, setPremiumBarSize] = useState('100g'); // '100g' | '50g'
 
   // Premium reads/writes its own queue; every other batch-backed mode
   // (currently just mini) keeps using `batches`.
@@ -686,8 +686,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   // A4 page).
   const bandsPerPage = bandSize === '50g' ? 14 : 8;
   const miniPerPage = MINI_LABEL_GRID.columns * MINI_LABEL_GRID.rows;
-  const premiumGrid = PREMIUM_LABEL_GRID[premiumBarSize];
-  const premiumPerPage = premiumGrid.columns * premiumGrid.rows;
+  const premiumPerPage = PREMIUM_LABEL_GRID.columns * PREMIUM_LABEL_GRID.rows;
   const sealPerPage = SEAL_GRID.columns * SEAL_GRID.rows;
   const labelsPerPage =
     printMode === 'mini' ? miniPerPage
@@ -903,7 +902,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
       : printMode === 'premium'
       ? {
           display: 'grid',
-          gridTemplateColumns: `repeat(${premiumGrid.columns}, ${PREMIUM_LABEL_SIZE_MM[premiumBarSize].width}mm)`,
+          gridTemplateColumns: `repeat(${PREMIUM_LABEL_GRID.columns}, ${PREMIUM_LABEL_SIZE_MM.width}mm)`,
           gap: '3mm',
           justifyContent: 'center',
           alignContent: 'start',
@@ -978,7 +977,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
         /* Premium label: double-rule frame — outer dashed cut-guide (this
            border), inner solid brand-green hairline (.premium-label-frame)
            — the main "premium" signal, at effectively zero extra ink.
-           Width/height are set inline per premiumBarSize, not here. */
+           Width/height are set inline from PREMIUM_LABEL_SIZE_MM, not here. */
         .premium-label {
           border: 1px dashed #ccc;
           position: relative;
@@ -1147,7 +1146,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
 
           .premium-page-sheet {
             display: grid !important;
-            grid-template-columns: repeat(${premiumGrid.columns}, ${PREMIUM_LABEL_SIZE_MM[premiumBarSize].width}mm) !important;
+            grid-template-columns: repeat(${PREMIUM_LABEL_GRID.columns}, ${PREMIUM_LABEL_SIZE_MM.width}mm) !important;
             gap: 3mm !important;
             justify-content: center !important;
             align-content: start !important;
@@ -1244,8 +1243,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           }
 
           .premium-label {
-            width: ${PREMIUM_LABEL_SIZE_MM[premiumBarSize].width}mm !important;
-            height: ${PREMIUM_LABEL_SIZE_MM[premiumBarSize].height}mm !important;
+            width: ${PREMIUM_LABEL_SIZE_MM.width}mm !important;
+            height: ${PREMIUM_LABEL_SIZE_MM.height}mm !important;
             border: 0.1mm dashed #000 !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
@@ -1391,33 +1390,6 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             Occasion Seal
           </button>
         </div>
-
-        {/* Premium: bar-size sub-toggle, same pattern as the bands one below —
-            one size active per print run, not mixed on one sheet. */}
-        {printMode === 'premium' && (
-          <div style={{ display: 'flex', background: '#E5E7EB', borderRadius: '8px', padding: '3px', gap: '2px' }}>
-            {Object.entries(PREMIUM_LABEL_SIZE_MM).map(([key]) => (
-              <button
-                key={key}
-                onClick={() => setPremiumBarSize(key)}
-                style={{
-                  background: premiumBarSize === key ? COLORS.brand : 'transparent',
-                  color: premiumBarSize === key ? 'white' : COLORS.muted,
-                  border: 'none',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontFamily: FONTS.sans,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {key}
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Premium: which variant the next Add targets — a product can have
             both a regular and a fragrance-free queue entry side by side,
@@ -1843,21 +1815,21 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                       alignItems: 'center',
                       gap: '6px',
                       borderRadius: '20px',
-                      border: `1px solid ${queued ? COLORS.brand : '#E5E7EB'}`,
-                      background: queued ? '#D8F3DC' : 'white',
+                      border: `1px solid ${queued ? preset.color : '#E5E7EB'}`,
+                      background: queued ? `${preset.color}1A` : 'white',
                       padding: '5px 10px 5px 8px',
                       fontFamily: FONTS.sans,
                       fontSize: '12px',
                       cursor: 'pointer',
                     }}
                   >
-                    {preset.Icon({ size: 4.5 })}
+                    {preset.Icon({ size: 4.5, color: preset.color })}
                     {queued && (
-                      <span style={{ background: COLORS.brand, color: 'white', borderRadius: '10px', padding: '1px 6px', fontWeight: 800, fontSize: '11px' }}>
+                      <span style={{ background: preset.color, color: 'white', borderRadius: '10px', padding: '1px 6px', fontWeight: 800, fontSize: '11px' }}>
                         {queued.qty}
                       </span>
                     )}
-                    <span style={{ fontWeight: queued ? 700 : 500, color: queued ? COLORS.brand : COLORS.text }}>
+                    <span style={{ fontWeight: queued ? 700 : 500, color: queued ? preset.color : COLORS.text }}>
                       {preset.label}
                     </span>
                   </button>
@@ -1965,7 +1937,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                   <PremiumProductLabel
                     key={label.uid}
                     label={label}
-                    sizeMm={PREMIUM_LABEL_SIZE_MM[premiumBarSize]}
+                    sizeMm={PREMIUM_LABEL_SIZE_MM}
                     onRemove={() => removeOneFromBatch(label.id)}
                   />
                 ) : printMode === 'seal' ? (
@@ -1997,7 +1969,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                       background: 'transparent',
                       backgroundImage: 'none',
                       border: '1px dashed #E5E7EB',
-                      ...(printMode === 'premium' ? { width: `${PREMIUM_LABEL_SIZE_MM[premiumBarSize].width}mm`, height: `${PREMIUM_LABEL_SIZE_MM[premiumBarSize].height}mm` } : {}),
+                      ...(printMode === 'premium' ? { width: `${PREMIUM_LABEL_SIZE_MM.width}mm`, height: `${PREMIUM_LABEL_SIZE_MM.height}mm` } : {}),
                     }}
                   />
                 ))}
