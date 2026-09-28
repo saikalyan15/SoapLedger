@@ -79,7 +79,7 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
             break-inside: avoid; page-break-inside: avoid;
           }
 
-          .checklist-page-break { page-break-before: always; padding-top: 12mm; font-size: 13px; }
+          .checklist-heading { padding-top: 6mm; font-size: 13px; break-before: avoid; }
           .checklist-section { display: block !important; column-count: 2; column-gap: 3mm; }
           .checklist-card {
             display: block !important;
@@ -192,7 +192,7 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
 
         {shipments.length > 0 && (
           <>
-            <h3 className="section-header checklist-page-break"><ListChecks size={18} /> Packing Checklist (internal — do not include in parcel)</h3>
+            <h3 className="section-header checklist-heading"><ListChecks size={18} /> Packing Checklist (internal — do not include in parcel)</h3>
             <div className="checklist-section" style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', alignItems: 'flex-start' }}>
               {shipments.map((s) => {
                 const isSelected = selectedIds.has(s.shipment_id);
