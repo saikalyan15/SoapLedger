@@ -604,6 +604,11 @@ function OccasionSealLabel({ seal, onRemove }) {
             textAlign: 'center',
           }}
         >
+          <img
+            src="/logo/healing-soil-v2.1-transparent.png"
+            alt=""
+            style={{ width: '11mm', height: 'auto', marginBottom: '1mm' }}
+          />
           {iconEl}
           <div
             style={{
@@ -616,11 +621,6 @@ function OccasionSealLabel({ seal, onRemove }) {
           >
             {seal.message}
           </div>
-          <img
-            src="/logo/healing-soil-v2.1-transparent.png"
-            alt=""
-            style={{ width: '8mm', height: 'auto', marginTop: '1mm', opacity: 0.9 }}
-          />
         </div>
       </div>
     </div>
