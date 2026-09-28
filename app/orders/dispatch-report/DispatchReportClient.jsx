@@ -158,9 +158,24 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
                   <div style={{ fontSize: '15px', lineHeight: 1.5, color: 'black', fontWeight: 500, marginBottom: '10px' }}>
                     {s.address_text}
                   </div>
-                  <div style={{ fontSize: '17px', fontWeight: 800, color: 'black' }}>
+                  <div style={{ fontSize: '17px', fontWeight: 800, color: 'black', marginBottom: s.items?.length ? '10px' : 0 }}>
                     Phone: {formatPhoneForDisplay(s.customer_phone)}
                   </div>
+
+                  {s.items?.length > 0 && (
+                    <div style={{ borderTop: '1px dashed #000', paddingTop: '6px' }}>
+                      {s.items.map((item, idx) => (
+                        <div
+                          key={idx}
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: 'black', padding: '2px 0' }}
+                        >
+                          <Square size={14} color={COLORS.muted} style={{ flexShrink: 0 }} />
+                          <span style={{ flex: 1 }}>{item.product_name}</span>
+                          <span style={{ fontWeight: 800 }}>x{item.quantity}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
