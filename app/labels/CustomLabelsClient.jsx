@@ -78,6 +78,20 @@ function getMiniLabelDescription(label) {
   return label.mini_label_description?.trim() || 'Handmade soap';
 }
 
+// Ingredients is free text (comma-separated), authored per product — not
+// a structured list — so a fragrance-free copy is produced by dropping
+// any comma-separated segment that mentions "essential oil" (however it's
+// named — "Tulsi Essential Oil", "Essential Oil Blend", etc.) rather than
+// requiring a second, separately-maintained ingredients field per product.
+function stripFragrance(ingredients) {
+  if (!ingredients) return ingredients;
+  return ingredients
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part && !/essential oil/i.test(part))
+    .join(', ');
+}
+
 // The description field is already capped at 44 chars (see
 // MAX_MINI_LABEL_DESCRIPTION_LENGTH in lib/actions/products.js), so it gets
 // one fixed size, sized to the sticker's width (the binding constraint on
@@ -103,6 +117,165 @@ const MINI_TITLE_FONT_SIZE = '9pt';
 // 11 x 18mm = 198mm).
 const MINI_LABEL_SIZE_MM = { width: 40, height: 18 };
 const MINI_LABEL_GRID = { columns: 7, rows: 11 };
+
+// Premium soap label — a standalone, occasional premium tier (gift sets,
+// festive runs), NOT a replacement for the wrapper band + mini sticker
+// combo used on regular stock, and not fitted into the band's cutout.
+// Sized against the bar's own faces already measured for the band above
+// (~54x35mm for the 100g bar's front face, ~40x40mm for the 50g bar's
+// square top face), trimmed down a little so the label sits inside the
+// face with a small margin instead of overhanging the edge. One size
+// active per print run (see premiumBarSize below), same toggle pattern as
+// bandSize — verify against the actual bars with a plain-paper test print
+// before committing sticker stock.
+const PREMIUM_LABEL_SIZE_MM = {
+  '100g': { width: 48, height: 30 },
+  '50g': { width: 38, height: 38 },
+};
+const PREMIUM_LABEL_GRID = {
+  '100g': { columns: 4, rows: 8 },
+  '50g': { columns: 5, rows: 7 },
+};
+
+// Occasion "seal" sticker — round, sized to hold shut a folded sheet of
+// brown paper (a "topper wrap" laid over a bundle of already cling- and
+// brown-paper-wrapped bars before the box lid closes), like a wax seal on
+// a letter. It seals a paper fold, not a box exterior — the box's to/from
+// address already lives on its own sticker (see the `address` mode) — so
+// this doesn't need to vary by box size; one size covers every box.
+const SEAL_SIZE_MM = { width: 48, height: 48 };
+const SEAL_GRID = { columns: 3, rows: 5 };
+
+// Shared wrapper for the small single-stroke line icons used on both new
+// sticker types. One brand-green stroke, no fill — kept deliberately
+// simple so ink stays negligible regardless of how many print.
+function LineIcon({ children, size = 10 }) {
+  return (
+    <svg
+      width={`${size}mm`}
+      height={`${size}mm`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={COLORS.brand}
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {children}
+    </svg>
+  );
+}
+
+// One hero icon per base_type product family — a designed identity mark
+// per product line, standing in for the per-ingredient icons that were
+// ruled out. Ink use scales with covered area, not how small or "subtle"
+// something looks, so five reusable single-stroke marks (built once,
+// reused across every product in that family) are what actually stays
+// cheap, where a literal icon per ingredient would not have.
+const BASE_TYPE_ICONS = {
+  Glycerine: (props) => (
+    <LineIcon {...props}>
+      <path d="M12 3c3 4 6 7.5 6 11a6 6 0 1 1-12 0c0-3.5 3-7 6-11z" />
+    </LineIcon>
+  ),
+  'Goat Milk': (props) => (
+    <LineIcon {...props}>
+      <path d="M12 4c2.5 2.8 5 6.4 5 9.5a5 5 0 1 1-10 0C7 10.4 9.5 6.8 12 4z" />
+      <path d="M12 12.5v4" />
+    </LineIcon>
+  ),
+  'Shea Butter': (props) => (
+    <LineIcon {...props}>
+      <ellipse cx="12" cy="13" rx="6" ry="5" />
+      <path d="M12 8c1.5-2 3-3.2 4.5-3.5" />
+    </LineIcon>
+  ),
+  'Red Wine': (props) => (
+    <LineIcon {...props}>
+      <circle cx="9" cy="10" r="3" />
+      <circle cx="14.5" cy="14" r="3" />
+      <circle cx="9.5" cy="16" r="2.2" />
+      <path d="M9 7c1-1.6 2.4-2.4 4-2.6" />
+    </LineIcon>
+  ),
+  Loofah: (props) => (
+    <LineIcon {...props}>
+      <ellipse cx="12" cy="12" rx="5" ry="8" />
+      <path d="M8 8c2 1 6 1 8 0M7.5 12c2 1 7 1 9 0M8 16c2 1 6 1 8 0" />
+    </LineIcon>
+  ),
+};
+
+const DiyaIcon = (props) => (
+  <LineIcon {...props}>
+    <path d="M4 15c2 2.5 5 3.5 8 3.5s6-1 8-3.5" />
+    <path d="M4 15c0-1.6 1.2-2.5 2.5-2 1 .4 1.6 1 3.5 1s2-1.5 2-1.5 .5 1.5 2 1.5 2.5-.6 3.5-1c1.3-.5 2.5.4 2.5 2" />
+    <path d="M12 9c-.8-1.2-.8-2.4 0-3.5.8 1.1.8 2.3 0 3.5z" />
+  </LineIcon>
+);
+const ModakIcon = (props) => (
+  <LineIcon {...props}>
+    <path d="M6 14a6 6 0 0 1 12 0c0 3-2.5 5-6 7-3.5-2-6-4-6-7z" />
+    <path d="M8.5 12.5c1-.8 2-1.2 3.5-1.2s2.5.4 3.5 1.2" />
+  </LineIcon>
+);
+const ToranIcon = (props) => (
+  <LineIcon {...props}>
+    <path d="M3 7c4 3 14 3 18 0" />
+    <path d="M7 7v3.5l-1.5 2M12 7v4l-1.5 2M17 7v3.5l1.5 2" />
+  </LineIcon>
+);
+const KiteIcon = (props) => (
+  <LineIcon {...props}>
+    <path d="M12 3l6 7-6 11-6-11 6-7z" />
+    <path d="M6 10h12M3 20l3-3M21 20l-3-3" />
+  </LineIcon>
+);
+const RakhiIcon = (props) => (
+  <LineIcon {...props}>
+    <circle cx="12" cy="13" r="4" />
+    <path d="M12 9V5M9.5 6.5 12 5l2.5 1.5" />
+    <path d="M9 12h6M9 14h6" />
+  </LineIcon>
+);
+const HoliIcon = (props) => (
+  <LineIcon {...props}>
+    <circle cx="12" cy="12" r="2" />
+    <path d="M12 5v2.5M12 16.5V19M5 12h2.5M16.5 12H19M7.5 7.5l1.7 1.7M14.8 14.8l1.7 1.7M16.5 7.5l-1.7 1.7M9.2 14.8l-1.7 1.7" />
+  </LineIcon>
+);
+const ChristmasTreeIcon = (props) => (
+  <LineIcon {...props}>
+    <path d="M12 3l4 5h-2.5l3.5 5h-3l3.5 5H6.5l3.5-5h-3l3.5-5H9l3-5z" />
+    <path d="M12 18v3" />
+  </LineIcon>
+);
+const FireworkIcon = (props) => (
+  <LineIcon {...props}>
+    <path d="M12 4v4M12 16v4M4 12h4M16 12h4M6.3 6.3l2.8 2.8M14.9 14.9l2.8 2.8M17.7 6.3l-2.8 2.8M9.1 14.9l-2.8 2.8" />
+    <circle cx="12" cy="12" r="2" />
+  </LineIcon>
+);
+const SparkleIcon = (props) => (
+  <LineIcon {...props}>
+    <path d="M12 4l1.6 5.4L19 11l-5.4 1.6L12 18l-1.6-5.4L5 11l5.4-1.6L12 4z" />
+  </LineIcon>
+);
+
+// Curated defaults, matching the Hindi/Kannada catalog audience plus a
+// couple of general occasions. A plain config array, not a DB table —
+// seasonal content that doesn't need to be editable outside of code, and
+// grows by adding an entry here.
+const OCCASION_PRESETS = [
+  { id: 'diwali', label: 'Diwali', message: 'Happy Diwali', Icon: DiyaIcon },
+  { id: 'ganesh-chaturthi', label: 'Ganesh Chaturthi', message: 'Happy Ganesh Chaturthi', Icon: ModakIcon },
+  { id: 'ugadi', label: 'Ugadi', message: 'Happy Ugadi', Icon: ToranIcon },
+  { id: 'sankranti', label: 'Sankranti', message: 'Happy Sankranti', Icon: KiteIcon },
+  { id: 'raksha-bandhan', label: 'Raksha Bandhan', message: 'Happy Raksha Bandhan', Icon: RakhiIcon },
+  { id: 'holi', label: 'Holi', message: 'Happy Holi', Icon: HoliIcon },
+  { id: 'christmas', label: 'Christmas', message: 'Merry Christmas', Icon: ChristmasTreeIcon },
+  { id: 'new-year', label: 'New Year', message: 'Happy New Year', Icon: FireworkIcon },
+];
 
 // Hover-to-reveal delete button rendered on top of a printed label, so a
 // single click removes that exact instance straight from the sheet
@@ -356,6 +529,146 @@ function AddressSticker({ address, brandName, onRemove }) {
   );
 }
 
+// The double-rule frame (dashed cut-guide outside, solid brand-green
+// hairline inside) is the main "premium" signal here, at effectively zero
+// extra ink — full name + full ingredients, not the 44-char mini-sticker
+// blurb, since this label has the room for both.
+function PremiumProductLabel({ label, sizeMm, onRemove }) {
+  const BaseIcon = BASE_TYPE_ICONS[label.base_type];
+  const ingredientsText = label.fragranceFree ? stripFragrance(label.ingredients) : (label.ingredients || '');
+  return (
+    <div className="premium-label" style={{ width: `${sizeMm.width}mm`, height: `${sizeMm.height}mm` }}>
+      {onRemove && <RemoveLabelButton onRemove={onRemove} />}
+      <div className="premium-label-frame">
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            width: '100%',
+            padding: '1.5mm',
+            boxSizing: 'border-box',
+            textAlign: 'center',
+          }}
+        >
+          {BaseIcon && <BaseIcon size={7} />}
+          <div
+            style={{
+              fontWeight: 800,
+              color: COLORS.brand,
+              fontSize: '8pt',
+              lineHeight: 1.1,
+              marginTop: '0.5mm',
+            }}
+          >
+            {label.product_name}
+          </div>
+          <div
+            style={{
+              width: '60%',
+              borderBottom: `0.12mm solid ${COLORS.brand}`,
+              opacity: 0.35,
+              margin: '0.8mm 0',
+            }}
+          />
+          <div
+            style={{
+              fontSize: '6pt',
+              fontWeight: 500,
+              color: COLORS.muted,
+              lineHeight: 1.15,
+              overflow: 'hidden',
+            }}
+          >
+            {ingredientsText}
+          </div>
+          {label.fragranceFree && (
+            <div
+              style={{
+                fontSize: '5pt',
+                fontWeight: 800,
+                color: COLORS.brand,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                marginTop: '0.4mm',
+              }}
+            >
+              Fragrance-Free
+            </div>
+          )}
+          <div
+            style={{
+              fontSize: '5pt',
+              fontWeight: 700,
+              color: COLORS.muted,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              marginTop: '0.8mm',
+            }}
+          >
+            {label.weight_grams ? `${label.weight_grams}g · ` : ''}healingsoil.in
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Seals the "topper wrap" fold of brown paper laid over a bundle of
+// already-wrapped bars, on gift/festive orders only — not stuck on the
+// box exterior (that's the `address` sticker's territory) and not one
+// per bar. Round, like a wax seal, one size regardless of box size.
+function OccasionSealLabel({ seal, onRemove }) {
+  const preset = OCCASION_PRESETS.find((p) => p.id === seal.iconId);
+  const iconEl = preset ? preset.Icon({ size: 9 }) : SparkleIcon({ size: 9 });
+  return (
+    <div className="seal-label">
+      {onRemove && <RemoveLabelButton onRemove={onRemove} />}
+      <div className="seal-label-frame">
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            width: '100%',
+            padding: '2mm',
+            boxSizing: 'border-box',
+            textAlign: 'center',
+          }}
+        >
+          {iconEl}
+          <div
+            style={{
+              fontWeight: 800,
+              color: COLORS.brand,
+              fontSize: '9pt',
+              lineHeight: 1.1,
+              marginTop: '1mm',
+            }}
+          >
+            {seal.message}
+          </div>
+          <div
+            style={{
+              fontSize: '5.5pt',
+              fontWeight: 600,
+              color: COLORS.muted,
+              letterSpacing: '0.04em',
+              marginTop: '0.6mm',
+            }}
+          >
+            from Healing Soil
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // These product lines don't get individual labels printed (gift/seasonal
 // bundles, kids sets, discovery boxes, and travel minis are packaged and
 // labeled differently) — keep them out of the label palette entirely.
@@ -366,16 +679,39 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
     (p) => !EXCLUDED_FROM_LABELS.some((re) => re.test(p.name)),
   );
 
-  // Each batch: { id, product_id, product_name, base_type, weight_grams, ingredients, mini_label_description, qty }
+  // Each batch: { id, product_id, product_name, base_type, weight_grams, ingredients, mini_label_description, fragranceFree, qty }
   const [batches, setBatches] = useState([]);
+  // Premium keeps its own queue, separate from `batches` above — mini and
+  // premium used to share one array, which meant quantities queued in one
+  // mode silently bled into the other when you switched modes.
+  const [premiumBatches, setPremiumBatches] = useState([]);
+  // Which variant `addOne`/`addQuantityToAll` add to next, premium only —
+  // a couple of customers are sensitive to fragrance, so a run can mix
+  // regular and fragrance-free copies of the same product. Toggle before
+  // adding, since a product's palette chip only shows one running total.
+  const [fragranceFreeMode, setFragranceFreeMode] = useState(false);
   // Bulk-seed amount, used only by the "Add to all" button below the
   // product palette — per-product fine-tuning happens by clicking a chip
   // (add one) or the × on a printed label in the sheet (remove one).
   const [quantity, setQuantity] = useState(1);
-  const [printMode, setPrintMode] = useState('bands'); // 'bands' | 'mini' | 'address'
+  const [printMode, setPrintMode] = useState('bands'); // 'bands' | 'mini' | 'address' | 'premium' | 'seal'
   const [bandPages, setBandPages] = useState(1);
   const [bandSize, setBandSize] = useState('100g'); // '100g' | '50g'
   const [addressCount, setAddressCount] = useState(21);
+  const [premiumBarSize, setPremiumBarSize] = useState('100g'); // '100g' | '50g'
+
+  // Premium reads/writes its own queue; every other batch-backed mode
+  // (currently just mini) keeps using `batches`.
+  const activeBatches = printMode === 'premium' ? premiumBatches : batches;
+  const setActiveBatches = printMode === 'premium' ? setPremiumBatches : setBatches;
+
+  // Occasion seal queue, separate from the product `batches` above — each
+  // entry is a message + which preset (if any) it came from, not a
+  // product. Keyed by `key` (a preset's id, or `custom:<text>` for a
+  // free-typed message) so re-adding the same preset/text bumps its qty
+  // instead of creating a duplicate queue entry.
+  const [sealBatches, setSealBatches] = useState([]);
+  const [sealMessage, setSealMessage] = useState('');
 
   // Mini: 40x10mm (see MINI_LABEL_SIZE_MM above), 7x21 grid on a 297x210mm
   // landscape A4 sheet (147/sheet, auto-centered — width doesn't tile
@@ -387,11 +723,21 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   // A4 page).
   const bandsPerPage = bandSize === '50g' ? 14 : 8;
   const miniPerPage = MINI_LABEL_GRID.columns * MINI_LABEL_GRID.rows;
+  const premiumGrid = PREMIUM_LABEL_GRID[premiumBarSize];
+  const premiumPerPage = premiumGrid.columns * premiumGrid.rows;
+  const sealPerPage = SEAL_GRID.columns * SEAL_GRID.rows;
   const labelsPerPage =
-    printMode === 'mini' ? miniPerPage : printMode === 'address' ? 21 : bandsPerPage;
+    printMode === 'mini' ? miniPerPage
+    : printMode === 'address' ? 21
+    : printMode === 'premium' ? premiumPerPage
+    : printMode === 'seal' ? sealPerPage
+    : bandsPerPage;
 
-  const bumpBatch = (prev, product, amount) => {
-    const idx = prev.findIndex((b) => b.product_id === product.id);
+  // Keyed by (product_id, fragranceFree) rather than product_id alone, so
+  // premium can carry a regular and a fragrance-free queue entry for the
+  // same product side by side instead of one overwriting the other.
+  const bumpBatch = (prev, product, amount, fragranceFree = false) => {
+    const idx = prev.findIndex((b) => b.product_id === product.id && !!b.fragranceFree === fragranceFree);
     if (idx !== -1) {
       const next = [...prev];
       next[idx] = { ...next[idx], qty: next[idx].qty + amount };
@@ -400,25 +746,30 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
     return [
       ...prev,
       {
-        id: `${product.id}-${Date.now()}`,
+        id: `${product.id}-${fragranceFree ? 'nf-' : ''}${Date.now()}`,
         product_id: product.id,
         product_name: product.name,
         base_type: product.base_type,
         weight_grams: product.weight_grams,
         ingredients: product.ingredients,
         mini_label_description: product.mini_label_description,
+        fragranceFree,
         qty: amount,
       },
     ];
   };
 
-  // Click a product chip → one label lands on the sheet immediately.
-  const addOne = (product) => setBatches((prev) => bumpBatch(prev, product, 1));
+  // Click a product chip → one label lands on the sheet immediately, as
+  // whichever variant fragranceFreeMode currently points to.
+  const addOne = (product) =>
+    setActiveBatches((prev) => bumpBatch(prev, product, 1, printMode === 'premium' && fragranceFreeMode));
 
   // Bulk-seed every product at once with the shared quantity field, for
   // starting a baseline before fine-tuning up/down per product.
   const addQuantityToAll = () => {
-    setBatches((prev) => products.reduce((acc, p) => bumpBatch(acc, p, quantity), prev));
+    setActiveBatches((prev) =>
+      products.reduce((acc, p) => bumpBatch(acc, p, quantity, printMode === 'premium' && fragranceFreeMode), prev),
+    );
   };
 
   const dropOne = (prev, idx) => {
@@ -430,23 +781,68 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
 
   // Click the × on a printed label in the sheet → remove that exact one.
   const removeOneFromBatch = (batchId) => {
-    setBatches((prev) => {
+    setActiveBatches((prev) => {
       const idx = prev.findIndex((b) => b.id === batchId);
       return idx === -1 ? prev : dropOne(prev, idx);
     });
   };
 
-  // Click the − on a product chip → remove one, without hunting for it in the sheet.
+  // Click the − on a product chip → remove one, without hunting for it in
+  // the sheet. Targets whichever variant fragranceFreeMode currently
+  // points to, falling back to the other variant if that one is empty.
   const removeOneByProduct = (productId) => {
-    setBatches((prev) => {
-      const idx = prev.findIndex((b) => b.product_id === productId);
+    setActiveBatches((prev) => {
+      const wantNF = printMode === 'premium' && fragranceFreeMode;
+      let idx = prev.findIndex((b) => b.product_id === productId && !!b.fragranceFree === wantNF);
+      if (idx === -1) idx = prev.findIndex((b) => b.product_id === productId);
       return idx === -1 ? prev : dropOne(prev, idx);
     });
   };
 
   const removeBatch = (id) =>
-    setBatches((prev) => prev.filter((b) => b.id !== id));
-  const clearAll = () => setBatches([]);
+    setActiveBatches((prev) => prev.filter((b) => b.id !== id));
+  const clearAll = () => setActiveBatches([]);
+
+  // Seal queue helpers — same add-one/drop-one shape as the product
+  // batches above, just keyed by preset id / custom text instead of
+  // product_id.
+  const bumpSealBatch = (prev, key, seedFields, amount) => {
+    const idx = prev.findIndex((b) => b.key === key);
+    if (idx !== -1) {
+      const next = [...prev];
+      next[idx] = { ...next[idx], qty: next[idx].qty + amount };
+      return next;
+    }
+    return [...prev, { id: `${key}-${Date.now()}`, key, qty: amount, ...seedFields }];
+  };
+
+  const addPresetSeal = (preset) =>
+    setSealBatches((prev) => bumpSealBatch(prev, preset.id, { message: preset.message, iconId: preset.id }, 1));
+
+  const addCustomSeal = () => {
+    const msg = sealMessage.trim();
+    if (!msg) return;
+    setSealBatches((prev) => bumpSealBatch(prev, `custom:${msg}`, { message: msg, iconId: 'custom' }, 1));
+    setSealMessage('');
+  };
+
+  const dropOneSeal = (prev, idx) => {
+    if (prev[idx].qty <= 1) return prev.filter((_, i) => i !== idx);
+    const next = [...prev];
+    next[idx] = { ...next[idx], qty: next[idx].qty - 1 };
+    return next;
+  };
+
+  // Click the × on a printed seal in the sheet → remove that exact one.
+  const removeOneSealFromQueue = (sealId) => {
+    setSealBatches((prev) => {
+      const idx = prev.findIndex((b) => b.id === sealId);
+      return idx === -1 ? prev : dropOneSeal(prev, idx);
+    });
+  };
+
+  const removeSealBatch = (id) => setSealBatches((prev) => prev.filter((b) => b.id !== id));
+  const clearAllSeals = () => setSealBatches([]);
 
   // Expand batches into flat label list for the print grid
   const queue = useMemo(() => {
@@ -459,10 +855,15 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
       // no per-product palette here — just a flat count to fill.
       return Array.from({ length: addressCount }, (_, i) => ({ uid: `addr-${i}` }));
     }
-    return batches.flatMap((b) =>
+    if (printMode === 'seal') {
+      return sealBatches.flatMap((b) =>
+        Array.from({ length: b.qty }, (_, i) => ({ uid: `${b.id}-${i}`, ...b })),
+      );
+    }
+    return activeBatches.flatMap((b) =>
       Array.from({ length: b.qty }, (_, i) => ({ uid: `${b.id}-${i}`, ...b })),
     );
-  }, [batches, printMode, bandPages, bandsPerPage, addressCount]);
+  }, [activeBatches, sealBatches, printMode, bandPages, bandsPerPage, addressCount]);
 
   const totalLabels = queue.length;
 
@@ -505,8 +906,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
       counts[byRemainder[k % byRemainder.length].i] += 1;
     }
 
-    setBatches((prev) =>
-      products.reduce((acc, p, i) => bumpBatch(acc, p, counts[i]), prev),
+    setActiveBatches((prev) =>
+      products.reduce((acc, p, i) => bumpBatch(acc, p, counts[i], printMode === 'premium' && fragranceFreeMode), prev),
     );
   };
 
@@ -529,6 +930,30 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 62mm)',
           gap: '3mm',
+          justifyContent: 'center',
+          alignContent: 'start',
+          padding: '8mm',
+          width: '210mm',
+          height: 'auto',
+          minHeight: '297mm',
+        }
+      : printMode === 'premium'
+      ? {
+          display: 'grid',
+          gridTemplateColumns: `repeat(${premiumGrid.columns}, ${PREMIUM_LABEL_SIZE_MM[premiumBarSize].width}mm)`,
+          gap: '3mm',
+          justifyContent: 'center',
+          alignContent: 'start',
+          padding: '6mm',
+          width: '210mm',
+          height: 'auto',
+          minHeight: '297mm',
+        }
+      : printMode === 'seal'
+      ? {
+          display: 'grid',
+          gridTemplateColumns: `repeat(${SEAL_GRID.columns}, ${SEAL_SIZE_MM.width}mm)`,
+          gap: '4mm',
           justifyContent: 'center',
           alignContent: 'start',
           padding: '8mm',
@@ -587,6 +1012,47 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           background: white;
         }
 
+        /* Premium label: double-rule frame — outer dashed cut-guide (this
+           border), inner solid brand-green hairline (.premium-label-frame)
+           — the main "premium" signal, at effectively zero extra ink.
+           Width/height are set inline per premiumBarSize, not here. */
+        .premium-label {
+          border: 1px dashed #ccc;
+          position: relative;
+          box-sizing: border-box;
+          overflow: hidden;
+          background: white;
+          padding: 1.3mm;
+        }
+        .premium-label-frame {
+          height: 100%;
+          width: 100%;
+          box-sizing: border-box;
+          border: 0.5px solid ${COLORS.brand};
+          border-radius: 1.5mm;
+        }
+
+        /* Occasion seal: round, like a wax seal — same double-rule idea,
+           just circular. One fixed size regardless of box size. */
+        .seal-label {
+          width: ${SEAL_SIZE_MM.width}mm;
+          height: ${SEAL_SIZE_MM.height}mm;
+          border: 1px dashed #ccc;
+          border-radius: 50%;
+          position: relative;
+          box-sizing: border-box;
+          overflow: hidden;
+          background: white;
+          padding: 1.8mm;
+        }
+        .seal-label-frame {
+          height: 100%;
+          width: 100%;
+          box-sizing: border-box;
+          border: 0.5px solid ${COLORS.brand};
+          border-radius: 50%;
+        }
+
         /* Remove-on-hover: the × only shows while hovering a printed label,
            so the sheet preview stays clean until you're pointing at the
            exact one you want to pull off. */
@@ -595,7 +1061,9 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           transition: opacity 0.12s ease;
         }
         .mini-label:hover .remove-label-btn,
-        .address-sticker:hover .remove-label-btn {
+        .address-sticker:hover .remove-label-btn,
+        .premium-label:hover .remove-label-btn,
+        .seal-label:hover .remove-label-btn {
           opacity: 1;
         }
 
@@ -714,6 +1182,48 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             break-after: auto;
           }
 
+          .premium-page-sheet {
+            display: grid !important;
+            grid-template-columns: repeat(${premiumGrid.columns}, ${PREMIUM_LABEL_SIZE_MM[premiumBarSize].width}mm) !important;
+            gap: 3mm !important;
+            justify-content: center !important;
+            align-content: start !important;
+            padding: 6mm !important;
+            margin: 0 auto !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            page-break-after: always;
+            break-after: page;
+            width: 210mm !important;
+            height: 297mm !important;
+            box-sizing: border-box !important;
+          }
+          .premium-page-sheet:last-child {
+            page-break-after: auto;
+            break-after: auto;
+          }
+
+          .seal-page-sheet {
+            display: grid !important;
+            grid-template-columns: repeat(${SEAL_GRID.columns}, ${SEAL_SIZE_MM.width}mm) !important;
+            gap: 4mm !important;
+            justify-content: center !important;
+            align-content: start !important;
+            padding: 8mm !important;
+            margin: 0 auto !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            page-break-after: always;
+            break-after: page;
+            width: 210mm !important;
+            height: 297mm !important;
+            box-sizing: border-box !important;
+          }
+          .seal-page-sheet:last-child {
+            page-break-after: auto;
+            break-after: auto;
+          }
+
           .band-page-sheet {
             display: flex !important;
             flex-direction: column !important;
@@ -763,6 +1273,29 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             width: 62mm !important;
             height: 36mm !important;
             border: 0.1mm dashed #000 !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            background: white !important;
+          }
+
+          .premium-label {
+            width: ${PREMIUM_LABEL_SIZE_MM[premiumBarSize].width}mm !important;
+            height: ${PREMIUM_LABEL_SIZE_MM[premiumBarSize].height}mm !important;
+            border: 0.1mm dashed #000 !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            background: white !important;
+          }
+
+          .seal-label {
+            width: ${SEAL_SIZE_MM.width}mm !important;
+            height: ${SEAL_SIZE_MM.height}mm !important;
+            border: 0.1mm dashed #000 !important;
+            border-radius: 50% !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             box-sizing: border-box !important;
@@ -862,7 +1395,109 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           >
             From Address
           </button>
+          <button
+            onClick={() => setPrintMode('premium')}
+            style={{
+              background: printMode === 'premium' ? COLORS.brand : 'transparent',
+              color: printMode === 'premium' ? 'white' : COLORS.muted,
+              border: 'none',
+              padding: '6px 14px',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: FONTS.sans,
+            }}
+          >
+            Premium Label
+          </button>
+          <button
+            onClick={() => setPrintMode('seal')}
+            style={{
+              background: printMode === 'seal' ? COLORS.brand : 'transparent',
+              color: printMode === 'seal' ? 'white' : COLORS.muted,
+              border: 'none',
+              padding: '6px 14px',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: FONTS.sans,
+            }}
+          >
+            Occasion Seal
+          </button>
         </div>
+
+        {/* Premium: bar-size sub-toggle, same pattern as the bands one below —
+            one size active per print run, not mixed on one sheet. */}
+        {printMode === 'premium' && (
+          <div style={{ display: 'flex', background: '#E5E7EB', borderRadius: '8px', padding: '3px', gap: '2px' }}>
+            {Object.entries(PREMIUM_LABEL_SIZE_MM).map(([key]) => (
+              <button
+                key={key}
+                onClick={() => setPremiumBarSize(key)}
+                style={{
+                  background: premiumBarSize === key ? COLORS.brand : 'transparent',
+                  color: premiumBarSize === key ? 'white' : COLORS.muted,
+                  border: 'none',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: FONTS.sans,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {key}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Premium: which variant the next Add targets — a product can have
+            both a regular and a fragrance-free queue entry side by side,
+            for customers sensitive to smell. Toggle before clicking a
+            product chip or "to all". */}
+        {printMode === 'premium' && (
+          <div style={{ display: 'flex', background: '#E5E7EB', borderRadius: '8px', padding: '3px', gap: '2px' }}>
+            <button
+              onClick={() => setFragranceFreeMode(false)}
+              style={{
+                background: !fragranceFreeMode ? COLORS.brand : 'transparent',
+                color: !fragranceFreeMode ? 'white' : COLORS.muted,
+                border: 'none',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: FONTS.sans,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Regular
+            </button>
+            <button
+              onClick={() => setFragranceFreeMode(true)}
+              style={{
+                background: fragranceFreeMode ? COLORS.brand : 'transparent',
+                color: fragranceFreeMode ? 'white' : COLORS.muted,
+                border: 'none',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: FONTS.sans,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              No Fragrance
+            </button>
+          </div>
+        )}
 
         {/* Bands: soap size sub-toggle (defaults to the original 100g layout) */}
         {printMode === 'bands' && (
@@ -942,8 +1577,59 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           </div>
         )}
 
-        {/* Mini: bulk-seed qty + running capacity readout */}
-        {printMode === 'mini' && (
+        {/* Seal: add a preset or custom message, + running capacity readout */}
+        {printMode === 'seal' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              value={sealMessage}
+              onChange={(e) => setSealMessage(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addCustomSeal()}
+              placeholder="Custom message…"
+              style={{ width: '160px', padding: '6px 8px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '13px', fontFamily: FONTS.sans, boxSizing: 'border-box' }}
+            />
+            <button
+              onClick={addCustomSeal}
+              disabled={!sealMessage.trim()}
+              style={{
+                padding: '6px 14px',
+                background: sealMessage.trim() ? COLORS.brand : '#9CA3AF',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: sealMessage.trim() ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontFamily: FONTS.sans,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Plus size={14} /> Add
+            </button>
+            {sealBatches.length > 0 && (
+              <span style={{ fontSize: '12px', color: COLORS.muted, fontFamily: FONTS.sans }}>
+                {totalLabels} seal{totalLabels !== 1 ? 's' : ''} · {pages.length} page{pages.length !== 1 ? 's' : ''}
+                {' · '}
+                {freeOnLastPage === 0 ? (
+                  <span style={{ color: COLORS.brand, fontWeight: 700 }}>last page full</span>
+                ) : (
+                  <span>
+                    {lastPageCount}/{labelsPerPage} on last page —{' '}
+                    <span style={{ color: '#B45309', fontWeight: 700 }}>{freeOnLastPage} free</span>
+                  </span>
+                )}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Mini + Premium: bulk-seed qty + running capacity readout (premium
+            reuses the same product batches/palette as mini, just rendered
+            bigger with full ingredients — see PremiumProductLabel) */}
+        {(printMode === 'mini' || printMode === 'premium') && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, flexWrap: 'wrap' }}>
             <label style={{ fontSize: '13px', color: COLORS.muted, fontFamily: FONTS.sans, whiteSpace: 'nowrap' }}>Add</label>
             <input
@@ -998,7 +1684,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             >
               <Layers size={14} /> Fill sheet
             </button>
-            {batches.length > 0 && (
+            {activeBatches.length > 0 && (
               <span style={{ fontSize: '12px', color: COLORS.muted, fontFamily: FONTS.sans }}>
                 {totalLabels} label{totalLabels !== 1 ? 's' : ''} · {pages.length} page{pages.length !== 1 ? 's' : ''}
                 {' · '}
@@ -1045,7 +1731,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             instantly. Remove one at a time by hovering a printed label
             below and clicking its ×, or clear a whole product with the
             trash icon in the batch summary underneath. */}
-        {printMode === 'mini' && (
+        {(printMode === 'mini' || printMode === 'premium') && (
           <div className="no-print" style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', marginBottom: '12px' }}>
             <div style={{ marginBottom: '10px' }}>
               <span style={{ fontSize: '12px', fontWeight: 700, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: '0.03em', fontFamily: FONTS.sans }}>
@@ -1054,7 +1740,14 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {products.map((p) => {
-                const queued = batches.find((b) => b.product_id === p.id);
+                // Sums across both variants (regular + fragrance-free) so
+                // the chip's running total is accurate even when a product
+                // has both queued — the batch list below shows the
+                // per-variant breakdown.
+                const queuedQty = activeBatches
+                  .filter((b) => b.product_id === p.id)
+                  .reduce((sum, b) => sum + b.qty, 0);
+                const queued = queuedQty > 0;
                 return (
                   <div
                     key={p.id}
@@ -1112,7 +1805,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                     >
                       {queued && (
                         <span style={{ background: COLORS.brand, color: 'white', borderRadius: '10px', padding: '1px 6px', fontWeight: 800, fontSize: '11px' }}>
-                          {queued.qty}
+                          {queuedQty}
                         </span>
                       )}
                       <span style={{ fontWeight: queued ? 700 : 500, color: queued ? COLORS.brand : COLORS.text }}>
@@ -1127,12 +1820,96 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           </div>
         )}
 
-        {/* Mini batch list — compact */}
-        {printMode === 'mini' && batches.length > 0 && (
+        {/* Mini/Premium batch list — compact. Regular and fragrance-free
+            copies of the same product are separate entries (different
+            ids), so they naturally show as two rows here. */}
+        {(printMode === 'mini' || printMode === 'premium') && activeBatches.length > 0 && (
           <div className="no-print" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-            {batches.map((batch) => (
+            {activeBatches.map((batch) => (
               <div
                 key={batch.id}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'white',
+                  border: `1px solid ${batch.fragranceFree ? COLORS.brand : '#E5E7EB'}`,
+                  borderRadius: '20px',
+                  padding: '4px 10px 4px 6px',
+                  fontSize: '12px',
+                  fontFamily: FONTS.sans,
+                }}
+              >
+                <span style={{ background: COLORS.brand, color: 'white', borderRadius: '12px', padding: '1px 7px', fontWeight: 800, fontSize: '11px' }}>{batch.qty}</span>
+                <span style={{ fontWeight: 600, color: COLORS.text }}>
+                  {batch.product_name}
+                  {batch.fragranceFree && <span style={{ color: COLORS.brand, fontWeight: 800 }}> · No Fragrance</span>}
+                </span>
+                <button onClick={() => removeBatch(batch.id)} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: '0', lineHeight: 1, display: 'flex' }}>
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+            <button onClick={clearAll} style={{ background: 'none', border: '1px solid #FCA5A5', color: '#EF4444', borderRadius: '20px', padding: '4px 10px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: FONTS.sans }}>
+              Clear all
+            </button>
+          </div>
+        )}
+
+        {/* Occasion preset palette — click a preset to add one seal to the
+            sheet, tagging its icon + message. Custom messages are added via
+            the text field in the control bar above instead of a chip here. */}
+        {printMode === 'seal' && (
+          <div className="no-print" style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', marginBottom: '12px' }}>
+            <div style={{ marginBottom: '10px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: '0.03em', fontFamily: FONTS.sans }}>
+                Occasions — click to add one
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {OCCASION_PRESETS.map((preset) => {
+                const queued = sealBatches.find((b) => b.key === preset.id);
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => addPresetSeal(preset)}
+                    title="Add one"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      borderRadius: '20px',
+                      border: `1px solid ${queued ? COLORS.brand : '#E5E7EB'}`,
+                      background: queued ? '#D8F3DC' : 'white',
+                      padding: '5px 10px 5px 8px',
+                      fontFamily: FONTS.sans,
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {preset.Icon({ size: 4.5 })}
+                    {queued && (
+                      <span style={{ background: COLORS.brand, color: 'white', borderRadius: '10px', padding: '1px 6px', fontWeight: 800, fontSize: '11px' }}>
+                        {queued.qty}
+                      </span>
+                    )}
+                    <span style={{ fontWeight: queued ? 700 : 500, color: queued ? COLORS.brand : COLORS.text }}>
+                      {preset.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Seal batch list — compact */}
+        {printMode === 'seal' && sealBatches.length > 0 && (
+          <div className="no-print" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+            {sealBatches.map((seal) => (
+              <div
+                key={seal.id}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -1145,14 +1922,14 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                   fontFamily: FONTS.sans,
                 }}
               >
-                <span style={{ background: COLORS.brand, color: 'white', borderRadius: '12px', padding: '1px 7px', fontWeight: 800, fontSize: '11px' }}>{batch.qty}</span>
-                <span style={{ fontWeight: 600, color: COLORS.text }}>{batch.product_name}</span>
-                <button onClick={() => removeBatch(batch.id)} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: '0', lineHeight: 1, display: 'flex' }}>
+                <span style={{ background: COLORS.brand, color: 'white', borderRadius: '12px', padding: '1px 7px', fontWeight: 800, fontSize: '11px' }}>{seal.qty}</span>
+                <span style={{ fontWeight: 600, color: COLORS.text }}>{seal.message}</span>
+                <button onClick={() => removeSealBatch(seal.id)} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: '0', lineHeight: 1, display: 'flex' }}>
                   <Trash2 size={12} />
                 </button>
               </div>
             ))}
-            <button onClick={clearAll} style={{ background: 'none', border: '1px solid #FCA5A5', color: '#EF4444', borderRadius: '20px', padding: '4px 10px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: FONTS.sans }}>
+            <button onClick={clearAllSeals} style={{ background: 'none', border: '1px solid #FCA5A5', color: '#EF4444', borderRadius: '20px', padding: '4px 10px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: FONTS.sans }}>
               Clear all
             </button>
           </div>
@@ -1179,7 +1956,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                   whiteSpace: 'nowrap',
                 }}
               >
-                Page {pageIdx + 1} of {pages.length} — {page.length} {printMode === 'bands' ? 'bands' : 'labels'}
+                Page {pageIdx + 1} of {pages.length} — {page.length} {printMode === 'bands' ? 'bands' : printMode === 'seal' ? 'seals' : 'labels'}
               </div>
               <div style={{ flex: 1, height: '1px', background: '#D1D5DB' }} />
             </div>
@@ -1191,6 +1968,10 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                   ? 'mini-page-sheet'
                   : printMode === 'address'
                   ? 'address-page-sheet'
+                  : printMode === 'premium'
+                  ? 'premium-page-sheet'
+                  : printMode === 'seal'
+                  ? 'seal-page-sheet'
                   : 'band-page-sheet'
               }
               style={{
@@ -1217,6 +1998,19 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                     brandName={businessConfig.brand.name}
                     onRemove={() => setAddressCount((c) => Math.max(0, c - 1))}
                   />
+                ) : printMode === 'premium' ? (
+                  <PremiumProductLabel
+                    key={label.uid}
+                    label={label}
+                    sizeMm={PREMIUM_LABEL_SIZE_MM[premiumBarSize]}
+                    onRemove={() => removeOneFromBatch(label.id)}
+                  />
+                ) : printMode === 'seal' ? (
+                  <OccasionSealLabel
+                    key={label.uid}
+                    seal={label}
+                    onRemove={() => removeOneSealFromQueue(label.id)}
+                  />
                 ) : (
                   <SoapBand
                     key={label.uid}
@@ -1228,16 +2022,19 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
               {/* Screen-only ghost slots for the remaining empty space on the last
                   page — shows exactly how many more labels are needed to avoid
                   printing (and wasting) a partially-filled sheet. Never printed. */}
-              {(printMode === 'mini' || printMode === 'address') &&
+              {(printMode === 'mini' || printMode === 'address' || printMode === 'premium' || printMode === 'seal') &&
                 pageIdx === pages.length - 1 &&
                 Array.from({ length: freeOnLastPage }, (_, i) => (
                   <div
                     key={`ghost-${i}`}
-                    className={`no-print ${printMode === 'mini' ? 'mini-label' : 'address-sticker'}`}
+                    className={`no-print ${
+                      printMode === 'mini' ? 'mini-label' : printMode === 'address' ? 'address-sticker' : printMode === 'premium' ? 'premium-label' : 'seal-label'
+                    }`}
                     style={{
                       background: 'transparent',
                       backgroundImage: 'none',
                       border: '1px dashed #E5E7EB',
+                      ...(printMode === 'premium' ? { width: `${PREMIUM_LABEL_SIZE_MM[premiumBarSize].width}mm`, height: `${PREMIUM_LABEL_SIZE_MM[premiumBarSize].height}mm` } : {}),
                     }}
                   />
                 ))}
@@ -1277,6 +2074,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
               ? 'Add pages to see the wrapper bands preview.'
               : printMode === 'address'
               ? 'Set a sticker count above to fill the sheet.'
+              : printMode === 'seal'
+              ? 'Click an occasion above, or type a custom message, to add a seal.'
               : 'Click a product above to add it to the sheet.'}
           </div>
         )}
