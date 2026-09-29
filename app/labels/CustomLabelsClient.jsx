@@ -8,8 +8,6 @@ import {
   BAND_SIZES,
   MINI_LABEL_SIZE_MM,
   MINI_LABEL_GRID,
-  MINI_TITLE_FONT_SIZE,
-  MINI_INGREDIENT_FONT_SIZE,
   PREMIUM_LABEL_SIZE_MM,
   PREMIUM_LABEL_GRID,
   SEAL_SIZE_MM,
@@ -18,70 +16,14 @@ import {
   ADDRESS_LABEL_GRID,
   EXCLUDED_FROM_LABELS,
 } from './constants';
-import { getDisplayName, getMiniLabelDescription, stripFragrance, computeWeightedCounts, computePagination } from './logic';
+import { stripFragrance, computeWeightedCounts, computePagination } from './logic';
 import { RemoveLabelButton } from './components/RemoveLabelButton';
 import { OCCASION_PRESETS } from './components/occasionPresets';
 import { OccasionSealLabel } from './components/OccasionSealLabel';
 import { AddressSticker } from './components/AddressSticker';
 import { SoapBand } from './components/SoapBand';
+import { MiniProductLabel } from './components/MiniProductLabel';
 import { useSealQueue } from './hooks/useSealQueue';
-
-function MiniProductLabel({ label, license, onRemove }) {
-  const ingredientText = getMiniLabelDescription(label);
-  const displayName = getDisplayName(label.product_name, label.base_type);
-  return (
-    <div className="mini-label">
-      {onRemove && <RemoveLabelButton onRemove={onRemove} />}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          height: '100%',
-          padding: '0.6mm 1.5mm',
-          boxSizing: 'border-box',
-        }}
-      >
-        <div
-          style={{
-            fontWeight: 800,
-            color: COLORS.brand,
-            lineHeight: 1.05,
-            textAlign: 'center',
-            fontSize: MINI_TITLE_FONT_SIZE,
-          }}
-        >
-          {displayName}
-        </div>
-
-        <div
-          style={{
-            width: '55%',
-            alignSelf: 'center',
-            borderBottom: `0.12mm solid ${COLORS.brand}`,
-            opacity: 0.3,
-            margin: '0.6mm 0',
-          }}
-        />
-
-        <div
-          style={{
-            width: '100%',
-            textAlign: 'center',
-            fontSize: MINI_INGREDIENT_FONT_SIZE,
-            fontWeight: 500,
-            color: COLORS.text,
-            lineHeight: 1.1,
-            overflowWrap: 'anywhere',
-            overflow: 'hidden',
-          }}
-        >
-          {ingredientText}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // The double-rule frame (dashed cut-guide outside, solid brand-green
 // hairline inside) is the main "premium" signal here, at effectively zero
