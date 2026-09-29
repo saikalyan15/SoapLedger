@@ -13,10 +13,13 @@ import {
 
 // The one style block covering all 5 label types, for both screen editing
 // and print. `jsx global` styles aren't scoped/hashed to a component, so
-// this plain template string (rendered via `<style jsx global>{getPrintStyles(printMode)}</style>`)
-// behaves identically to having the template literal inline — no need for
-// styled-jsx's external-CSS coordination, which exists to keep two files'
-// generated class names in sync for *scoped* styles, not global ones.
+// this plain template string behaves identically to having the template
+// literal inline — no need for styled-jsx's external-CSS coordination,
+// which exists to keep two files' generated class names in sync for
+// *scoped* styles, not global ones. Callers must assign the result to a
+// local variable before rendering it — `<style jsx>`'s child must be a
+// template literal, string, or identifier (Turbopack's styled-jsx check
+// rejects a function-call expression directly inside it).
 export function getPrintStyles(printMode) {
   return `
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');

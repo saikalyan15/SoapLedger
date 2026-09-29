@@ -176,9 +176,14 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           minHeight: '297mm',
         };
 
+  // Turbopack's styled-jsx check requires `<style jsx>`'s child to be a
+  // template literal, string, or plain identifier — not a function call
+  // expression — so the computed CSS is assigned here first.
+  const printStyles = getPrintStyles(printMode);
+
   return (
     <div className="labels-page">
-      <style jsx global>{getPrintStyles(printMode)}</style>
+      <style jsx global>{printStyles}</style>
 
       {/* Slim control bar */}
       <div
