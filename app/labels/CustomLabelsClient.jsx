@@ -17,6 +17,7 @@ import {
   EXCLUDED_FROM_LABELS,
 } from './constants';
 import { getDisplayName, getMiniLabelDescription, stripFragrance, computeWeightedCounts, computePagination } from './logic';
+import { RemoveLabelButton } from './components/RemoveLabelButton';
 
 // Shared wrapper for the small single-stroke line icons used on both new
 // sticker types. One brand-green stroke, no fill — kept deliberately
@@ -111,44 +112,6 @@ const OCCASION_PRESETS = [
   { id: 'christmas', label: 'Christmas', message: 'Merry Christmas', Icon: ChristmasTreeIcon, color: '#B91C1C' },
   { id: 'new-year', label: 'New Year', message: 'Happy New Year', Icon: FireworkIcon, color: '#B45309' },
 ];
-
-// Hover-to-reveal delete button rendered on top of a printed label, so a
-// single click removes that exact instance straight from the sheet
-// preview. Screen-only (no-print) — never appears in the printed output.
-function RemoveLabelButton({ onRemove }) {
-  return (
-    <button
-      type="button"
-      className="no-print remove-label-btn"
-      onClick={(e) => {
-        e.stopPropagation();
-        onRemove();
-      }}
-      title="Remove this label"
-      style={{
-        position: 'absolute',
-        top: '0.6mm',
-        right: '0.6mm',
-        zIndex: 2,
-        width: '3.2mm',
-        height: '3.2mm',
-        borderRadius: '50%',
-        border: 'none',
-        background: 'rgba(220,38,38,0.92)',
-        color: 'white',
-        fontSize: '2.4mm',
-        lineHeight: 1,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 0,
-      }}
-    >
-      ×
-    </button>
-  );
-}
 
 function MiniProductLabel({ label, license, onRemove }) {
   const ingredientText = getMiniLabelDescription(label);
