@@ -124,12 +124,16 @@ const MINI_LABEL_GRID = { columns: 7, rows: 11 };
 // One size fits both bar shapes rather than a per-bar-size toggle — sized
 // to sit inside the smaller dimension of each bar face already measured
 // for the band above (100g bar's front face ~54x35mm, 50g bar's square
-// top face ~40x40mm), with margin to spare on both: 36x30mm clears the
-// 50g bar's 40mm width with 2mm either side, and the 100g bar's 35mm
-// height with 2.5mm top and bottom. Verify against the actual bars with a
-// plain-paper test print before committing sticker stock.
-const PREMIUM_LABEL_SIZE_MM = { width: 36, height: 30 };
-const PREMIUM_LABEL_GRID = { columns: 5, rows: 8 };
+// top face ~40x40mm): 36x35mm clears the 50g bar's 40mm width with 2mm
+// either side, and runs flush with the 100g bar's 35mm height (no
+// margin left on that edge — raised from 30mm to give long product
+// names/ingredient lists and the "No Fragrance" badge room without
+// clipping). Verify against the actual bars with a plain-paper test
+// print before committing sticker stock.
+const PREMIUM_LABEL_SIZE_MM = { width: 36, height: 35 };
+// 7 rows (not 8) — at 35mm tall, an 8th row would overflow the 297mm A4
+// page height once the sheet's padding and inter-row gaps are added.
+const PREMIUM_LABEL_GRID = { columns: 5, rows: 7 };
 
 // Occasion "seal" sticker — round, sized to hold shut a folded sheet of
 // brown paper (a "topper wrap" laid over a bundle of already cling- and
