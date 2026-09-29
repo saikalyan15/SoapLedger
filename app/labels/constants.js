@@ -85,6 +85,12 @@ export const PREMIUM_LABEL_GRID = { columns: 5, rows: 7 };
 export const SEAL_SIZE_MM = { width: 48, height: 48 };
 export const SEAL_GRID = { columns: 3, rows: 5 };
 
+// Address sticker — 62x36mm, 3x7 grid, 21 per sheet (8mm padding + 3mm
+// gaps: 7*36 + 6*3 = 270mm fits inside the 281mm usable height of a
+// 297mm-tall A4 page).
+export const ADDRESS_LABEL_SIZE_MM = { width: 62, height: 36 };
+export const ADDRESS_LABEL_GRID = { columns: 3, rows: 7 };
+
 // These product lines don't get individual labels printed (gift/seasonal
 // bundles, kids sets, discovery boxes, and travel minis are packaged and
 // labeled differently) — keep them out of the label palette entirely.

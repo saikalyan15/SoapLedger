@@ -14,12 +14,15 @@ import {
   PREMIUM_LABEL_GRID,
   SEAL_SIZE_MM,
   SEAL_GRID,
+  ADDRESS_LABEL_SIZE_MM,
+  ADDRESS_LABEL_GRID,
   EXCLUDED_FROM_LABELS,
 } from './constants';
 import { getDisplayName, getMiniLabelDescription, stripFragrance, computeWeightedCounts, computePagination } from './logic';
 import { RemoveLabelButton } from './components/RemoveLabelButton';
 import { OCCASION_PRESETS } from './components/occasionPresets';
 import { OccasionSealLabel } from './components/OccasionSealLabel';
+import { AddressSticker } from './components/AddressSticker';
 import { useSealQueue } from './hooks/useSealQueue';
 
 function MiniProductLabel({ label, license, onRemove }) {
@@ -176,66 +179,6 @@ function SoapBand({ license, size = BAND_SIZES['100g'] }) {
   );
 }
 
-function AddressSticker({ address, brandName, onRemove }) {
-  return (
-    <div className="address-sticker">
-      {onRemove && <RemoveLabelButton onRemove={onRemove} />}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          height: '100%',
-          padding: '2.5mm 3mm',
-          boxSizing: 'border-box',
-        }}
-      >
-        {/* FROM tag + brand name */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5mm' }}>
-          <span
-            style={{
-              display: 'inline-block',
-              background: COLORS.brand,
-              color: 'white',
-              fontWeight: 800,
-              fontSize: '6.5pt',
-              letterSpacing: '0.1em',
-              borderRadius: '0.8mm',
-              padding: '0.4mm 1.5mm',
-              WebkitPrintColorAdjust: 'exact',
-              printColorAdjust: 'exact',
-            }}
-          >
-            FROM
-          </span>
-          <div style={{ flex: 1, borderTop: `0.2mm solid ${COLORS.brand}`, opacity: 0.4 }} />
-          <span style={{ fontSize: '6.5pt', fontWeight: 700, color: COLORS.brand, whiteSpace: 'nowrap' }}>
-            {brandName}
-          </span>
-        </div>
-
-        {/* Sender name */}
-        <div style={{ fontSize: '11pt', fontWeight: 800, color: COLORS.text, lineHeight: 1.15 }}>
-          {address.name}
-        </div>
-
-        {/* Address lines */}
-        <div style={{ fontSize: '8.5pt', color: COLORS.text, lineHeight: 1.35, fontWeight: 500 }}>
-          {address.line1}<br />
-          {address.line2}<br />
-          {address.line3}<br />
-          {address.cityStateZip}
-        </div>
-
-        {/* Phone */}
-        <div style={{ fontSize: '9pt', fontWeight: 700, color: COLORS.text }}>
-          Ph: {address.phone}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // The double-rule frame (dashed cut-guide outside, solid brand-green
 // hairline inside) is the main "premium" signal here, at effectively zero
 // extra ink — full name + full ingredients, not the 44-char mini-sticker
@@ -379,9 +322,10 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   const miniPerPage = MINI_LABEL_GRID.columns * MINI_LABEL_GRID.rows;
   const premiumPerPage = PREMIUM_LABEL_GRID.columns * PREMIUM_LABEL_GRID.rows;
   const sealPerPage = SEAL_GRID.columns * SEAL_GRID.rows;
+  const addressPerPage = ADDRESS_LABEL_GRID.columns * ADDRESS_LABEL_GRID.rows;
   const labelsPerPage =
     printMode === 'mini' ? miniPerPage
-    : printMode === 'address' ? 21
+    : printMode === 'address' ? addressPerPage
     : printMode === 'premium' ? premiumPerPage
     : printMode === 'seal' ? sealPerPage
     : bandsPerPage;
@@ -513,7 +457,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
       : printMode === 'address'
       ? {
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 62mm)',
+          gridTemplateColumns: `repeat(${ADDRESS_LABEL_GRID.columns}, ${ADDRESS_LABEL_SIZE_MM.width}mm)`,
           gap: '3mm',
           justifyContent: 'center',
           alignContent: 'start',
@@ -586,8 +530,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
         }
 
         .address-sticker {
-          width: 62mm;
-          height: 36mm;
+          width: ${ADDRESS_LABEL_SIZE_MM.width}mm;
+          height: ${ADDRESS_LABEL_SIZE_MM.height}mm;
           border: 1px dashed #ccc;
           display: flex;
           flex-direction: column;
@@ -748,7 +692,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
 
           .address-page-sheet {
             display: grid !important;
-            grid-template-columns: repeat(3, 62mm) !important;
+            grid-template-columns: repeat(${ADDRESS_LABEL_GRID.columns}, ${ADDRESS_LABEL_SIZE_MM.width}mm) !important;
             gap: 3mm !important;
             justify-content: center !important;
             align-content: start !important;
@@ -855,8 +799,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           }
 
           .address-sticker {
-            width: 62mm !important;
-            height: 36mm !important;
+            width: ${ADDRESS_LABEL_SIZE_MM.width}mm !important;
+            height: ${ADDRESS_LABEL_SIZE_MM.height}mm !important;
             border: 0.1mm dashed #000 !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
