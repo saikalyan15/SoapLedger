@@ -16,7 +16,7 @@ import {
   ADDRESS_LABEL_GRID,
   EXCLUDED_FROM_LABELS,
 } from './constants';
-import { computeWeightedCounts, computePagination } from './logic';
+import { computePagination } from './logic';
 import { OCCASION_PRESETS } from './components/occasionPresets';
 import { OccasionSealLabel } from './components/OccasionSealLabel';
 import { AddressSticker } from './components/AddressSticker';
@@ -24,36 +24,32 @@ import { SoapBand } from './components/SoapBand';
 import { MiniProductLabel } from './components/MiniProductLabel';
 import { PremiumProductLabel } from './components/PremiumProductLabel';
 import { useSealQueue } from './hooks/useSealQueue';
+import { useProductBatchQueue } from './hooks/useProductBatchQueue';
 
 export default function CustomLabelsClient({ products: allProducts, businessConfig }) {
   const products = allProducts.filter(
     (p) => !EXCLUDED_FROM_LABELS.some((re) => re.test(p.name)),
   );
 
-  // Each batch: { id, product_id, product_name, base_type, weight_grams, ingredients, mini_label_description, fragranceFree, qty }
-  const [batches, setBatches] = useState([]);
-  // Premium keeps its own queue, separate from `batches` above — mini and
-  // premium used to share one array, which meant quantities queued in one
-  // mode silently bled into the other when you switched modes.
-  const [premiumBatches, setPremiumBatches] = useState([]);
-  // Which variant `addOne`/`addQuantityToAll` add to next, premium only —
-  // a couple of customers are sensitive to fragrance, so a run can mix
-  // regular and fragrance-free copies of the same product. Toggle before
-  // adding, since a product's palette chip only shows one running total.
-  const [fragranceFreeMode, setFragranceFreeMode] = useState(false);
-  // Bulk-seed amount, used only by the "Add to all" button below the
-  // product palette — per-product fine-tuning happens by clicking a chip
-  // (add one) or the × on a printed label in the sheet (remove one).
-  const [quantity, setQuantity] = useState(1);
   const [printMode, setPrintMode] = useState('bands'); // 'bands' | 'mini' | 'address' | 'premium' | 'seal'
   const [bandPages, setBandPages] = useState(1);
   const [bandSize, setBandSize] = useState('100g'); // '100g' | '50g'
   const [addressCount, setAddressCount] = useState(21);
 
-  // Premium reads/writes its own queue; every other batch-backed mode
-  // (currently just mini) keeps using `batches`.
-  const activeBatches = printMode === 'premium' ? premiumBatches : batches;
-  const setActiveBatches = printMode === 'premium' ? setPremiumBatches : setBatches;
+  const {
+    activeBatches,
+    fragranceFreeMode,
+    setFragranceFreeMode,
+    quantity,
+    setQuantity,
+    addOne,
+    addQuantityToAll,
+    removeOneFromBatch,
+    removeOneByProduct,
+    removeBatch,
+    clearAll,
+    fillSheetEvenly: fillActiveBatchesEvenly,
+  } = useProductBatchQueue(printMode, products);
 
   const {
     sealBatches,
@@ -86,76 +82,6 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
     : printMode === 'seal' ? sealPerPage
     : bandsPerPage;
 
-  // Keyed by (product_id, fragranceFree) rather than product_id alone, so
-  // premium can carry a regular and a fragrance-free queue entry for the
-  // same product side by side instead of one overwriting the other.
-  const bumpBatch = (prev, product, amount, fragranceFree = false) => {
-    const idx = prev.findIndex((b) => b.product_id === product.id && !!b.fragranceFree === fragranceFree);
-    if (idx !== -1) {
-      const next = [...prev];
-      next[idx] = { ...next[idx], qty: next[idx].qty + amount };
-      return next;
-    }
-    return [
-      ...prev,
-      {
-        id: `${product.id}-${fragranceFree ? 'nf-' : ''}${Date.now()}`,
-        product_id: product.id,
-        product_name: product.name,
-        base_type: product.base_type,
-        weight_grams: product.weight_grams,
-        ingredients: product.ingredients,
-        mini_label_description: product.mini_label_description,
-        fragranceFree,
-        qty: amount,
-      },
-    ];
-  };
-
-  // Click a product chip → one label lands on the sheet immediately, as
-  // whichever variant fragranceFreeMode currently points to.
-  const addOne = (product) =>
-    setActiveBatches((prev) => bumpBatch(prev, product, 1, printMode === 'premium' && fragranceFreeMode));
-
-  // Bulk-seed every product at once with the shared quantity field, for
-  // starting a baseline before fine-tuning up/down per product.
-  const addQuantityToAll = () => {
-    setActiveBatches((prev) =>
-      products.reduce((acc, p) => bumpBatch(acc, p, quantity, printMode === 'premium' && fragranceFreeMode), prev),
-    );
-  };
-
-  const dropOne = (prev, idx) => {
-    if (prev[idx].qty <= 1) return prev.filter((_, i) => i !== idx);
-    const next = [...prev];
-    next[idx] = { ...next[idx], qty: next[idx].qty - 1 };
-    return next;
-  };
-
-  // Click the × on a printed label in the sheet → remove that exact one.
-  const removeOneFromBatch = (batchId) => {
-    setActiveBatches((prev) => {
-      const idx = prev.findIndex((b) => b.id === batchId);
-      return idx === -1 ? prev : dropOne(prev, idx);
-    });
-  };
-
-  // Click the − on a product chip → remove one, without hunting for it in
-  // the sheet. Targets whichever variant fragranceFreeMode currently
-  // points to, falling back to the other variant if that one is empty.
-  const removeOneByProduct = (productId) => {
-    setActiveBatches((prev) => {
-      const wantNF = printMode === 'premium' && fragranceFreeMode;
-      let idx = prev.findIndex((b) => b.product_id === productId && !!b.fragranceFree === wantNF);
-      if (idx === -1) idx = prev.findIndex((b) => b.product_id === productId);
-      return idx === -1 ? prev : dropOne(prev, idx);
-    });
-  };
-
-  const removeBatch = (id) =>
-    setActiveBatches((prev) => prev.filter((b) => b.id !== id));
-  const clearAll = () => setActiveBatches([]);
-
   // Expand batches into flat label list for the print grid
   const queue = useMemo(() => {
     if (printMode === 'bands') {
@@ -182,19 +108,11 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   // partially-filled sheet of (expensive) adhesive paper.
   const { pages, totalLabels, lastPageCount, freeOnLastPage } = computePagination(queue, labelsPerPage);
 
-  // One-click default: spread just enough labels across every visible
-  // product to exactly fill up the sheet currently in progress (or a whole
-  // fresh sheet if nothing's queued yet) — so a full page of variety is one
-  // click away instead of clicking each chip by hand.
-  const fillSheetEvenly = () => {
-    const target = totalLabels === 0 ? labelsPerPage : freeOnLastPage;
-    if (target <= 0 || products.length === 0) return;
-
-    const counts = computeWeightedCounts(products, target);
-    setActiveBatches((prev) =>
-      products.reduce((acc, p, i) => bumpBatch(acc, p, counts[i], printMode === 'premium' && fragranceFreeMode), prev),
-    );
-  };
+  // One-click "fill sheet" for the active product queue (mini/premium) —
+  // pagination values are computed here (via computePagination above,
+  // which depends on `queue`/`activeBatches`), so they're passed into the
+  // hook's fillSheetEvenly rather than computed inside it.
+  const fillSheetEvenly = () => fillActiveBatchesEvenly(freeOnLastPage, labelsPerPage, totalLabels);
 
   // Per-mode sheet layout — mini prints landscape, edge-to-edge, centered on the page.
   const sheetLayoutStyle =
