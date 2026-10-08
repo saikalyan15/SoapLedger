@@ -9,6 +9,8 @@ import {
   SEAL_GRID,
   ADDRESS_LABEL_SIZE_MM,
   ADDRESS_LABEL_GRID,
+  BODY_CARE_STICKER_SIZE_MM,
+  BODY_CARE_STICKER_GRID,
 } from './constants';
 
 // The one style block covering all 5 label types, for both screen editing
@@ -100,6 +102,34 @@ export function getPrintStyles(printMode) {
           border-radius: 50%;
         }
 
+        /* Body-care sticker: round, lid-mounted — the per-product color
+           fills the whole circle as a band, with a white inner disc
+           (same double-circle idea as the seal, colors swapped) holding
+           the logo + name. */
+        .bodycare-sticker {
+          width: ${BODY_CARE_STICKER_SIZE_MM.width}mm;
+          height: ${BODY_CARE_STICKER_SIZE_MM.height}mm;
+          border: 1px dashed #ccc;
+          border-radius: 50%;
+          position: relative;
+          box-sizing: border-box;
+          overflow: hidden;
+          padding: 2mm;
+        }
+        .bodycare-sticker-disc {
+          height: 100%;
+          width: 100%;
+          border-radius: 50%;
+          background: white;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 1mm;
+          overflow: hidden;
+        }
+
         /* Remove-on-hover: the × only shows while hovering a printed label,
            so the sheet preview stays clean until you're pointing at the
            exact one you want to pull off. */
@@ -110,7 +140,8 @@ export function getPrintStyles(printMode) {
         .mini-label:hover .remove-label-btn,
         .address-sticker:hover .remove-label-btn,
         .premium-label:hover .remove-label-btn,
-        .seal-label:hover .remove-label-btn {
+        .seal-label:hover .remove-label-btn,
+        .bodycare-sticker:hover .remove-label-btn {
           opacity: 1;
         }
 
@@ -271,6 +302,27 @@ export function getPrintStyles(printMode) {
             break-after: auto;
           }
 
+          .bodycare-page-sheet {
+            display: grid !important;
+            grid-template-columns: repeat(${BODY_CARE_STICKER_GRID.columns}, ${BODY_CARE_STICKER_SIZE_MM.width}mm) !important;
+            gap: 4mm !important;
+            justify-content: center !important;
+            align-content: start !important;
+            padding: 8mm !important;
+            margin: 0 auto !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            page-break-after: always;
+            break-after: page;
+            width: 210mm !important;
+            height: 297mm !important;
+            box-sizing: border-box !important;
+          }
+          .bodycare-page-sheet:last-child {
+            page-break-after: auto;
+            break-after: auto;
+          }
+
           .band-page-sheet {
             display: flex !important;
             flex-direction: column !important;
@@ -348,6 +400,17 @@ export function getPrintStyles(printMode) {
             box-sizing: border-box !important;
             overflow: hidden !important;
             background: white !important;
+          }
+
+          .bodycare-sticker {
+            width: ${BODY_CARE_STICKER_SIZE_MM.width}mm !important;
+            height: ${BODY_CARE_STICKER_SIZE_MM.height}mm !important;
+            border: 0.1mm dashed #000 !important;
+            border-radius: 50% !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
           }
 
           .soap-band-container {

@@ -14,17 +14,22 @@ import {
   SEAL_GRID,
   ADDRESS_LABEL_SIZE_MM,
   ADDRESS_LABEL_GRID,
+  BODY_CARE_STICKER_SIZE_MM,
+  BODY_CARE_STICKER_GRID,
   EXCLUDED_FROM_LABELS,
 } from './constants';
 import { computePagination } from './logic';
 import { getPrintStyles } from './printStyles';
 import { OCCASION_PRESETS } from './components/occasionPresets';
+import { BODY_CARE_PRODUCTS } from './components/bodyCareProducts';
 import { OccasionSealLabel } from './components/OccasionSealLabel';
+import { BodyCareStickerLabel } from './components/BodyCareStickerLabel';
 import { AddressSticker } from './components/AddressSticker';
 import { SoapBand } from './components/SoapBand';
 import { MiniProductLabel } from './components/MiniProductLabel';
 import { PremiumProductLabel } from './components/PremiumProductLabel';
 import { useSealQueue } from './hooks/useSealQueue';
+import { useBodyCareQueue } from './hooks/useBodyCareQueue';
 import { useProductBatchQueue } from './hooks/useProductBatchQueue';
 
 export default function CustomLabelsClient({ products: allProducts, businessConfig }) {
@@ -32,7 +37,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
     (p) => !EXCLUDED_FROM_LABELS.some((re) => re.test(p.name)),
   );
 
-  const [printMode, setPrintMode] = useState('bands'); // 'bands' | 'mini' | 'address' | 'premium' | 'seal'
+  const [printMode, setPrintMode] = useState('bands'); // 'bands' | 'mini' | 'address' | 'premium' | 'seal' | 'bodycare'
   const [bandPages, setBandPages] = useState(1);
   const [bandSize, setBandSize] = useState('100g'); // '100g' | '50g'
   const [addressCount, setAddressCount] = useState(21);
@@ -63,6 +68,14 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
     clearAllSeals,
   } = useSealQueue();
 
+  const {
+    bodyCareBatches,
+    addBodyCareItem,
+    removeOneBodyCareItem,
+    removeBodyCareBatch,
+    clearAllBodyCare,
+  } = useBodyCareQueue();
+
   // Mini: 40x10mm (see MINI_LABEL_SIZE_MM above), 7x21 grid on a 297x210mm
   // landscape A4 sheet (147/sheet, auto-centered — width doesn't tile
   // edge-to-edge at this size). Fits inside the 100g band's clear space but
@@ -76,11 +89,13 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   const premiumPerPage = PREMIUM_LABEL_GRID.columns * PREMIUM_LABEL_GRID.rows;
   const sealPerPage = SEAL_GRID.columns * SEAL_GRID.rows;
   const addressPerPage = ADDRESS_LABEL_GRID.columns * ADDRESS_LABEL_GRID.rows;
+  const bodyCarePerPage = BODY_CARE_STICKER_GRID.columns * BODY_CARE_STICKER_GRID.rows;
   const labelsPerPage =
     printMode === 'mini' ? miniPerPage
     : printMode === 'address' ? addressPerPage
     : printMode === 'premium' ? premiumPerPage
     : printMode === 'seal' ? sealPerPage
+    : printMode === 'bodycare' ? bodyCarePerPage
     : bandsPerPage;
 
   // Expand batches into flat label list for the print grid
@@ -99,10 +114,15 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
         Array.from({ length: b.qty }, (_, i) => ({ uid: `${b.id}-${i}`, ...b })),
       );
     }
+    if (printMode === 'bodycare') {
+      return bodyCareBatches.flatMap((b) =>
+        Array.from({ length: b.qty }, (_, i) => ({ uid: `${b.id}-${i}`, ...b })),
+      );
+    }
     return activeBatches.flatMap((b) =>
       Array.from({ length: b.qty }, (_, i) => ({ uid: `${b.id}-${i}`, ...b })),
     );
-  }, [activeBatches, sealBatches, printMode, bandPages, bandsPerPage, addressCount]);
+  }, [activeBatches, sealBatches, bodyCareBatches, printMode, bandPages, bandsPerPage, addressCount]);
 
   // How full the last page is — surfaced as a capacity meter + ghost slots
   // so it's obvious how many more labels are needed to avoid wasting a
@@ -157,6 +177,18 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
       ? {
           display: 'grid',
           gridTemplateColumns: `repeat(${SEAL_GRID.columns}, ${SEAL_SIZE_MM.width}mm)`,
+          gap: '4mm',
+          justifyContent: 'center',
+          alignContent: 'start',
+          padding: '8mm',
+          width: '210mm',
+          height: 'auto',
+          minHeight: '297mm',
+        }
+      : printMode === 'bodycare'
+      ? {
+          display: 'grid',
+          gridTemplateColumns: `repeat(${BODY_CARE_STICKER_GRID.columns}, ${BODY_CARE_STICKER_SIZE_MM.width}mm)`,
           gap: '4mm',
           justifyContent: 'center',
           alignContent: 'start',
@@ -278,6 +310,22 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
             }}
           >
             Occasion Seal
+          </button>
+          <button
+            onClick={() => setPrintMode('bodycare')}
+            style={{
+              background: printMode === 'bodycare' ? COLORS.brand : 'transparent',
+              color: printMode === 'bodycare' ? 'white' : COLORS.muted,
+              border: 'none',
+              padding: '6px 14px',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: FONTS.sans,
+            }}
+          >
+            Body Care
           </button>
         </div>
 
@@ -448,6 +496,25 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                 )}
               </span>
             )}
+          </div>
+        )}
+
+        {/* Body care: running capacity readout — selection happens via the
+            product palette below, so there's no input here. */}
+        {printMode === 'bodycare' && bodyCareBatches.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '12px', color: COLORS.muted, fontFamily: FONTS.sans }}>
+              {totalLabels} sticker{totalLabels !== 1 ? 's' : ''} · {pages.length} page{pages.length !== 1 ? 's' : ''}
+              {' · '}
+              {freeOnLastPage === 0 ? (
+                <span style={{ color: COLORS.brand, fontWeight: 700 }}>last page full</span>
+              ) : (
+                <span>
+                  {lastPageCount}/{labelsPerPage} on last page —{' '}
+                  <span style={{ color: '#B45309', fontWeight: 700 }}>{freeOnLastPage} free</span>
+                </span>
+              )}
+            </span>
           </div>
         )}
 
@@ -729,6 +796,83 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           </div>
         )}
 
+        {/* Body-care product palette — click a product to add one sticker. */}
+        {printMode === 'bodycare' && (
+          <div className="no-print" style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', marginBottom: '12px' }}>
+            <div style={{ marginBottom: '10px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: '0.03em', fontFamily: FONTS.sans }}>
+                Body Care Products — click to add one
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {BODY_CARE_PRODUCTS.map((item) => {
+                const queued = bodyCareBatches.find((b) => b.id === item.id);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => addBodyCareItem(item)}
+                    title="Add one"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      borderRadius: '20px',
+                      border: `1px solid ${queued ? item.color : '#E5E7EB'}`,
+                      background: queued ? `${item.color}1A` : 'white',
+                      padding: '5px 10px 5px 8px',
+                      fontFamily: FONTS.sans,
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: item.color, flexShrink: 0 }} />
+                    {queued && (
+                      <span style={{ background: item.color, color: 'white', borderRadius: '10px', padding: '1px 6px', fontWeight: 800, fontSize: '11px' }}>
+                        {queued.qty}
+                      </span>
+                    )}
+                    <span style={{ fontWeight: queued ? 700 : 500, color: queued ? item.color : COLORS.text }}>
+                      {item.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Body-care batch list — compact */}
+        {printMode === 'bodycare' && bodyCareBatches.length > 0 && (
+          <div className="no-print" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+            {bodyCareBatches.map((batch) => (
+              <div
+                key={batch.id}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'white',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '20px',
+                  padding: '4px 10px 4px 6px',
+                  fontSize: '12px',
+                  fontFamily: FONTS.sans,
+                }}
+              >
+                <span style={{ background: COLORS.brand, color: 'white', borderRadius: '12px', padding: '1px 7px', fontWeight: 800, fontSize: '11px' }}>{batch.qty}</span>
+                <span style={{ fontWeight: 600, color: COLORS.text }}>{batch.name}</span>
+                <button onClick={() => removeBodyCareBatch(batch.id)} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', padding: '0', lineHeight: 1, display: 'flex' }}>
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+            <button onClick={clearAllBodyCare} style={{ background: 'none', border: '1px solid #FCA5A5', color: '#EF4444', borderRadius: '20px', padding: '4px 10px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: FONTS.sans }}>
+              Clear all
+            </button>
+          </div>
+        )}
+
         {/* Seal batch list — compact */}
         {printMode === 'seal' && sealBatches.length > 0 && (
           <div className="no-print" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
@@ -781,7 +925,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                   whiteSpace: 'nowrap',
                 }}
               >
-                Page {pageIdx + 1} of {pages.length} — {page.length} {printMode === 'bands' ? 'bands' : printMode === 'seal' ? 'seals' : 'labels'}
+                Page {pageIdx + 1} of {pages.length} — {page.length} {printMode === 'bands' ? 'bands' : printMode === 'seal' ? 'seals' : printMode === 'bodycare' ? 'stickers' : 'labels'}
               </div>
               <div style={{ flex: 1, height: '1px', background: '#D1D5DB' }} />
             </div>
@@ -797,6 +941,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                   ? 'premium-page-sheet'
                   : printMode === 'seal'
                   ? 'seal-page-sheet'
+                  : printMode === 'bodycare'
+                  ? 'bodycare-page-sheet'
                   : 'band-page-sheet'
               }
               style={{
@@ -836,6 +982,12 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
                     seal={label}
                     onRemove={() => removeOneSealFromQueue(label.id)}
                   />
+                ) : printMode === 'bodycare' ? (
+                  <BodyCareStickerLabel
+                    key={label.uid}
+                    item={label}
+                    onRemove={() => removeOneBodyCareItem(label.id)}
+                  />
                 ) : (
                   <SoapBand
                     key={label.uid}
@@ -847,13 +999,13 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
               {/* Screen-only ghost slots for the remaining empty space on the last
                   page — shows exactly how many more labels are needed to avoid
                   printing (and wasting) a partially-filled sheet. Never printed. */}
-              {(printMode === 'mini' || printMode === 'address' || printMode === 'premium' || printMode === 'seal') &&
+              {(printMode === 'mini' || printMode === 'address' || printMode === 'premium' || printMode === 'seal' || printMode === 'bodycare') &&
                 pageIdx === pages.length - 1 &&
                 Array.from({ length: freeOnLastPage }, (_, i) => (
                   <div
                     key={`ghost-${i}`}
                     className={`no-print ${
-                      printMode === 'mini' ? 'mini-label' : printMode === 'address' ? 'address-sticker' : printMode === 'premium' ? 'premium-label' : 'seal-label'
+                      printMode === 'mini' ? 'mini-label' : printMode === 'address' ? 'address-sticker' : printMode === 'premium' ? 'premium-label' : printMode === 'bodycare' ? 'bodycare-sticker' : 'seal-label'
                     }`}
                     style={{
                       background: 'transparent',
@@ -901,6 +1053,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
               ? 'Set a sticker count above to fill the sheet.'
               : printMode === 'seal'
               ? 'Click an occasion above, or type a custom message, to add a seal.'
+              : printMode === 'bodycare'
+              ? 'Click a product above to add a sticker.'
               : 'Click a product above to add it to the sheet.'}
           </div>
         )}

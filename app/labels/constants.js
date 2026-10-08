@@ -91,6 +91,17 @@ export const SEAL_GRID = { columns: 3, rows: 5 };
 export const ADDRESS_LABEL_SIZE_MM = { width: 62, height: 36 };
 export const ADDRESS_LABEL_GRID = { columns: 3, rows: 7 };
 
+// Body-care sticker (body butter, lip balm, ...) — round, stuck on the
+// flat black lid of a jar rather than wrapped around a side, so round
+// like the occasion seal, just much smaller: the lid is ~2in/50mm across,
+// the sticker sits centered on it at ~1in/25mm. Exact mm pinned here after
+// a plain-paper test print against the real jars (see the labels plan).
+// 6x9 grid on a 210x297mm portrait A4 sheet (54/sheet; 8mm padding + 4mm
+// gaps: 6*25 + 5*4 = 170mm fits the 194mm usable width, 9*25 + 8*4 = 257mm
+// fits the 281mm usable height).
+export const BODY_CARE_STICKER_SIZE_MM = { width: 25, height: 25 };
+export const BODY_CARE_STICKER_GRID = { columns: 6, rows: 9 };
+
 // These product lines don't get individual labels printed (gift/seasonal
 // bundles, kids sets, discovery boxes, and travel minis are packaged and
 // labeled differently) — keep them out of the label palette entirely.
