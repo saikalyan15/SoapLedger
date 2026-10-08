@@ -10,6 +10,7 @@ import {
   ADDRESS_LABEL_SIZE_MM,
   ADDRESS_LABEL_GRID,
   BODY_CARE_STICKER_SIZE_MM,
+  BODY_CARE_STICKER_INK_SIZE_MM,
   BODY_CARE_STICKER_GRID,
 } from './constants';
 
@@ -102,8 +103,11 @@ export function getPrintStyles(printMode) {
           border-radius: 50%;
         }
 
-        /* Body-care sticker: round, lid-mounted — the per-product color
-           fills the whole circle as a band, with a white inner disc
+        /* Body-care sticker: round, lid-mounted. The outer circle is the
+           dashed scissor-cut guide, sized bigger than the inked
+           bodycare-sticker-ink circle inside it so a wavy hand cut lands
+           in blank margin, not in the color band. The ink circle itself
+           is the per-product color as a band, with a white inner disc
            (same double-circle idea as the seal, colors swapped) holding
            the logo + name. */
         .bodycare-sticker {
@@ -114,7 +118,20 @@ export function getPrintStyles(printMode) {
           position: relative;
           box-sizing: border-box;
           overflow: hidden;
+          background: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .bodycare-sticker-ink {
+          width: ${BODY_CARE_STICKER_INK_SIZE_MM}mm;
+          height: ${BODY_CARE_STICKER_INK_SIZE_MM}mm;
+          border-radius: 50%;
+          box-sizing: border-box;
           padding: 2mm;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
         .bodycare-sticker-disc {
           height: 100%;
@@ -411,6 +428,7 @@ export function getPrintStyles(printMode) {
             break-inside: avoid !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
+            background: white !important;
           }
 
           .soap-band-container {

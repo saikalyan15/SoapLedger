@@ -94,13 +94,25 @@ export const ADDRESS_LABEL_GRID = { columns: 3, rows: 7 };
 // Body-care sticker (body butter, lip balm, ...) — round, stuck on the
 // flat black lid of a jar rather than wrapped around a side, so round
 // like the occasion seal, just much smaller: the lid is ~2in/50mm across,
-// the sticker sits centered on it at ~1in/25mm. Exact mm pinned here after
-// a plain-paper test print against the real jars (see the labels plan).
-// 6x9 grid on a 210x297mm portrait A4 sheet (54/sheet; 8mm padding + 4mm
-// gaps: 6*25 + 5*4 = 170mm fits the 194mm usable width, 9*25 + 8*4 = 257mm
+// the inked colored circle sits centered on it at ~1in/25mm. Exact mm
+// pinned here after a plain-paper test print against the real jars (see
+// the labels plan).
+// The cut-guide circle is deliberately bigger than the ink: a hand-cut
+// scissor line wobbles, and with no margin that wobble nicks straight into
+// the color band. BODY_CARE_STICKER_MARGIN_MM of blank paper on every side
+// means the cut can wander up to that much and still land in white, not in
+// ink — so BODY_CARE_STICKER_SIZE_MM (what you actually cut along) is the
+// 25mm ink circle plus the margin on both sides.
+export const BODY_CARE_STICKER_INK_SIZE_MM = 25;
+export const BODY_CARE_STICKER_MARGIN_MM = 1.5;
+export const BODY_CARE_STICKER_SIZE_MM = {
+  width: BODY_CARE_STICKER_INK_SIZE_MM + BODY_CARE_STICKER_MARGIN_MM * 2,
+  height: BODY_CARE_STICKER_INK_SIZE_MM + BODY_CARE_STICKER_MARGIN_MM * 2,
+};
+// 6x8 grid on a 210x297mm portrait A4 sheet (48/sheet; 8mm padding + 4mm
+// gaps: 6*28 + 5*4 = 188mm fits the 194mm usable width, 8*28 + 7*4 = 252mm
 // fits the 281mm usable height).
-export const BODY_CARE_STICKER_SIZE_MM = { width: 25, height: 25 };
-export const BODY_CARE_STICKER_GRID = { columns: 6, rows: 9 };
+export const BODY_CARE_STICKER_GRID = { columns: 6, rows: 8 };
 
 // These product lines don't get individual labels printed (gift/seasonal
 // bundles, kids sets, discovery boxes, and travel minis are packaged and
