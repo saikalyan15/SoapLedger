@@ -14,7 +14,7 @@ export function BodyCareStickerLabel({ item, onRemove }) {
         <img
           src="/logo/healing-soil-v2.1-transparent.png"
           alt=""
-          style={{ width: '7mm', height: 'auto', marginBottom: '0.6mm' }}
+          style={{ width: '9.5mm', height: 'auto', marginBottom: '0.5mm' }}
         />
         <div
           style={{

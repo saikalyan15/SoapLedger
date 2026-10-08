@@ -74,7 +74,8 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
     removeOneBodyCareItem,
     removeBodyCareBatch,
     clearAllBodyCare,
-  } = useBodyCareQueue();
+    fillBodyCareSheetEvenly,
+  } = useBodyCareQueue(BODY_CARE_PRODUCTS);
 
   // Mini: 40x10mm (see MINI_LABEL_SIZE_MM above), 7x21 grid on a 297x210mm
   // landscape A4 sheet (147/sheet, auto-centered — width doesn't tile
@@ -134,6 +135,7 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
   // which depends on `queue`/`activeBatches`), so they're passed into the
   // hook's fillSheetEvenly rather than computed inside it.
   const fillSheetEvenly = () => fillActiveBatchesEvenly(freeOnLastPage, labelsPerPage, totalLabels);
+  const fillBodyCareSheet = () => fillBodyCareSheetEvenly(freeOnLastPage, labelsPerPage, totalLabels);
 
   // Per-mode sheet layout — mini prints landscape, edge-to-edge, centered on the page.
   const sheetLayoutStyle =
@@ -499,22 +501,47 @@ export default function CustomLabelsClient({ products: allProducts, businessConf
           </div>
         )}
 
-        {/* Body care: running capacity readout — selection happens via the
-            product palette below, so there's no input here. */}
-        {printMode === 'bodycare' && bodyCareBatches.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', color: COLORS.muted, fontFamily: FONTS.sans }}>
-              {totalLabels} sticker{totalLabels !== 1 ? 's' : ''} · {pages.length} page{pages.length !== 1 ? 's' : ''}
-              {' · '}
-              {freeOnLastPage === 0 ? (
-                <span style={{ color: COLORS.brand, fontWeight: 700 }}>last page full</span>
-              ) : (
-                <span>
-                  {lastPageCount}/{labelsPerPage} on last page —{' '}
-                  <span style={{ color: '#B45309', fontWeight: 700 }}>{freeOnLastPage} free</span>
-                </span>
-              )}
-            </span>
+        {/* Body care: one-click fill (split evenly across the catalog) +
+            running capacity readout. Per-product fine-tuning still happens
+            via the palette chips below or the × on a printed sticker. */}
+        {printMode === 'bodycare' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, flexWrap: 'wrap' }}>
+            <button
+              onClick={fillBodyCareSheet}
+              disabled={!(BODY_CARE_PRODUCTS.length > 0 && (totalLabels === 0 || freeOnLastPage > 0))}
+              title="Fill up the current sheet, split evenly across every body-care product"
+              style={{
+                padding: '6px 14px',
+                background: BODY_CARE_PRODUCTS.length > 0 && (totalLabels === 0 || freeOnLastPage > 0) ? '#2563EB' : '#9CA3AF',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: BODY_CARE_PRODUCTS.length > 0 && (totalLabels === 0 || freeOnLastPage > 0) ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontFamily: FONTS.sans,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Layers size={14} /> Fill sheet
+            </button>
+            {bodyCareBatches.length > 0 && (
+              <span style={{ fontSize: '12px', color: COLORS.muted, fontFamily: FONTS.sans }}>
+                {totalLabels} sticker{totalLabels !== 1 ? 's' : ''} · {pages.length} page{pages.length !== 1 ? 's' : ''}
+                {' · '}
+                {freeOnLastPage === 0 ? (
+                  <span style={{ color: COLORS.brand, fontWeight: 700 }}>last page full</span>
+                ) : (
+                  <span>
+                    {lastPageCount}/{labelsPerPage} on last page —{' '}
+                    <span style={{ color: '#B45309', fontWeight: 700 }}>{freeOnLastPage} free</span>
+                  </span>
+                )}
+              </span>
+            )}
           </div>
         )}
 
