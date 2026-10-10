@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useTransition } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ShoppingCart, ClipboardList } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, ClipboardList, Lock } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { getEventRecommendationsAction, savePlannedInventoryAction } from '@/lib/actions/events';
 
@@ -10,26 +10,31 @@ function fmtCurrency(v) {
   return `₹${Number(v || 0).toLocaleString('en-IN')}`;
 }
 
-function buildRows(products, savedInventory) {
+function buildRows(products, savedInventory, soldByProduct) {
   const savedMap = new Map(savedInventory.map((r) => [r.product_id, r]));
   return products.map((p) => {
     const saved = savedMap.get(p.id);
+    const soldQuantity = soldByProduct[p.id] || 0;
+    const defaultIncluded = saved ? saved.planned_quantity > 0 : p.recommended_quantity > 0;
     return {
       product_id: p.id,
       name: p.name,
       base_type: p.base_type,
       weight_grams: p.weight_grams,
+      is_active: p.is_active,
+      sold_quantity: soldQuantity,
       recommended_quantity: p.recommended_quantity,
       planned_quantity: saved ? saved.planned_quantity : p.recommended_quantity,
       unit_price: saved ? Number(saved.unit_price) : Number(p.unit_price),
+      included: soldQuantity > 0 ? true : defaultIncluded,
     };
   });
 }
 
-export default function PlanInventoryClient({ event, initialRecommendations, savedInventory, initialTarget }) {
+export default function PlanInventoryClient({ event, initialRecommendations, savedInventory, soldByProduct, initialTarget }) {
   const [isPending, startTransition] = useTransition();
   const [target, setTarget] = useState(initialTarget);
-  const [rows, setRows] = useState(() => buildRows(initialRecommendations, savedInventory));
+  const [rows, setRows] = useState(() => buildRows(initialRecommendations, savedInventory, soldByProduct));
   const [savedMsg, setSavedMsg] = useState('');
 
   const grouped = useMemo(() => {
@@ -42,8 +47,9 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
   }, [rows]);
 
   const totals = useMemo(() => {
-    const units = rows.reduce((sum, r) => sum + (Number(r.planned_quantity) || 0), 0);
-    const value = rows.reduce((sum, r) => sum + (Number(r.planned_quantity) || 0) * (Number(r.unit_price) || 0), 0);
+    const included = rows.filter((r) => r.included);
+    const units = included.reduce((sum, r) => sum + (Number(r.planned_quantity) || 0), 0);
+    const value = included.reduce((sum, r) => sum + (Number(r.planned_quantity) || 0) * (Number(r.unit_price) || 0), 0);
     return { units, value };
   }, [rows]);
 
@@ -64,9 +70,26 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
     setRows((prev) => prev.map((r) => (r.product_id === productId ? { ...r, [field]: value } : r)));
   };
 
+  const toggleIncluded = (productId) => {
+    setRows((prev) => prev.map((r) => {
+      if (r.product_id !== productId || r.sold_quantity > 0) return r;
+      const included = !r.included;
+      // Jumping into the plan from zero planned (e.g. a newly-checked seasonal
+      // soap) starts from the recommendation rather than a stale zero.
+      const planned_quantity = included && r.planned_quantity === 0 ? r.recommended_quantity : r.planned_quantity;
+      return { ...r, included, planned_quantity };
+    }));
+  };
+
   const handleSave = () => {
+    const rowsToSubmit = rows.filter((r) => r.included).map((r) => ({
+      product_id: r.product_id,
+      recommended_quantity: r.recommended_quantity,
+      planned_quantity: r.planned_quantity,
+      unit_price: r.unit_price,
+    }));
     startTransition(async () => {
-      const result = await savePlannedInventoryAction(event.id, rows);
+      const result = await savePlannedInventoryAction(event.id, rowsToSubmit, target);
       setSavedMsg(result.success ? 'Plan saved.' : result.error || 'Could not save plan.');
     });
   };
@@ -78,7 +101,7 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
       </Link>
       <PageHeader
         title={`Plan: ${event.name}`}
-        subtitle="Recommended quantities are based on past sales — edit any number freely."
+        subtitle="Check which soaps to bring — recommendations are a starting point, not a requirement."
         action={
           <div className="flex gap-2">
             <Link href={`/events/${event.id}/sell`} className="flex items-center gap-2 px-4 py-2 bg-white border border-[var(--color-border)] rounded-lg text-sm font-semibold font-plus-jakarta">
@@ -101,6 +124,7 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-28"
         />
         {isPending && <span className="text-xs text-[var(--color-muted)] font-plus-jakarta">Recalculating…</span>}
+        <span className="text-xs text-[var(--color-muted)] font-plus-jakarta">Remembered as your default for the next event</span>
       </div>
 
       {grouped.map(([baseType, items]) => (
@@ -110,6 +134,7 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
             <table className="w-full text-sm font-plus-jakarta">
               <thead>
                 <tr className="bg-gray-50 text-left text-xs text-gray-500">
+                  <th className="px-4 py-2 w-10"></th>
                   <th className="px-4 py-2">Product</th>
                   <th className="px-4 py-2 w-28">Recommended</th>
                   <th className="px-4 py-2 w-28">Planned</th>
@@ -118,21 +143,36 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
               </thead>
               <tbody>
                 {items.map((r) => (
-                  <tr key={r.product_id} className="border-t border-gray-100">
-                    <td className="px-4 py-2">{r.name} {r.weight_grams ? <span className="text-gray-400">({r.weight_grams}g)</span> : null}</td>
+                  <tr key={r.product_id} className={`border-t border-gray-100 ${r.included ? '' : 'opacity-50'}`}>
+                    <td className="px-4 py-2">
+                      {r.sold_quantity > 0 ? (
+                        <span title="Already has sales logged — can't be removed"><Lock size={14} className="text-gray-400" /></span>
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={r.included}
+                          onChange={() => toggleIncluded(r.product_id)}
+                          className="w-4 h-4"
+                        />
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      {r.name} {r.weight_grams ? <span className="text-gray-400">({r.weight_grams}g)</span> : null}
+                      {!r.is_active && <span className="ml-2 text-[10px] uppercase tracking-wide bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">Seasonal / inactive</span>}
+                    </td>
                     <td className="px-4 py-2 text-gray-400">{r.recommended_quantity}</td>
                     <td className="px-4 py-2">
                       <input
-                        type="number" min="0" value={r.planned_quantity}
+                        type="number" min="0" value={r.planned_quantity} disabled={!r.included}
                         onChange={(e) => updateRow(r.product_id, 'planned_quantity', Number(e.target.value))}
-                        className="border border-gray-300 rounded px-2 py-1 w-20"
+                        className="border border-gray-300 rounded px-2 py-1 w-20 disabled:bg-gray-50"
                       />
                     </td>
                     <td className="px-4 py-2">
                       <input
-                        type="number" min="0" value={r.unit_price}
+                        type="number" min="0" value={r.unit_price} disabled={!r.included}
                         onChange={(e) => updateRow(r.product_id, 'unit_price', Number(e.target.value))}
-                        className="border border-gray-300 rounded px-2 py-1 w-20"
+                        className="border border-gray-300 rounded px-2 py-1 w-20 disabled:bg-gray-50"
                       />
                     </td>
                   </tr>

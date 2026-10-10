@@ -3,11 +3,65 @@
 import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import PageHeader from '@/components/PageHeader';
 import { recordClosingCountsAction, recordCashCountedAction, updateEventAction } from '@/lib/actions/events';
 
 function fmtCurrency(v) {
   return `₹${Number(v || 0).toLocaleString('en-IN')}`;
+}
+
+// Validated categorical pair (dataviz skill palette, slots 1–2: blue/orange) —
+// passes CVD separation and contrast checks, distinct from the brand green
+// used everywhere else so Planned/Sold never blur into "just more green".
+const CHART_COLORS = { planned: '#2a78d6', sold: '#eb6834' };
+
+function InventoryChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', fontFamily: '"Plus Jakarta Sans", sans-serif', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+      <strong style={{ display: 'block', marginBottom: '4px' }}>{label}</strong>
+      {payload.map((item) => (
+        <div key={item.dataKey} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', color: '#374151' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: item.color }} />
+            {item.name}
+          </span>
+          <strong>{item.value}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function InventoryVsSalesChart({ items }) {
+  const data = items.map((i) => ({
+    name: i.name.length > 14 ? `${i.name.slice(0, 13)}…` : i.name,
+    Planned: i.planned_quantity,
+    Sold: i.sold_quantity,
+  }));
+
+  return (
+    <div className="bg-white border border-[var(--color-border)] rounded-xl p-5 mb-6">
+      <div className="mb-4">
+        <h2 className="text-base font-semibold font-plus-jakarta text-gray-900 m-0">Inventory vs sales</h2>
+        <p className="text-xs font-plus-jakarta text-[var(--color-muted)] mt-1 m-0">Planned stock against units actually sold, per soap</p>
+      </div>
+      <div style={{ height: Math.max(220, data.length * 36) }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16, top: 0, bottom: 0 }} barGap={2}>
+            <CartesianGrid horizontal={false} stroke="#E1E0D9" />
+            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: '#898781' }} axisLine={{ stroke: '#C3C2B7' }} tickLine={false} />
+            <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 12, fill: '#52514E' }} axisLine={false} tickLine={false} />
+            <Tooltip content={<InventoryChartTooltip />} />
+            <Legend wrapperStyle={{ fontSize: '12px', fontFamily: '"Plus Jakarta Sans", sans-serif' }} />
+            <Bar dataKey="Planned" fill={CHART_COLORS.planned} radius={[0, 4, 4, 0]} barSize={16} />
+            <Bar dataKey="Sold" fill={CHART_COLORS.sold} radius={[0, 4, 4, 0]} barSize={16} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
 }
 
 export default function SummaryClient({ eventId, summary }) {
@@ -74,6 +128,8 @@ export default function SummaryClient({ eventId, summary }) {
           )
         }
       />
+
+      {items.length > 0 && <InventoryVsSalesChart items={items} />}
 
       <div className="bg-white border border-[var(--color-border)] rounded-xl overflow-hidden mb-6">
         <table className="w-full text-sm font-plus-jakarta">
