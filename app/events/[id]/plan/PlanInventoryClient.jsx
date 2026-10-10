@@ -56,8 +56,17 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
     return { units, value };
   }, [rows]);
 
-  // Break-even against the stall fee alone (not full COGS) — the minimum
-  // units, at the planned average price, needed just to cover showing up.
+  // Rough catalog-wide average price — used to turn a stall fee into a
+  // minimum target *before* a plan exists yet (chicken-and-egg: the real
+  // planned average price isn't known until products are chosen).
+  const catalogAvgPrice = useMemo(() => {
+    const active = rows.filter((r) => r.is_active);
+    if (active.length === 0) return 0;
+    return active.reduce((sum, r) => sum + r.unit_price, 0) / active.length;
+  }, [rows]);
+
+  // Break-even against the stall fee alone (not full COGS) — checked against
+  // the actual plan's weighted average price, once products are chosen.
   const breakeven = useMemo(() => {
     const fee = Number(stallFee) || 0;
     const avgPrice = totals.units > 0 ? totals.value / totals.units : 0;
@@ -70,14 +79,6 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
     };
   }, [stallFee, totals]);
 
-  const handleSaveFee = () => {
-    const fee = stallFee === '' ? null : Number(stallFee);
-    startTransition(async () => {
-      const result = await updateStallFeeAction(event.id, fee);
-      setFeeMsg(result.success ? 'Saved.' : result.error || 'Could not save.');
-    });
-  };
-
   const handleTargetChange = (newTarget) => {
     setTarget(newTarget);
     startTransition(async () => {
@@ -89,6 +90,21 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
         });
       }
     });
+  };
+
+  // Entering/changing the stall fee re-derives the minimum target from it
+  // (fee ÷ average price) and recomputes recommendations from that — the
+  // owner can still bump the target field up afterwards for safety stock.
+  const handleSaveFee = () => {
+    const fee = stallFee === '' ? null : Number(stallFee);
+    const minimumTarget = fee && catalogAvgPrice > 0 ? Math.ceil(fee / catalogAvgPrice) : null;
+    startTransition(async () => {
+      const result = await updateStallFeeAction(event.id, fee);
+      setFeeMsg(result.success ? 'Saved.' : result.error || 'Could not save.');
+    });
+    if (minimumTarget != null && minimumTarget > target) {
+      handleTargetChange(minimumTarget);
+    }
   };
 
   const updateRow = (productId, field, value) => {
@@ -129,19 +145,6 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
 
       <StallChecklist eventId={event.id} initialChecklist={initialChecklist} />
 
-      <div className="bg-white border border-[var(--color-border)] rounded-xl p-5 mb-6 flex items-center gap-4 flex-wrap">
-        <label className="text-sm font-semibold font-plus-jakarta text-gray-700">Target total units to bring</label>
-        <input
-          type="number"
-          min="0"
-          value={target}
-          onChange={(e) => handleTargetChange(Number(e.target.value))}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-28"
-        />
-        {isPending && <span className="text-xs text-[var(--color-muted)] font-plus-jakarta">Recalculating…</span>}
-        <span className="text-xs text-[var(--color-muted)] font-plus-jakarta">Remembered as your default for the next event</span>
-      </div>
-
       <div className="bg-white border border-[var(--color-border)] rounded-xl p-5 mb-6">
         <div className="flex items-center gap-4 flex-wrap mb-1">
           <label className="text-sm font-semibold font-plus-jakarta text-gray-700">Stall fee (₹)</label>
@@ -160,6 +163,7 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
           </button>
           {feeMsg && <span className="text-xs text-[var(--color-muted)] font-plus-jakarta">{feeMsg}</span>}
         </div>
+        <p className="text-xs text-[var(--color-muted)] font-plus-jakarta mt-1">Saving this sets the target below to the minimum needed to break even — bump it up afterwards if you want extra stock.</p>
         {breakeven ? (
           <p className="text-sm font-plus-jakarta text-gray-700 mt-2">
             Break-even: sell at least <strong className="text-[var(--color-primary)]">{breakeven.units} soaps</strong> (at your ~{fmtCurrency(breakeven.avgPrice)} planned average price) to cover the {fmtCurrency(stallFee)} stall fee
@@ -168,6 +172,19 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
         ) : (
           <p className="text-xs text-[var(--color-muted)] font-plus-jakarta mt-2">Enter the stall fee to see the minimum units you'd need to sell to cover it.</p>
         )}
+      </div>
+
+      <div className="bg-white border border-[var(--color-border)] rounded-xl p-5 mb-6 flex items-center gap-4 flex-wrap">
+        <label className="text-sm font-semibold font-plus-jakarta text-gray-700">Target total units to bring</label>
+        <input
+          type="number"
+          min="0"
+          value={target}
+          onChange={(e) => handleTargetChange(Number(e.target.value))}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-28"
+        />
+        {isPending && <span className="text-xs text-[var(--color-muted)] font-plus-jakarta">Recalculating…</span>}
+        <span className="text-xs text-[var(--color-muted)] font-plus-jakarta">Set from the stall fee above — raise it yourself to bring extra safety stock</span>
       </div>
 
       {grouped.map(([baseType, items]) => (
