@@ -63,8 +63,13 @@ function InventoryVsSalesChart({ items }) {
   );
 }
 
+const CATEGORY_ORDER = ['Soap', 'Balm', 'Gift Set', 'Other'];
+
 export default function SummaryClient({ eventId, summary }) {
-  const { event, items, total_revenue, total_units_sold, cash_counted } = summary;
+  const { event, items, total_revenue, cash_counted } = summary;
+  const groupedByCategory = CATEGORY_ORDER
+    .map((type) => ({ type, items: items.filter((i) => (i.product_type || 'Soap') === type) }))
+    .filter((g) => g.items.length > 0);
   const [closingCounts, setClosingCounts] = useState(
     () => Object.fromEntries(items.map((i) => [i.product_id, i.closing_count ?? '']))
   );
@@ -144,53 +149,72 @@ export default function SummaryClient({ eventId, summary }) {
 
       {items.length > 0 && <InventoryVsSalesChart items={items} />}
 
-      <div className="bg-white border border-[var(--color-border)] rounded-xl overflow-hidden mb-6">
-        <table className="w-full text-sm font-plus-jakarta">
-          <thead>
-            <tr className="bg-gray-50 text-left text-xs text-gray-500">
-              <th className="px-4 py-2">Product</th>
-              <th className="px-4 py-2 w-20">Planned</th>
-              <th className="px-4 py-2 w-20">Sold</th>
-              <th className="px-4 py-2 w-20">Remaining</th>
-              <th className="px-4 py-2 w-28">Closing count</th>
-              <th className="px-4 py-2 w-24">Revenue</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((i) => {
-              const closing = closingCounts[i.product_id];
-              const variance = closing === '' || closing == null ? null : i.remaining - Number(closing);
-              return (
-                <tr key={i.product_id} className="border-t border-gray-100">
-                  <td className="px-4 py-2">{i.name}{i.weight_grams ? <span className="text-gray-400"> ({i.weight_grams}g)</span> : null}</td>
-                  <td className="px-4 py-2">{i.planned_quantity}</td>
-                  <td className="px-4 py-2">{i.sold_quantity}</td>
-                  <td className="px-4 py-2">{i.remaining}</td>
-                  <td className="px-4 py-2">
-                    <input
-                      type="number" min="0" value={closing}
-                      onChange={(e) => setClosingCounts((prev) => ({ ...prev, [i.product_id]: e.target.value }))}
-                      className="border border-gray-300 rounded px-2 py-1 w-20"
-                      placeholder="—"
-                    />
-                    {variance != null && variance !== 0 && (
-                      <span className="text-red-600 text-xs ml-2">Δ{variance > 0 ? '+' : ''}{variance}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2">{fmtCurrency(i.revenue)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot>
-            <tr className="border-t-2 border-gray-200 font-bold bg-gray-50">
-              <td className="px-4 py-2">Total</td>
-              <td className="px-4 py-2" colSpan={2}>{total_units_sold} sold</td>
-              <td className="px-4 py-2" colSpan={2}></td>
-              <td className="px-4 py-2">{fmtCurrency(total_revenue)}</td>
-            </tr>
-          </tfoot>
-        </table>
+      {groupedByCategory.map(({ type, items: categoryItems }) => {
+        const categorySold = categoryItems.reduce((sum, i) => sum + i.sold_quantity, 0);
+        const categoryRevenue = categoryItems.reduce((sum, i) => sum + i.revenue, 0);
+        return (
+          <div key={type} className="mb-6">
+            <h2 className="font-plus-jakarta font-bold text-[var(--color-primary)] text-base mb-2">{type}</h2>
+            <div className="bg-white border border-[var(--color-border)] rounded-xl overflow-hidden">
+              <table className="w-full text-sm font-plus-jakarta">
+                <thead>
+                  <tr className="bg-gray-50 text-left text-xs text-gray-500">
+                    <th className="px-4 py-2">Product</th>
+                    <th className="px-4 py-2 w-20">Planned</th>
+                    <th className="px-4 py-2 w-20">Sold</th>
+                    <th className="px-4 py-2 w-20">Remaining</th>
+                    <th className="px-4 py-2 w-28">Closing count</th>
+                    <th className="px-4 py-2 w-24">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {categoryItems.map((i) => {
+                    const closing = closingCounts[i.product_id];
+                    const variance = closing === '' || closing == null ? null : i.remaining - Number(closing);
+                    return (
+                      <tr key={i.product_id} className="border-t border-gray-100">
+                        <td className="px-4 py-2">{i.name}{i.weight_grams ? <span className="text-gray-400"> ({i.weight_grams}g)</span> : null}</td>
+                        <td className="px-4 py-2">{i.planned_quantity}</td>
+                        <td className="px-4 py-2">{i.sold_quantity}</td>
+                        <td className="px-4 py-2">{i.remaining}</td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="number" min="0" value={closing}
+                            onChange={(e) => setClosingCounts((prev) => ({ ...prev, [i.product_id]: e.target.value }))}
+                            className="border border-gray-300 rounded px-2 py-1 w-20"
+                            placeholder="—"
+                          />
+                          {variance != null && variance !== 0 && (
+                            <span className="text-red-600 text-xs ml-2">Δ{variance > 0 ? '+' : ''}{variance}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2">{fmtCurrency(i.revenue)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-gray-200 font-bold bg-gray-50">
+                    <td className="px-4 py-2">{type} total</td>
+                    <td className="px-4 py-2" colSpan={2}>{categorySold} sold</td>
+                    <td className="px-4 py-2" colSpan={2}></td>
+                    <td className="px-4 py-2">{fmtCurrency(categoryRevenue)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+
+      <div className="bg-white border border-[var(--color-border)] rounded-xl p-5 mb-6 font-plus-jakarta">
+        <div className="flex items-center justify-between font-bold">
+          <span>Total revenue (all categories)</span>
+          <span>{fmtCurrency(total_revenue)}</span>
+        </div>
+        <div className="text-xs text-[var(--color-muted)] mt-1">
+          {groupedByCategory.map(({ type, items: ci }) => `${type}: ${ci.reduce((s, i) => s + i.sold_quantity, 0)} sold`).join(' · ')}
+        </div>
       </div>
 
       <div className="flex items-center justify-between mb-6">

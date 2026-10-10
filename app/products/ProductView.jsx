@@ -520,6 +520,23 @@ export default function ProductView({ products, allOils = [] }) {
 
               <div>
                 <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
+                  Product Type
+                </label>
+                <select
+                  name="product_type"
+                  defaultValue={editingProduct?.product_type || 'Soap'}
+                  className="w-full px-[14px] py-[11px] border border-[#E5E7EB] rounded-[8px] font-sans text-[16px] md:text-[14px] text-[#1A1A1A] bg-[#FFFFFF] outline-none"
+                >
+                  <option value="Soap">Soap</option>
+                  <option value="Balm">Balm</option>
+                  <option value="Gift Set">Gift Set</option>
+                  <option value="Other">Other</option>
+                </select>
+                <p className="font-sans text-[11px] text-[#9CA3AF] mt-[4px]">Used by event planning to tell soaps apart from balms, gift sets, etc.</p>
+              </div>
+
+              <div>
+                <label className="font-sans text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280] mb-[6px] block">
                   Website Category
                 </label>
                 <input
