@@ -116,6 +116,7 @@ export default function DashboardClient({
   initialUnitEconomics,
   initialLocations,
   indiaGeo,
+  initialEventRevenue,
 }) {
   const [filter, setFilter] = useState('All Time');
   const [isPending, startTransition] = useTransition();
@@ -295,6 +296,26 @@ export default function DashboardClient({
             label="Orders needing action"
             value={fmtNumber(ordersNeedingAction)}
             helper={ordersNeedingAction > 0 ? 'New orders, payments, confirmations, or dispatches to handle' : 'No orders need your attention'}
+          />
+        </div>
+
+        <p className="money-scoreboard-group">Revenue by channel · lifetime</p>
+        <div className="money-scoreboard-strip">
+          <CashMetric
+            label="Event sales"
+            value={fmtCurrency(initialEventRevenue.lifetime)}
+            note={initialEventRevenue.events_count > 0
+              ? `${fmtNumber(initialEventRevenue.events_count)} event${initialEventRevenue.events_count === 1 ? '' : 's'} · ${fmtCurrency(initialEventRevenue.this_month)} this month`
+              : 'No events yet'}
+            helper="Walk-in stall sales — kept separate from Total sold and every order KPI above"
+            tone="green"
+          />
+          <CashMetric
+            label="Combined total"
+            value={fmtCurrency(initialRevenue.total_revenue + initialEventRevenue.lifetime)}
+            note="Total sold + event sales"
+            helper="The only number on this page that blends both channels"
+            tone="green"
           />
         </div>
       </section>

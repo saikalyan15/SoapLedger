@@ -6,7 +6,7 @@ import { useState } from 'react'
 import {
   LayoutDashboard, PlusCircle, ShoppingBag, Users,
   Package, Receipt, Settings, X, Tag, TrendingUp, Bell, BarChart2, Droplets, NotebookPen,
-  ChevronDown, BarChart3, Wrench, Percent, LogOut, Truck, MessageCircle, BookOpen
+  ChevronDown, BarChart3, Wrench, Percent, LogOut, Truck, MessageCircle, BookOpen, Tent
 } from 'lucide-react'
 import { signOutAction } from '@/lib/actions/auth'
 
@@ -18,6 +18,7 @@ const navItems = [
   { label: 'Customers',   href: '/customers',  icon: Users },
   { label: 'Products',    href: '/products',   icon: Package },
   { label: 'Inventory',   href: '/inventory',  icon: Droplets },
+  { label: 'Events',      href: '/events',     icon: Tent },
   {
     label: 'Reports',
     icon: BarChart3,

@@ -11,6 +11,7 @@ import {
   getThisMonthSnapshot,
   getActionableOrders,
   getOrdersByLocation,
+  getEventRevenueSummary,
 } from '@/lib/queries/dashboard';
 import DashboardClient from './DashboardClient';
 
@@ -20,6 +21,7 @@ export default async function DashboardPage() {
   const [
     revenue, customers, products, cashFlow, expenseCats,
     snapshot, actionable, quietCustomers, unitEconomics, locations,
+    eventRevenue,
   ] = await Promise.all([
     getRevenueKPIs(range),
     getRepeatCustomerRate(range),
@@ -31,6 +33,7 @@ export default async function DashboardPage() {
     getQuietCustomers(),
     getUnitEconomics(),
     getOrdersByLocation(),
+    getEventRevenueSummary(),
   ]);
 
   const indiaGeo = JSON.parse(
@@ -51,6 +54,7 @@ export default async function DashboardPage() {
         initialUnitEconomics={unitEconomics}
         initialLocations={locations}
         indiaGeo={indiaGeo}
+        initialEventRevenue={eventRevenue}
       />
     </div>
   );
