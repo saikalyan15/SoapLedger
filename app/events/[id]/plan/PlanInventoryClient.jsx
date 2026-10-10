@@ -163,7 +163,7 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
   const handleApplyMarkup = () => {
     const pct = Number(markupPct) || 0;
     setRows((prev) => prev.map((r) => (
-      r.included ? { ...r, unit_price: Math.round(r.catalog_price * (1 + pct / 100) * 100) / 100 } : r
+      r.included ? { ...r, unit_price: Math.round(r.catalog_price * (1 + pct / 100)) } : r
     )));
   };
 
