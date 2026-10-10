@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import PageHeader from '@/components/PageHeader';
+import EventWorkflowNav from '../EventWorkflowNav';
 import { recordClosingCountsAction, recordCashCountedAction, updateEventAction } from '@/lib/actions/events';
 
 function fmtCurrency(v) {
@@ -107,14 +106,14 @@ export default function SummaryClient({ eventId, summary }) {
   };
 
   const cashDiff = cashCounted === '' ? null : Number(cashCounted) - total_revenue;
+  const stallFee = event.stall_fee == null ? null : Number(event.stall_fee);
+  const feeCovered = stallFee != null ? total_revenue - stallFee : null;
 
   return (
     <div style={{ padding: '40px', maxWidth: '960px', margin: '0 auto' }}>
-      <Link href="/events" className="text-sm text-[var(--color-muted)] font-plus-jakarta flex items-center gap-1 mb-4">
-        <ArrowLeft size={14} /> All events
-      </Link>
+      <EventWorkflowNav event={event} activeStep="summary" />
       <PageHeader
-        title={`Summary: ${event.name}`}
+        title="Summary & reconciliation"
         subtitle="Planned vs sold vs remaining — the full picture for this event"
         action={
           event.status !== 'Completed' && (
@@ -128,6 +127,20 @@ export default function SummaryClient({ eventId, summary }) {
           )
         }
       />
+
+      {stallFee != null && (
+        <div className="bg-white border border-[var(--color-border)] rounded-xl p-5 mb-6 flex items-center justify-between flex-wrap gap-3">
+          <div className="font-plus-jakarta">
+            <div className="text-xs text-[var(--color-muted)]">Stall fee</div>
+            <div className="text-lg font-dm-serif text-[var(--color-primary)]">{fmtCurrency(stallFee)}</div>
+          </div>
+          <div className={`font-plus-jakarta font-semibold ${feeCovered >= 0 ? 'text-[var(--color-primary)]' : 'text-red-600'}`}>
+            {feeCovered >= 0
+              ? `Covered — ${fmtCurrency(feeCovered)} ahead of the fee`
+              : `${fmtCurrency(Math.abs(feeCovered))} short of covering the fee`}
+          </div>
+        </div>
+      )}
 
       {items.length > 0 && <InventoryVsSalesChart items={items} />}
 

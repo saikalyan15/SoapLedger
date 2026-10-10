@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useMemo, useTransition } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, ShoppingCart, ClipboardList, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
-import { getEventRecommendationsAction, savePlannedInventoryAction } from '@/lib/actions/events';
+import EventWorkflowNav from '../EventWorkflowNav';
+import StallChecklist from './StallChecklist';
+import { getEventRecommendationsAction, savePlannedInventoryAction, updateStallFeeAction } from '@/lib/actions/events';
 
 function fmtCurrency(v) {
   return `₹${Number(v || 0).toLocaleString('en-IN')}`;
@@ -31,11 +32,13 @@ function buildRows(products, savedInventory, soldByProduct) {
   });
 }
 
-export default function PlanInventoryClient({ event, initialRecommendations, savedInventory, soldByProduct, initialTarget }) {
+export default function PlanInventoryClient({ event, initialRecommendations, savedInventory, soldByProduct, initialTarget, initialChecklist }) {
   const [isPending, startTransition] = useTransition();
   const [target, setTarget] = useState(initialTarget);
   const [rows, setRows] = useState(() => buildRows(initialRecommendations, savedInventory, soldByProduct));
   const [savedMsg, setSavedMsg] = useState('');
+  const [stallFee, setStallFee] = useState(event.stall_fee ?? '');
+  const [feeMsg, setFeeMsg] = useState('');
 
   const grouped = useMemo(() => {
     const map = new Map();
@@ -52,6 +55,28 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
     const value = included.reduce((sum, r) => sum + (Number(r.planned_quantity) || 0) * (Number(r.unit_price) || 0), 0);
     return { units, value };
   }, [rows]);
+
+  // Break-even against the stall fee alone (not full COGS) — the minimum
+  // units, at the planned average price, needed just to cover showing up.
+  const breakeven = useMemo(() => {
+    const fee = Number(stallFee) || 0;
+    const avgPrice = totals.units > 0 ? totals.value / totals.units : 0;
+    if (fee <= 0 || avgPrice <= 0) return null;
+    const units = Math.ceil(fee / avgPrice);
+    return {
+      units,
+      avgPrice,
+      pctOfPlan: totals.units > 0 ? (units / totals.units) * 100 : null,
+    };
+  }, [stallFee, totals]);
+
+  const handleSaveFee = () => {
+    const fee = stallFee === '' ? null : Number(stallFee);
+    startTransition(async () => {
+      const result = await updateStallFeeAction(event.id, fee);
+      setFeeMsg(result.success ? 'Saved.' : result.error || 'Could not save.');
+    });
+  };
 
   const handleTargetChange = (newTarget) => {
     setTarget(newTarget);
@@ -96,23 +121,13 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
 
   return (
     <div style={{ padding: '40px', maxWidth: '960px', margin: '0 auto' }}>
-      <Link href="/events" className="text-sm text-[var(--color-muted)] font-plus-jakarta flex items-center gap-1 mb-4">
-        <ArrowLeft size={14} /> All events
-      </Link>
+      <EventWorkflowNav event={event} activeStep="plan" />
       <PageHeader
-        title={`Plan: ${event.name}`}
+        title="Plan inventory"
         subtitle="Check which soaps to bring — recommendations are a starting point, not a requirement."
-        action={
-          <div className="flex gap-2">
-            <Link href={`/events/${event.id}/sell`} className="flex items-center gap-2 px-4 py-2 bg-white border border-[var(--color-border)] rounded-lg text-sm font-semibold font-plus-jakarta">
-              <ShoppingCart size={16} /> Sell
-            </Link>
-            <Link href={`/events/${event.id}/summary`} className="flex items-center gap-2 px-4 py-2 bg-white border border-[var(--color-border)] rounded-lg text-sm font-semibold font-plus-jakarta">
-              <ClipboardList size={16} /> Summary
-            </Link>
-          </div>
-        }
       />
+
+      <StallChecklist eventId={event.id} initialChecklist={initialChecklist} />
 
       <div className="bg-white border border-[var(--color-border)] rounded-xl p-5 mb-6 flex items-center gap-4 flex-wrap">
         <label className="text-sm font-semibold font-plus-jakarta text-gray-700">Target total units to bring</label>
@@ -125,6 +140,34 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
         />
         {isPending && <span className="text-xs text-[var(--color-muted)] font-plus-jakarta">Recalculating…</span>}
         <span className="text-xs text-[var(--color-muted)] font-plus-jakarta">Remembered as your default for the next event</span>
+      </div>
+
+      <div className="bg-white border border-[var(--color-border)] rounded-xl p-5 mb-6">
+        <div className="flex items-center gap-4 flex-wrap mb-1">
+          <label className="text-sm font-semibold font-plus-jakarta text-gray-700">Stall fee (₹)</label>
+          <input
+            type="number" min="0" value={stallFee}
+            onChange={(e) => setStallFee(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-28"
+            placeholder="0"
+          />
+          <button
+            onClick={handleSaveFee}
+            disabled={isPending}
+            className="px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-sm font-semibold font-plus-jakarta disabled:opacity-60"
+          >
+            Save
+          </button>
+          {feeMsg && <span className="text-xs text-[var(--color-muted)] font-plus-jakarta">{feeMsg}</span>}
+        </div>
+        {breakeven ? (
+          <p className="text-sm font-plus-jakarta text-gray-700 mt-2">
+            Break-even: sell at least <strong className="text-[var(--color-primary)]">{breakeven.units} soaps</strong> (at your ~{fmtCurrency(breakeven.avgPrice)} planned average price) to cover the {fmtCurrency(stallFee)} stall fee
+            {breakeven.pctOfPlan != null && <> — that's <strong>{breakeven.pctOfPlan.toFixed(0)}%</strong> of what you're planning to bring.</>}
+          </p>
+        ) : (
+          <p className="text-xs text-[var(--color-muted)] font-plus-jakarta mt-2">Enter the stall fee to see the minimum units you'd need to sell to cover it.</p>
+        )}
       </div>
 
       {grouped.map(([baseType, items]) => (

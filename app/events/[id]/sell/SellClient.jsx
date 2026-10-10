@@ -2,7 +2,8 @@
 
 import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Undo2, Banknote, Smartphone, CreditCard } from 'lucide-react';
+import { Undo2, Banknote, Smartphone, CreditCard } from 'lucide-react';
+import EventWorkflowNav from '../EventWorkflowNav';
 import { logEventSaleAction, undoLastEventSaleAction } from '@/lib/actions/events';
 
 const PAYMENT_OPTIONS = [
@@ -48,10 +49,10 @@ export default function SellClient({ event, initialItems }) {
 
   return (
     <div style={{ padding: '16px', minHeight: '100vh', background: '#F8F7F4' }}>
+      <EventWorkflowNav event={event} activeStep="sell" compact />
+
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <Link href={`/events/${event.id}/plan`} className="text-sm text-[var(--color-muted)] font-plus-jakarta flex items-center gap-1">
-          <ArrowLeft size={14} /> {event.name}
-        </Link>
+        <div className="font-plus-jakarta font-bold text-[var(--color-primary)]">{event.name}</div>
         <div className="flex items-center gap-2">
           {PAYMENT_OPTIONS.map((opt) => {
             const Icon = opt.icon;

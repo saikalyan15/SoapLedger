@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getEventById, getEventInventory, getEventRecommendations, getEventSales } from '@/lib/queries/events';
+import { getEventById, getEventInventory, getEventRecommendations, getEventSales, getEventChecklist } from '@/lib/queries/events';
 import { getSettings } from '@/lib/queries/settings';
 import PlanInventoryClient from './PlanInventoryClient';
 
@@ -10,10 +10,11 @@ export default async function PlanInventoryPage({ params }) {
   const event = await getEventById(id);
   if (!event) notFound();
 
-  const [savedInventory, sales, settings] = await Promise.all([
+  const [savedInventory, sales, settings, checklist] = await Promise.all([
     getEventInventory(id),
     getEventSales(id),
     getSettings(),
+    getEventChecklist(id),
   ]);
 
   const soldByProduct = {};
@@ -35,6 +36,7 @@ export default async function PlanInventoryPage({ params }) {
       savedInventory={savedInventory}
       soldByProduct={soldByProduct}
       initialTarget={defaultTarget}
+      initialChecklist={checklist}
     />
   );
 }
