@@ -64,7 +64,6 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
         @media print {
           .no-print { display: none !important; }
           .dispatch-report-page { background: white !important; padding: 0 !important; min-height: 0 !important; }
-          .deselected { display: none !important; }
 
           /* CSS columns (not flex-wrap/inline-flex) — Chromium's print pagination engine
              reliably fills a multi-column layout, but unpredictably collapses flex-wrap
@@ -86,6 +85,8 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
             border: 0.3mm solid #000 !important; width: 100% !important; margin: 0 0 3mm 0;
             break-inside: avoid; page-break-inside: avoid;
           }
+
+          .address-label.deselected, .checklist-card.deselected { display: none !important; }
 
           * { color: #000000 !important; border-color: #000000 !important; }
           .address-label div { background: none !important; }
