@@ -15,10 +15,13 @@ function fmtCurrency(v) {
 
 function buildRows(products, savedInventory, soldByProduct) {
   const savedMap = new Map(savedInventory.map((r) => [r.product_id, r]));
+  const hasSavedPlan = savedInventory.length > 0;
   return products.map((p) => {
     const saved = savedMap.get(p.id);
     const soldQuantity = soldByProduct[p.id] || 0;
-    const defaultIncluded = saved ? saved.planned_quantity > 0 : p.recommended_quantity > 0;
+    // Once a plan is saved, only saved rows are in it — unchecked products are
+    // deleted on save, so falling back to the recommendation would resurrect them.
+    const defaultIncluded = hasSavedPlan ? !!saved : p.recommended_quantity > 0;
     return {
       product_id: p.id,
       name: p.name,
