@@ -49,6 +49,8 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
   const [feeMsg, setFeeMsg] = useState('');
   const [costPerSoap, setCostPerSoap] = useState(productionCostPerSoap ? Math.round(productionCostPerSoap) : '');
   const [markupPct, setMarkupPct] = useState('');
+  const [showMakeList, setShowMakeList] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Grouped by product TYPE first (Soap / Balm / Gift Set / Other) — never
   // blended into one unit count, since a soap and a balm aren't interchangeable
@@ -118,6 +120,45 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
     };
   }, [stallFee, costPerSoap, soapTotals]);
 
+  // The production list: what still has to be made = planned − already in stock,
+  // per product, live as the plan is edited.
+  const makeList = useMemo(() => {
+    const included = rows.filter((r) => r.included);
+    const lines = included.map((r) => {
+      const planned = Number(r.planned_quantity) || 0;
+      const inStock = Number(r.in_stock_quantity) || 0;
+      return { ...r, planned, inStock, toMake: Math.max(0, planned - inStock), surplus: Math.max(0, inStock - planned) };
+    });
+    const needMaking = lines.filter((l) => l.toMake > 0);
+    return {
+      needMaking: CATEGORY_ORDER
+        .map((type) => ({ type, items: needMaking.filter((l) => l.product_type === type) }))
+        .filter((g) => g.items.length > 0),
+      readyCount: lines.filter((l) => l.planned > 0 && l.toMake === 0).length,
+      totalToMake: needMaking.reduce((sum, l) => sum + l.toMake, 0),
+      totalPlanned: lines.reduce((sum, l) => sum + l.planned, 0),
+      totalInStock: lines.reduce((sum, l) => sum + Math.min(l.inStock, l.planned), 0),
+    };
+  }, [rows]);
+
+  const handleCopyMakeList = async () => {
+    const text = [
+      `Make list — ${event.name || 'event'}`,
+      ...makeList.needMaking.flatMap(({ type, items }) => [
+        '', type,
+        ...items.map((l) => `${l.toMake}× ${l.name}${l.weight_grams ? ` (${l.weight_grams}g)` : ''}`),
+      ]),
+      '', `Total to make: ${makeList.totalToMake}`,
+    ].join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
+
   const handleTargetChange = (newTarget) => {
     setTarget(newTarget);
     startTransition(async () => {
@@ -186,6 +227,7 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
 
   return (
     <div style={{ padding: '40px', maxWidth: '960px', margin: '0 auto' }}>
+      <style>{`@media print { body * { visibility: hidden; } .print-make-list, .print-make-list * { visibility: visible; } .print-make-list { position: absolute; left: 0; top: 0; width: 100%; border: none; } .print-make-list button { display: none; } }`}</style>
       <EventWorkflowNav event={event} activeStep="plan" />
       <PageHeader
         title="Plan inventory"
@@ -352,6 +394,47 @@ export default function PlanInventoryClient({ event, initialRecommendations, sav
           </div>
         );
       })}
+
+      <div className="bg-white border border-[var(--color-border)] rounded-xl p-5 mb-6 print-make-list">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <button
+            onClick={() => setShowMakeList((v) => !v)}
+            className="px-4 py-2.5 bg-[var(--color-primary)] text-white rounded-lg text-sm font-semibold font-plus-jakarta"
+          >
+            {showMakeList ? 'Hide make list' : `Show make list (${makeList.totalToMake} to make)`}
+          </button>
+          {showMakeList && makeList.totalToMake > 0 && (
+            <div className="flex items-center gap-2">
+              <button onClick={handleCopyMakeList} className="px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-sm font-semibold font-plus-jakarta">
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+              <button onClick={() => window.print()} className="px-3 py-2 bg-white border border-[var(--color-border)] rounded-lg text-sm font-semibold font-plus-jakarta">
+                Print
+              </button>
+            </div>
+          )}
+        </div>
+        {showMakeList && (
+          makeList.needMaking.length === 0 ? (
+            <p className="text-sm font-plus-jakarta text-gray-600 mt-4">Nothing left to make — everything planned is already in stock.</p>
+          ) : (
+            <div className="mt-4 font-plus-jakarta">
+              {makeList.needMaking.map(({ type, items }) => (
+                <div key={type} className="mb-3">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">{type}</div>
+                  {items.map((l) => (
+                    <div key={l.product_id} className="flex items-baseline gap-3 py-1 text-base">
+                      <span className="w-12 text-right font-bold text-[var(--color-primary)]">{l.toMake}×</span>
+                      <span>{l.name}{l.weight_grams ? ` (${l.weight_grams}g)` : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <div className="border-t border-gray-100 pt-2 text-sm text-gray-600">Total to make: <strong>{makeList.totalToMake}</strong></div>
+            </div>
+          )
+        )}
+      </div>
 
       <div className="sticky bottom-0 bg-white border border-[var(--color-border)] rounded-xl p-5 flex items-center justify-between flex-wrap gap-4 shadow-lg">
         <div className="font-plus-jakarta">
