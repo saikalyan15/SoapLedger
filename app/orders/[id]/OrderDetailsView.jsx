@@ -5,13 +5,39 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Pencil, ArrowLeft, ChevronDown, Printer, Package, MapPin, Droplets, CreditCard, ShieldCheck } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
-import { markOrderComplimentaryAction, reconcileRazorpayPaymentAction, updateShipmentStatusAction, updateOrderStatusAction } from '@/lib/actions/orders';
+import { markOrderComplimentaryAction, reconcileRazorpayPaymentAction, updateShipmentStatusAction, updateShipmentTrackingIdAction, updateOrderStatusAction } from '@/lib/actions/orders';
 import { SETTABLE_STATUSES, EDITABLE_STATUSES } from '@/lib/constants';
 import { formatPhoneForDisplay } from '@/lib/utils/phone';
 
 const ShipmentCard = ({ shipment, items, onStatusUpdate }) => {
   const [newStatus, setNewStatus] = useState(shipment.status);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [trackingId, setTrackingId] = useState(shipment.tracking_id || '');
+  const [savedTrackingId, setSavedTrackingId] = useState(shipment.tracking_id || '');
+  const [isSavingTracking, setIsSavingTracking] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const normalizedTracking = trackingId.replace(/\s+/g, '').toUpperCase();
+  const trackingChanged = normalizedTracking !== savedTrackingId;
+
+  const handleSaveTracking = async () => {
+    setIsSavingTracking(true);
+    const result = await updateShipmentTrackingIdAction(shipment.id, normalizedTracking);
+    setIsSavingTracking(false);
+    if (!result.success) { alert(result.error); return; }
+    setTrackingId(normalizedTracking);
+    setSavedTrackingId(normalizedTracking);
+  };
+
+  const handleCopyTracking = async () => {
+    try {
+      await navigator.clipboard.writeText(savedTrackingId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable — ID is still visible in the field */
+    }
+  };
 
   const handleUpdate = async () => {
     setIsUpdating(true);
@@ -58,6 +84,50 @@ const ShipmentCard = ({ shipment, items, onStatusUpdate }) => {
             <span style={{ fontWeight: '600' }}>₹{Number(item.line_total).toLocaleString()}</span>
           </div>
         ))}
+      </div>
+
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: '#9CA3AF', marginBottom: '8px' }}>Speed Post tracking ID</div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input
+            type="text"
+            value={trackingId}
+            onChange={(e) => setTrackingId(e.target.value)}
+            placeholder="e.g. EE123456789IN"
+            style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #E5E7EB', fontSize: '13px', fontFamily: 'inherit' }}
+          />
+          <button
+            onClick={handleSaveTracking}
+            disabled={!trackingChanged || isSavingTracking}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              background: trackingChanged ? '#1B4332' : '#F3F4F6',
+              color: trackingChanged ? '#FFFFFF' : '#9CA3AF',
+              fontWeight: '600',
+              fontSize: '13px',
+              cursor: trackingChanged ? 'pointer' : 'default'
+            }}
+          >
+            {isSavingTracking ? '...' : 'Save'}
+          </button>
+        </div>
+        {savedTrackingId && (
+          <div style={{ display: 'flex', gap: '16px', marginTop: '8px', fontSize: '13px' }}>
+            <button onClick={handleCopyTracking} style={{ background: 'none', border: 'none', padding: 0, color: '#1B4332', fontWeight: '600', cursor: 'pointer', textDecoration: 'underline' }}>
+              {copied ? 'Copied!' : 'Copy ID'}
+            </button>
+            <a
+              href="https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#1B4332', fontWeight: '600' }}
+            >
+              Open India Post tracking ↗
+            </a>
+          </div>
+        )}
       </div>
 
       <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '16px' }}>

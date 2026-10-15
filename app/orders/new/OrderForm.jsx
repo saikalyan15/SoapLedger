@@ -43,7 +43,8 @@ const OrderForm = ({ products, settings, initialData = null }) => {
         address_text: s.address_text,
         status: s.status,
         city: s.city || '',
-        state: s.state || ''
+        state: s.state || '',
+        tracking_id: s.tracking_id || ''
       }));
     }
     return [{ label: 'Primary Shipment', address_text: customer.address, status: 'Order Placed', city: '', state: '' }];
@@ -386,6 +387,20 @@ const OrderForm = ({ products, settings, initialData = null }) => {
                 style={{ ...inputBaseStyle, fontSize: '13px' }}
                 required
               />
+              <div style={{ marginTop: '12px' }}>
+                <label style={labelStyle}>Speed Post tracking ID</label>
+                <input
+                  type="text"
+                  value={s.tracking_id || ''}
+                  onChange={(e) => {
+                    const newShipments = [...shipments];
+                    newShipments[idx].tracking_id = e.target.value;
+                    setShipments(newShipments);
+                  }}
+                  placeholder="e.g. EE123456789IN (add once posted)"
+                  style={{ ...inputBaseStyle, fontSize: '13px' }}
+                />
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
                 <div>
                   <label style={labelStyle}>City</label>
