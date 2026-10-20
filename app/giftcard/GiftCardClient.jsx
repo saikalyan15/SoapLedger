@@ -41,8 +41,8 @@ const OPEN_W = CARD_W * 2;
 const COLS = 2;
 const ROWS = 2;
 const PER_SHEET = COLS * ROWS;
-const GRID_X = (210 - COLS * CARD_H) / 2;   // 5mm
-const GRID_Y = (297 - ROWS * OPEN_W) / 2;   // 8.5mm
+const SHEET_W = COLS * CARD_H;   // 200mm
+const SHEET_H = ROWS * OPEN_W;   // 280mm — page margins (@page) centre it on A4
 
 /* ══════════════════════════════════════
    SOIL LAYERS — thin strata lines, the card's one motif
@@ -173,18 +173,18 @@ function CardBack({ copy, fromName, bg }) {
 /* Lines run right across the grid — printers can't reach the outer ~5mm,
    so marks only in the margin get lost. Cut = dashed, fold = dotted. */
 function CutFoldLines({ count }) {
-  const xs = Array.from({ length: COLS + 1 }, (_, i) => GRID_X + i * CARD_H);
-  const ys = Array.from({ length: ROWS + 1 }, (_, i) => GRID_Y + i * OPEN_W);
+  const xs = Array.from({ length: COLS + 1 }, (_, i) => i * CARD_H);
+  const ys = Array.from({ length: ROWS + 1 }, (_, i) => i * OPEN_W);
   const usedRows = Math.ceil(count / COLS);
   const cut  = { stroke: '#A8A29E', strokeWidth: 0.25, strokeDasharray: '2 1.2' };
   const fold = { stroke: '#C9A876', strokeWidth: 0.3, strokeDasharray: '0.4 1', strokeLinecap: 'round' };
   return (
-    <svg viewBox="0 0 210 297" style={{ position: 'absolute', inset: 0, width: '210mm', height: '297mm', display: 'block', maxWidth: 'none' }}>
-      {xs.map(x => <line key={`x${x}`} x1={x} x2={x} y1={GRID_Y} y2={297 - GRID_Y} {...cut} />)}
-      {ys.map(y => <line key={`y${y}`} y1={y} y2={y} x1={GRID_X} x2={210 - GRID_X} {...cut} />)}
+    <svg viewBox={`0 0 ${SHEET_W} ${SHEET_H}`} style={{ position: 'absolute', inset: 0, width: `${SHEET_W}mm`, height: `${SHEET_H}mm`, display: 'block', maxWidth: 'none', overflow: 'visible' }}>
+      {xs.map(x => <line key={`x${x}`} x1={x} x2={x} y1={0} y2={SHEET_H} {...cut} />)}
+      {ys.map(y => <line key={`y${y}`} y1={y} y2={y} x1={0} x2={SHEET_W} {...cut} />)}
       {Array.from({ length: usedRows }, (_, r) => {
-        const y = GRID_Y + r * OPEN_W + CARD_W;
-        return <line key={`f${r}`} y1={y} y2={y} x1={GRID_X} x2={210 - GRID_X} {...fold} />;
+        const y = r * OPEN_W + CARD_W;
+        return <line key={`f${r}`} y1={y} y2={y} x1={0} x2={SHEET_W} {...fold} />;
       })}
     </svg>
   );
@@ -196,7 +196,7 @@ function PrintSheet({ count, children }) {
       {Array.from({ length: count }, (_, i) => (
         <div key={i} style={{
           position: 'absolute', overflow: 'hidden',
-          left: `${GRID_X + (i % COLS) * CARD_H}mm`, top: `${GRID_Y + Math.floor(i / COLS) * OPEN_W}mm`,
+          left: `${(i % COLS) * CARD_H}mm`, top: `${Math.floor(i / COLS) * OPEN_W}mm`,
           width: `${CARD_H}mm`, height: `${OPEN_W}mm`,
         }}>
           <div style={{
@@ -220,7 +220,7 @@ function PrintSheet({ count, children }) {
 export default function GiftCardClient({ savedSettings }) {
   const [copy, setCopy]           = useState({ ...SEED, ...savedSettings });
   const [fromName, setFromName]   = useState('');
-  const [cardCount, setCardCount] = useState(8);
+  const [cardCount, setCardCount] = useState(PER_SHEET);
   const [paper, setPaper]         = useState('cream');
   const [printFill, setPrintFill] = useState(false);
   const [saveState, setSaveState] = useState('idle'); // idle | saving | saved | error
@@ -255,7 +255,9 @@ export default function GiftCardClient({ savedSettings }) {
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&display=swap');
 
-        @page { size: 210mm 297mm; margin: 0; }
+        /* Sheet is 200×280mm inside these margins — leaves slack so rounding or a
+           printer's own margin can't push a sheet onto the next page */
+        @page { size: 210mm 297mm; margin: 8.5mm 5mm; }
 
         .gc-root {
           background: #F0EDE8;
@@ -270,16 +272,23 @@ export default function GiftCardClient({ savedSettings }) {
 
         @media print {
           .no-print { display: none !important; }
-          .gc-root  { background: white !important; padding: 0 !important; min-height: 0 !important; }
+          html, body, main.main-content, main.main-content > div, .gc-root {
+            margin: 0 !important; padding: 0 !important;
+            min-height: 0 !important; height: auto !important;
+            background: white !important;
+          }
+          body > div { min-height: 0 !important; }
           .gc-sheet {
             display: block !important;
             position: relative;
-            width: 210mm;
-            height: 297mm;
+            width: ${SHEET_W}mm;
+            height: ${SHEET_H}mm;
             overflow: hidden;
-            page-break-after: always;
-            break-after: page;
+            break-inside: avoid;
+            page-break-inside: avoid;
           }
+          /* Break between sheets only — never before the first or after the last */
+          .gc-sheet + .gc-sheet { break-before: page; page-break-before: always; }
         }
       `}</style>
 
@@ -309,7 +318,7 @@ export default function GiftCardClient({ savedSettings }) {
             display: 'flex', alignItems: 'center', gap: '7px', fontFamily: SANS,
           }}
         >
-          <Printer size={15} /> Print
+          <Printer size={15} /> Print {sheetCount} sheet{sheetCount !== 1 ? 's' : ''}
         </button>
       </div>
 
@@ -411,7 +420,10 @@ export default function GiftCardClient({ savedSettings }) {
             </div>
           </div>
           <div style={{ fontFamily: SANS, fontSize: '11px', color: C.muted, marginTop: '16px', lineHeight: 1.7 }}>
-            Print <b>single-sided</b> on 200–250gsm card at 100% scale (turn off &ldquo;fit to page&rdquo;).<br />
+            <div style={{ background: '#FEF3C7', color: '#92400E', borderRadius: '8px', padding: '8px 12px', marginBottom: '8px', fontWeight: 600 }}>
+              In the print dialog, turn <b>Two-Sided OFF</b>. Each page is a separate sheet of {PER_SHEET} cards.
+            </div>
+            Print on 200–250gsm card at 100% scale (turn off &ldquo;fit to page&rdquo;).<br />
             Cut on the grey dashed lines, then fold on the gold dotted line with the print facing out
             (score it first for a crisp fold). Each sheet gives {PER_SHEET} cards; the inside stays blank for a note.
           </div>
