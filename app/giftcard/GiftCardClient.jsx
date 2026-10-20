@@ -33,14 +33,16 @@ const SEED = {
   giftcard_qr_url:  'https://healingsoil.in/shop',
 };
 
-/* Card + A4 sheet geometry (mm). Cards sit sideways on the sheet: 2 × 4 = 8 per A4 */
+/* Geometry (mm). Folded card is 70×100; opened flat it's back|front = 140×100.
+   Open cards sit sideways on the sheet in 100×140 slots: 2 × 2 = 4 per A4 */
 const CARD_W = 70;
 const CARD_H = 100;
+const OPEN_W = CARD_W * 2;
 const COLS = 2;
-const ROWS = 4;
+const ROWS = 2;
 const PER_SHEET = COLS * ROWS;
 const GRID_X = (210 - COLS * CARD_H) / 2;   // 5mm
-const GRID_Y = (297 - ROWS * CARD_W) / 2;   // 8.5mm
+const GRID_Y = (297 - ROWS * OPEN_W) / 2;   // 8.5mm
 
 /* ══════════════════════════════════════
    SOIL LAYERS — thin strata lines, the card's one motif
@@ -60,17 +62,21 @@ function SoilLayers({ height = '7mm', faint = false }) {
   );
 }
 
-/* Logo PNG has wide empty margins — window onto the artwork only */
+/* Logo PNG has wide transparent margins — pull them in with negative margins
+   (nothing is clipped). maxWidth 'none' overrides Tailwind's img { max-width: 100% } */
 function Logo({ width = 30 }) {
-  const imgW = width / 0.53;
+  const imgW = width / 0.6;            // artwork ≈ 52% of the PNG's width; 60% leaves slack
+  const imgH = imgW * (1536 / 2814);
   return (
-    <div style={{ width: `${width}mm`, height: `${imgW * 0.546 * 0.88}mm`, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
-      <img
-        src="/logo/healing-soil-v2.1-transparent.png"
-        alt="Healing Soil"
-        style={{ position: 'absolute', width: `${imgW}mm`, height: 'auto', left: `${-imgW * 0.25}mm`, top: `${-imgW * 0.546 * 0.09}mm` }}
-      />
-    </div>
+    <img
+      src="/logo/healing-soil-v2.1-transparent.png"
+      alt="Healing Soil"
+      style={{
+        display: 'block', flexShrink: 0, maxWidth: 'none',
+        width: `${imgW}mm`, height: `${imgH}mm`,
+        margin: `${-imgH * 0.07}mm ${-imgW * 0.2}mm 0`,
+      }}
+    />
   );
 }
 
@@ -161,58 +167,49 @@ function CardBack({ copy, fromName, bg }) {
 }
 
 /* ══════════════════════════════════════
-   PRINT SHEET — 8 cards on A4, rotated into 100×70 slots.
-   Backs: columns mirrored + rotated the other way, so a
-   long-edge duplex flip puts each back behind its front, same way up.
+   PRINT SHEET — single-sided. Each open card (back | front) is
+   rotated into a 100×140 slot; fold across the middle, print side out.
 ══════════════════════════════════════ */
-function CropMarks() {
+/* Lines run right across the grid — printers can't reach the outer ~5mm,
+   so marks only in the margin get lost. Cut = dashed, fold = dotted. */
+function CutFoldLines({ count }) {
   const xs = Array.from({ length: COLS + 1 }, (_, i) => GRID_X + i * CARD_H);
-  const ys = Array.from({ length: ROWS + 1 }, (_, i) => GRID_Y + i * CARD_W);
-  const len = 4;
-  const stroke = { stroke: '#9CA3AF', strokeWidth: 0.15 };
+  const ys = Array.from({ length: ROWS + 1 }, (_, i) => GRID_Y + i * OPEN_W);
+  const usedRows = Math.ceil(count / COLS);
+  const cut  = { stroke: '#A8A29E', strokeWidth: 0.25, strokeDasharray: '2 1.2' };
+  const fold = { stroke: '#C9A876', strokeWidth: 0.3, strokeDasharray: '0.4 1', strokeLinecap: 'round' };
   return (
-    <svg viewBox="0 0 210 297" style={{ position: 'absolute', inset: 0, width: '210mm', height: '297mm' }}>
-      {xs.map(x => (
-        <g key={`x${x}`}>
-          <line x1={x} x2={x} y1={GRID_Y - 1 - len} y2={GRID_Y - 1} {...stroke} />
-          <line x1={x} x2={x} y1={297 - GRID_Y + 1} y2={297 - GRID_Y + 1 + len} {...stroke} />
-        </g>
-      ))}
-      {ys.map(y => (
-        <g key={`y${y}`}>
-          <line y1={y} y2={y} x1={0.5} x2={GRID_X - 1} {...stroke} />
-          <line y1={y} y2={y} x1={210 - GRID_X + 1} x2={209.5} {...stroke} />
-        </g>
-      ))}
+    <svg viewBox="0 0 210 297" style={{ position: 'absolute', inset: 0, width: '210mm', height: '297mm', display: 'block', maxWidth: 'none' }}>
+      {xs.map(x => <line key={`x${x}`} x1={x} x2={x} y1={GRID_Y} y2={297 - GRID_Y} {...cut} />)}
+      {ys.map(y => <line key={`y${y}`} y1={y} y2={y} x1={GRID_X} x2={210 - GRID_X} {...cut} />)}
+      {Array.from({ length: usedRows }, (_, r) => {
+        const y = GRID_Y + r * OPEN_W + CARD_W;
+        return <line key={`f${r}`} y1={y} y2={y} x1={GRID_X} x2={210 - GRID_X} {...fold} />;
+      })}
     </svg>
   );
 }
 
-function PrintSheet({ count, side, children }) {
+function PrintSheet({ count, children }) {
   return (
     <div className="gc-sheet">
-      {Array.from({ length: count }, (_, i) => {
-        const col = i % COLS;
-        const row = Math.floor(i / COLS);
-        const x = side === 'back' ? COLS - 1 - col : col;
-        return (
-          <div key={i} style={{
-            position: 'absolute', overflow: 'hidden',
-            left: `${GRID_X + x * CARD_H}mm`, top: `${GRID_Y + row * CARD_W}mm`,
-            width: `${CARD_H}mm`, height: `${CARD_W}mm`,
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} style={{
+          position: 'absolute', overflow: 'hidden',
+          left: `${GRID_X + (i % COLS) * CARD_H}mm`, top: `${GRID_Y + Math.floor(i / COLS) * OPEN_W}mm`,
+          width: `${CARD_H}mm`, height: `${OPEN_W}mm`,
+        }}>
+          <div style={{
+            position: 'absolute', display: 'flex',
+            width: `${OPEN_W}mm`, height: `${CARD_H}mm`,
+            left: `${(CARD_H - OPEN_W) / 2}mm`, top: `${(OPEN_W - CARD_H) / 2}mm`,
+            transform: 'rotate(90deg)',
           }}>
-            <div style={{
-              position: 'absolute',
-              width: `${CARD_W}mm`, height: `${CARD_H}mm`,
-              left: `${(CARD_H - CARD_W) / 2}mm`, top: `${(CARD_W - CARD_H) / 2}mm`,
-              transform: `rotate(${side === 'back' ? -90 : 90}deg)`,
-            }}>
-              {children}
-            </div>
+            {children}
           </div>
-        );
-      })}
-      <CropMarks />
+        </div>
+      ))}
+      <CutFoldLines count={count} />
     </div>
   );
 }
@@ -300,7 +297,7 @@ export default function GiftCardClient({ savedSettings }) {
           <div>
             <div style={{ fontSize: '16px', fontWeight: 800 }}>Gift Card</div>
             <div style={{ fontSize: '11px', opacity: 0.6 }}>
-              {count} card{count !== 1 ? 's' : ''} · {sheetCount} A4 sheet{sheetCount !== 1 ? 's' : ''}, printed both sides
+              {count} card{count !== 1 ? 's' : ''} · {sheetCount} A4 sheet{sheetCount !== 1 ? 's' : ''}, single-sided, cut & fold
             </div>
           </div>
         </div>
@@ -414,18 +411,19 @@ export default function GiftCardClient({ savedSettings }) {
             </div>
           </div>
           <div style={{ fontFamily: SANS, fontSize: '11px', color: C.muted, marginTop: '16px', lineHeight: 1.7 }}>
-            Print on 300gsm+ card, <b>double-sided, flip on long edge</b>, at 100% scale (turn off &ldquo;fit to page&rdquo;).<br />
-            Then cut along the crop marks. Each sheet gives {PER_SHEET} cards.
+            Print <b>single-sided</b> on 200–250gsm card at 100% scale (turn off &ldquo;fit to page&rdquo;).<br />
+            Cut on the grey dashed lines, then fold on the gold dotted line with the print facing out
+            (score it first for a crisp fold). Each sheet gives {PER_SHEET} cards; the inside stays blank for a note.
           </div>
         </div>
       </div>
 
-      {/* ── Print output: front sheet then back sheet, per 8 cards ── */}
+      {/* ── Print output: open cards (back | front), 4 per A4 ── */}
       {sheets.map((n, i) => (
-        <div key={i}>
-          <PrintSheet count={n} side="front"><CardFront copy={copy} bg={printBg} /></PrintSheet>
-          <PrintSheet count={n} side="back"><CardBack copy={copy} fromName={fromName} bg={printBg} /></PrintSheet>
-        </div>
+        <PrintSheet key={i} count={n}>
+          <CardBack copy={copy} fromName={fromName} bg={printBg} />
+          <CardFront copy={copy} bg={printBg} />
+        </PrintSheet>
       ))}
     </div>
   );
