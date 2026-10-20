@@ -6,7 +6,7 @@ import { useState } from 'react'
 import {
   LayoutDashboard, PlusCircle, ShoppingBag, Users,
   Package, Receipt, Settings, X, Tag, TrendingUp, Bell, BarChart2, Droplets, NotebookPen,
-  ChevronDown, BarChart3, Wrench, Percent, LogOut, Truck, MessageCircle, BookOpen, Tent
+  ChevronDown, BarChart3, Wrench, Percent, LogOut, Truck, MessageCircle, BookOpen, Tent, Gift
 } from 'lucide-react'
 import { signOutAction } from '@/lib/actions/auth'
 
@@ -37,7 +37,14 @@ const navItems = [
       { label: 'Print',            href: '/labels',   icon: Tag },
       { label: 'Soap Catalogue',   href: '/catalog',  icon: BookOpen },
       { label: 'Dispatch Report',  href: '/orders/dispatch-report', icon: Truck },
-      { label: 'Gift Handnote',    href: '/handnote', icon: NotebookPen },
+      {
+        label: 'Gift Notes',
+        icon: NotebookPen,
+        children: [
+          { label: 'Gift Booklet', href: '/handnote', icon: BookOpen },
+          { label: 'Gift Card',    href: '/giftcard', icon: Gift },
+        ],
+      },
       { label: 'Reorder Outreach', href: '/outreach', icon: Bell },
     ],
   },
@@ -76,22 +83,36 @@ function NavLink({ href, active, children, style = {} }) {
   )
 }
 
-function NavItem({ item, pathname }) {
+/* True if this item's link, or any link nested under it, matches the current path */
+function isItemActive(item, pathname) {
+  if (item.children) return item.children.some(c => isItemActive(c, pathname))
+  return pathname === item.href ||
+    (item.href !== '/dashboard' && pathname.startsWith(item.href))
+}
+
+/* depth 0 = top level, 1 = inside a group, 2 = group inside a group */
+const indentFor = depth => 24 + depth * 22
+const sizeFor = depth => ({
+  icon: depth === 0 ? 17 : 15,
+  font: depth === 0 ? '14px' : '13px',
+  pad:  depth === 0 ? '10px' : '8px',
+})
+
+function NavItem({ item, pathname, depth = 0 }) {
   const hasChildren = Boolean(item.children)
-  const childActive = hasChildren && item.children.some(
-    c => pathname === c.href || pathname.startsWith(c.href)
-  )
+  const childActive = hasChildren && isItemActive(item, pathname)
   const [open, setOpen] = useState(childActive)
   const [hovered, setHovered] = useState(false)
 
   const Icon = item.icon
+  const s = sizeFor(depth)
+  const nestedStyle = depth === 0 ? {} : { padding: `${s.pad} 24px ${s.pad} ${indentFor(depth)}px`, fontSize: s.font }
 
   if (!hasChildren) {
-    const isActive = pathname === item.href ||
-      (item.href !== '/dashboard' && pathname.startsWith(item.href))
+    const isActive = isItemActive(item, pathname)
     return (
-      <NavLink href={item.href} active={isActive}>
-        <Icon size={17} strokeWidth={isActive ? 2.2 : 1.8} />
+      <NavLink href={item.href} active={isActive} style={nestedStyle}>
+        <Icon size={s.icon} strokeWidth={isActive ? 2.2 : 1.8} />
         {item.label}
       </NavLink>
     )
@@ -114,9 +135,10 @@ function NavItem({ item, pathname }) {
           fontWeight: childActive ? '600' : '400',
           cursor: 'pointer',
           textAlign: 'left',
+          ...nestedStyle,
         }}
       >
-        <Icon size={17} strokeWidth={childActive ? 2.2 : 1.8} />
+        <Icon size={s.icon} strokeWidth={childActive ? 2.2 : 1.8} />
         <span style={{ flex: 1 }}>{item.label}</span>
         <ChevronDown
           size={14}
@@ -133,26 +155,14 @@ function NavItem({ item, pathname }) {
       <div
         style={{
           overflow: 'hidden',
-          maxHeight: open ? '200px' : '0',
+          maxHeight: open ? '600px' : '0',
           transition: 'max-height 0.22s ease',
-          backgroundColor: 'rgba(0,0,0,0.18)',
+          backgroundColor: depth === 0 ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.12)',
         }}
       >
-        {item.children.map(child => {
-          const isActive = pathname === child.href || pathname.startsWith(child.href)
-          const ChildIcon = child.icon
-          return (
-            <NavLink
-              key={child.href}
-              href={child.href}
-              active={isActive}
-              style={{ padding: '8px 24px 8px 46px', fontSize: '13px' }}
-            >
-              <ChildIcon size={15} strokeWidth={isActive ? 2.2 : 1.8} />
-              {child.label}
-            </NavLink>
-          )
-        })}
+        {item.children.map(child => (
+          <NavItem key={child.href || child.label} item={child} pathname={pathname} depth={depth + 1} />
+        ))}
       </div>
     </div>
   )
