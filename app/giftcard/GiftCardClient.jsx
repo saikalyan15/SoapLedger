@@ -126,8 +126,8 @@ function CorporateLines({ name }) {
       <WriteLine label="To" />
       {name ? (
         <div style={{ textAlign: 'center', fontFamily: SERIF, fontStyle: 'italic', color: C.textBrown, marginTop: '2mm' }}>
-          <div style={{ fontSize: '8pt', lineHeight: 1.2 }}>A little gift from</div>
-          <div style={{ fontSize: '11pt', fontWeight: 600, color: C.brand, lineHeight: 1.3 }}>{name}</div>
+          <div style={{ fontSize: '9pt', lineHeight: 1.2 }}>A little gift from</div>
+          <div style={{ fontSize: '12pt', fontWeight: 600, color: C.brand, lineHeight: 1.3 }}>{name}</div>
         </div>
       ) : (
         <div style={{ marginTop: '3.5mm' }}><WriteLine label="From" /></div>
@@ -142,11 +142,11 @@ function PersonalSignoff({ name, copy }) {
   const dotted = `0.3mm dotted ${C.textBrown}`;
   return (
     <div style={{ width: '46mm', marginBottom: '1.5mm', fontFamily: SERIF, fontStyle: 'italic', color: C.textBrown }}>
-      {Array.from({ length: NOTE_LINES }, (_, i) => <div key={i} style={{ height: '4.5mm', borderBottom: dotted }} />)}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', gap: '1.5mm', marginTop: '2mm', fontSize: '9pt' }}>
+      {Array.from({ length: NOTE_LINES }, (_, i) => <div key={i} style={{ height: '4.2mm', borderBottom: dotted }} />)}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', gap: '1.5mm', marginTop: '2mm', fontSize: '10pt' }}>
         {copy.giftcard_personal_signoff}
         {name
-          ? <span style={{ fontSize: '10.5pt', fontWeight: 600, color: C.brand, lineHeight: 1 }}>{name}</span>
+          ? <span style={{ fontSize: '11.5pt', fontWeight: 600, color: C.brand, lineHeight: 1 }}>{name}</span>
           : <div style={{ width: '18mm', borderBottom: dotted, marginBottom: '1mm' }} />}
       </div>
     </div>
@@ -156,7 +156,7 @@ function PersonalSignoff({ name, copy }) {
 /* Label + dotted line to fill in by hand; fixed label width keeps To/From lines aligned */
 function WriteLine({ label }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', fontFamily: SERIF, fontStyle: 'italic', fontSize: '9pt', color: C.textBrown }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', fontFamily: SERIF, fontStyle: 'italic', fontSize: '10pt', color: C.textBrown }}>
       <div style={{ width: '9mm' }}>{label}</div>
       <div style={{ width: '30mm', borderBottom: `0.3mm dotted ${C.textBrown}`, marginBottom: '1mm' }} />
     </div>
@@ -168,7 +168,7 @@ function CardBack({ copy, fromName, mode, bg }) {
   return (
     <div style={cardShell(bg)}>
       <div style={{
-        fontFamily: SANS, fontSize: '6.3pt', lineHeight: 1.55,
+        fontFamily: SANS, fontSize: '7.2pt', lineHeight: 1.45,
         color: C.textBrown, textAlign: 'center', whiteSpace: 'pre-line', textWrap: 'balance',
       }}>
         {copy.giftcard_body}
@@ -193,7 +193,7 @@ function CardBack({ copy, fromName, mode, bg }) {
           style={{ width: '12mm', height: '12mm', flexShrink: 0 }}
         />
       )}
-      <div style={{ fontFamily: SANS, fontSize: '5pt', fontWeight: 600, letterSpacing: '0.1em', color: C.brand, textAlign: 'center', margin: '1.5mm 0' }}>
+      <div style={{ fontFamily: SANS, fontSize: '5.8pt', fontWeight: 600, letterSpacing: '0.08em', color: C.brand, textAlign: 'center', margin: '1.5mm 0' }}>
         {copy.giftcard_contact}
       </div>
       <div style={{ width: '100%' }}>
@@ -474,7 +474,8 @@ export default function GiftCardClient({ savedSettings }) {
           </div>
           <div style={{ fontFamily: SANS, fontSize: '11px', color: C.muted, marginTop: '16px', lineHeight: 1.7 }}>
             <div style={{ background: '#FEF3C7', color: '#92400E', borderRadius: '8px', padding: '8px 12px', marginBottom: '8px', fontWeight: 600 }}>
-              In the print dialog, turn <b>Two-Sided ON</b> and choose <b>Long-Edge binding</b>. Each sheet prints fronts on one side, backs on the other.
+              In the print dialog: turn <b>Two-Sided ON</b> with <b>Long-Edge binding</b>, and turn <b>Headers and footers OFF</b>
+              (otherwise the page title and web address print over the cards). Each sheet prints fronts on one side, backs on the other.
             </div>
             Print on 300gsm card at 100% scale (turn off &ldquo;fit to page&rdquo;).<br />
             Cut on the grey dashed lines. Each sheet gives {PER_SHEET} cards. First time? Test on plain paper and hold it up to the light to check the sides line up.
