@@ -31,6 +31,8 @@ const SEED = {
   giftcard_footer:  'HANDMADE · SMALL BATCH · GOA',
   giftcard_contact: 'healingsoil.in · @healingsoil.in',
   giftcard_qr_url:  'https://healingsoil.in/shop',
+  giftcard_personal_heading: 'a little note for you',
+  giftcard_personal_signoff: 'with love,',
 };
 
 /* Geometry (mm). Folded card is 66×70 (fits the small jute pouch). Opened flat
@@ -120,6 +122,40 @@ function CardFront({ copy, bg }) {
 /* ══════════════════════════════════════
    BACK
 ══════════════════════════════════════ */
+/* Corporate: To line to handwrite; From is the typed company, or a line to handwrite */
+function CorporateLines({ name }) {
+  return (
+    <>
+      <WriteLine label="To" />
+      {name ? (
+        <div style={{ textAlign: 'center', fontFamily: SERIF, fontStyle: 'italic', color: C.textBrown, marginTop: '2mm' }}>
+          <div style={{ fontSize: '8pt', lineHeight: 1.2 }}>A little gift from</div>
+          <div style={{ fontSize: '11pt', fontWeight: 600, color: C.brand, lineHeight: 1.3 }}>{name}</div>
+        </div>
+      ) : (
+        <div style={{ marginTop: '3.5mm' }}><WriteLine label="From" /></div>
+      )}
+    </>
+  );
+}
+
+/* Personal: a heading, two lines for a short handwritten note, and a sign-off */
+function PersonalNote({ name, copy }) {
+  const dotted = `0.3mm dotted ${C.textBrown}`;
+  return (
+    <div style={{ width: '42mm', marginBottom: '1.5mm', fontFamily: SERIF, fontStyle: 'italic', color: C.textBrown }}>
+      <div style={{ fontSize: '9.5pt', textAlign: 'center', lineHeight: 1.2 }}>{copy.giftcard_personal_heading}</div>
+      {[0, 1].map(i => <div key={i} style={{ height: '4.8mm', borderBottom: dotted }} />)}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', gap: '1.5mm', marginTop: '2mm', fontSize: '9pt' }}>
+        {copy.giftcard_personal_signoff}
+        {name
+          ? <span style={{ fontSize: '10.5pt', fontWeight: 600, color: C.brand, lineHeight: 1 }}>{name}</span>
+          : <div style={{ width: '16mm', borderBottom: dotted, marginBottom: '1mm' }} />}
+      </div>
+    </div>
+  );
+}
+
 /* Label + dotted line to fill in by hand; fixed label width keeps To/From lines aligned */
 function WriteLine({ label }) {
   return (
@@ -130,7 +166,7 @@ function WriteLine({ label }) {
   );
 }
 
-function CardBack({ copy, fromName, bg }) {
+function CardBack({ copy, fromName, mode, bg }) {
   const name = fromName.trim();
   return (
     <div style={cardShell(bg)}>
@@ -141,18 +177,11 @@ function CardBack({ copy, fromName, bg }) {
         {copy.giftcard_body}
       </div>
 
-      <div style={{ width: '11mm', height: '0.25mm', background: C.rule, margin: '2.5mm 0', flexShrink: 0 }} />
+      <div style={{ width: '11mm', height: '0.25mm', background: C.rule, margin: '2mm 0', flexShrink: 0 }} />
 
-      <WriteLine label="To" />
-
-      {name ? (
-        <div style={{ textAlign: 'center', fontFamily: SERIF, fontStyle: 'italic', color: C.textBrown, marginTop: '2mm' }}>
-          <div style={{ fontSize: '8pt', lineHeight: 1.2 }}>A little gift from</div>
-          <div style={{ fontSize: '11pt', fontWeight: 600, color: C.brand, lineHeight: 1.3 }}>{name}</div>
-        </div>
-      ) : (
-        <div style={{ marginTop: '3.5mm' }}><WriteLine label="From" /></div>
-      )}
+      {mode === 'corporate'
+        ? <CorporateLines name={name} />
+        : <PersonalNote name={name} copy={copy} />}
 
       <div style={{ flex: 1 }} />
 
@@ -225,6 +254,7 @@ function PrintSheet({ count, front, back }) {
 ══════════════════════════════════════ */
 export default function GiftCardClient({ savedSettings }) {
   const [copy, setCopy]           = useState({ ...SEED, ...savedSettings });
+  const [mode, setMode]           = useState('personal'); // personal | corporate
   const [fromName, setFromName]   = useState('');
   const [cardCount, setCardCount] = useState(PER_SHEET);
   const [paper, setPaper]         = useState('cream');
@@ -341,11 +371,28 @@ export default function GiftCardClient({ savedSettings }) {
           <div style={card}>
             <Label>This batch</Label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <Field label="Gift from (person or company)">
+              <div style={{ display: 'flex', background: '#F3F4F6', borderRadius: '8px', padding: '3px' }}>
+                {[['personal', 'Personal'], ['corporate', 'Corporate']].map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setMode(key)}
+                    style={{
+                      flex: 1, padding: '7px', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                      fontFamily: SANS, fontSize: '12px', fontWeight: 700,
+                      background: mode === key ? 'white' : 'transparent',
+                      color: mode === key ? C.brand : C.muted,
+                      boxShadow: mode === key ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <Field label={mode === 'corporate' ? 'Gift from (company or sender)' : 'Sign off as'}>
                 <input
                   type="text"
                   value={fromName}
-                  placeholder="Leave empty for a handwritten line"
+                  placeholder={mode === 'corporate' ? 'Leave empty for a handwritten From line' : 'Leave empty to sign by hand'}
                   onChange={e => setFromName(e.target.value)}
                   maxLength={40}
                   style={input}
@@ -389,6 +436,12 @@ export default function GiftCardClient({ savedSettings }) {
               <Field label="QR code link">
                 <input type="url" value={copy.giftcard_qr_url} onChange={e => setField('giftcard_qr_url', e.target.value)} maxLength={500} style={input} />
               </Field>
+              <Field label="Personal note heading">
+                <input type="text" value={copy.giftcard_personal_heading} onChange={e => setField('giftcard_personal_heading', e.target.value)} maxLength={500} style={input} />
+              </Field>
+              <Field label="Personal sign-off">
+                <input type="text" value={copy.giftcard_personal_signoff} onChange={e => setField('giftcard_personal_signoff', e.target.value)} maxLength={500} style={input} />
+              </Field>
               <Field label="Contact line">
                 <input type="text" value={copy.giftcard_contact} onChange={e => setField('giftcard_contact', e.target.value)} maxLength={500} style={input} />
               </Field>
@@ -421,7 +474,7 @@ export default function GiftCardClient({ savedSettings }) {
             <div>
               <div style={previewTag}>BACK</div>
               <div style={{ boxShadow: '0 4px 18px rgba(0,0,0,0.14)' }}>
-                <CardBack copy={copy} fromName={fromName} bg={previewBg} />
+                <CardBack copy={copy} fromName={fromName} mode={mode} bg={previewBg} />
               </div>
             </div>
           </div>
@@ -441,7 +494,7 @@ export default function GiftCardClient({ savedSettings }) {
         <PrintSheet
           key={i}
           count={n}
-          back={<CardBack copy={copy} fromName={fromName} bg={printBg} />}
+          back={<CardBack copy={copy} fromName={fromName} mode={mode} bg={printBg} />}
           front={<CardFront copy={copy} bg={printBg} />}
         />
       ))}
