@@ -33,24 +33,24 @@ const SEED = {
   giftcard_qr_url:  'https://healingsoil.in/shop',
 };
 
-/* Geometry (mm). Folded card is 55×85 (business-card size, fits the small jute pouch);
-   opened flat it's back|front = 110×85. Open cards sit sideways on the sheet in
-   85×110 slots: 2 × 2 = 4 per A4 */
-const CARD_W = 55;
-const CARD_H = 85;
-const OPEN_W = CARD_W * 2;
-const COLS = 2;
+/* Geometry (mm). Folded card is 66×70 (fits the small jute pouch). Opened flat
+   it's 66×140: back on top (upside down), front below, fold across the middle —
+   a tent fold, so the fold sits at the card's top. 3 × 2 = 6 per A4, no rotation */
+const CARD_W = 66;
+const CARD_H = 70;
+const OPEN_H = CARD_H * 2;
+const COLS = 3;
 const ROWS = 2;
 const PER_SHEET = COLS * ROWS;
-const SHEET_W = COLS * CARD_H;   // 170mm
-const SHEET_H = ROWS * OPEN_W;   // 220mm — page margins (@page) centre it on A4
+const SHEET_W = COLS * CARD_W;   // 198mm
+const SHEET_H = ROWS * OPEN_H;   // 280mm — page margins (@page) centre it on A4
 const PAGE_MARGIN_X = (210 - SHEET_W) / 2;
 const PAGE_MARGIN_Y = (297 - SHEET_H) / 2;
 
 /* ══════════════════════════════════════
    SOIL LAYERS — thin strata lines, the card's one motif
 ══════════════════════════════════════ */
-function SoilLayers({ height = '5.5mm', faint = false }) {
+function SoilLayers({ height = '4.5mm', faint = false }) {
   const o = faint ? 0.55 : 1;
   return (
     <svg viewBox="0 0 200 22" preserveAspectRatio="none" style={{ width: '100%', height, display: 'block' }}>
@@ -85,7 +85,7 @@ function Logo({ width = 30 }) {
 
 const cardShell = (bg) => ({
   width: `${CARD_W}mm`, height: `${CARD_H}mm`,
-  background: bg, boxSizing: 'border-box', padding: '4.5mm',
+  background: bg, boxSizing: 'border-box', padding: '4mm',
   display: 'flex', flexDirection: 'column', alignItems: 'center',
   overflow: 'hidden', position: 'relative',
   WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
@@ -97,17 +97,17 @@ const cardShell = (bg) => ({
 function CardFront({ copy, bg }) {
   return (
     <div style={cardShell(bg)}>
-      <div style={{ height: '3mm', flexShrink: 0 }} />
-      <Logo width={27} />
-      <div style={{ width: '11mm', height: '0.25mm', background: C.rule, margin: '4mm 0 3.5mm', flexShrink: 0 }} />
+      <div style={{ height: '1mm', flexShrink: 0 }} />
+      <Logo width={22} />
+      <div style={{ width: '11mm', height: '0.25mm', background: C.rule, margin: '3mm 0 2.5mm', flexShrink: 0 }} />
       <div style={{
-        fontFamily: SERIF, fontStyle: 'italic', fontSize: '13pt', lineHeight: 1.25,
+        fontFamily: SERIF, fontStyle: 'italic', fontSize: '12pt', lineHeight: 1.2,
         color: C.textBrown, textAlign: 'center', whiteSpace: 'pre-line',
       }}>
         {copy.giftcard_tagline}
       </div>
       <div style={{ flex: 1 }} />
-      <div style={{ width: '100%', marginBottom: '2mm' }}>
+      <div style={{ width: '100%', marginBottom: '1.5mm' }}>
         <SoilLayers />
       </div>
       <div style={{ fontFamily: SANS, fontSize: '4.5pt', fontWeight: 600, letterSpacing: '0.22em', color: C.brand, textAlign: 'center' }}>
@@ -124,25 +124,24 @@ function CardBack({ copy, fromName, bg }) {
   const name = fromName.trim();
   return (
     <div style={cardShell(bg)}>
-      <div style={{ height: '2mm', flexShrink: 0 }} />
       <div style={{
-        fontFamily: SANS, fontSize: '6.5pt', lineHeight: 1.6,
-        color: C.textBrown, textAlign: 'center', whiteSpace: 'pre-line',
+        fontFamily: SANS, fontSize: '6.3pt', lineHeight: 1.55,
+        color: C.textBrown, textAlign: 'center', whiteSpace: 'pre-line', textWrap: 'balance',
       }}>
         {copy.giftcard_body}
       </div>
 
-      <div style={{ width: '11mm', height: '0.25mm', background: C.rule, margin: '3.5mm 0', flexShrink: 0 }} />
+      <div style={{ width: '11mm', height: '0.25mm', background: C.rule, margin: '2.5mm 0', flexShrink: 0 }} />
 
       {name ? (
         <div style={{ textAlign: 'center', fontFamily: SERIF, fontStyle: 'italic', color: C.textBrown }}>
-          <div style={{ fontSize: '8.5pt', lineHeight: 1.2 }}>A little gift from</div>
-          <div style={{ fontSize: '11.5pt', fontWeight: 600, color: C.brand, lineHeight: 1.3 }}>{name}</div>
+          <div style={{ fontSize: '8pt', lineHeight: 1.2 }}>A little gift from</div>
+          <div style={{ fontSize: '11pt', fontWeight: 600, color: C.brand, lineHeight: 1.3 }}>{name}</div>
         </div>
       ) : (
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2mm', fontFamily: SERIF, fontStyle: 'italic', fontSize: '9.5pt', color: C.textBrown }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2mm', fontFamily: SERIF, fontStyle: 'italic', fontSize: '9pt', color: C.textBrown }}>
           From
-          <div style={{ width: '28mm', borderBottom: `0.3mm dotted ${C.textBrown}`, marginBottom: '1mm' }} />
+          <div style={{ width: '30mm', borderBottom: `0.3mm dotted ${C.textBrown}`, marginBottom: '1mm' }} />
         </div>
       )}
 
@@ -156,28 +155,29 @@ function CardBack({ copy, fromName, bg }) {
           marginSize={0}
           fgColor={C.brand}
           bgColor="transparent"
-          style={{ width: '13mm', height: '13mm', flexShrink: 0 }}
+          style={{ width: '12mm', height: '12mm', flexShrink: 0 }}
         />
       )}
-      <div style={{ fontFamily: SANS, fontSize: '5pt', fontWeight: 600, letterSpacing: '0.1em', color: C.brand, textAlign: 'center', margin: '2mm 0' }}>
+      <div style={{ fontFamily: SANS, fontSize: '5pt', fontWeight: 600, letterSpacing: '0.1em', color: C.brand, textAlign: 'center', margin: '1.5mm 0' }}>
         {copy.giftcard_contact}
       </div>
       <div style={{ width: '100%' }}>
-        <SoilLayers height="2.8mm" faint />
+        <SoilLayers height="2.5mm" faint />
       </div>
     </div>
   );
 }
 
 /* ══════════════════════════════════════
-   PRINT SHEET — single-sided. Each open card (back | front) is
-   rotated into a 100×140 slot; fold across the middle, print side out.
+   PRINT SHEET — single-sided. Each open card is back (upside down) over
+   front; fold across the middle, print side out, and the back reads the
+   right way up when the card is turned around.
 ══════════════════════════════════════ */
 /* Lines run right across the grid — printers can't reach the outer ~5mm,
    so marks only in the margin get lost. Cut = dashed, fold = dotted. */
 function CutFoldLines({ count }) {
-  const xs = Array.from({ length: COLS + 1 }, (_, i) => i * CARD_H);
-  const ys = Array.from({ length: ROWS + 1 }, (_, i) => i * OPEN_W);
+  const xs = Array.from({ length: COLS + 1 }, (_, i) => i * CARD_W);
+  const ys = Array.from({ length: ROWS + 1 }, (_, i) => i * OPEN_H);
   const usedRows = Math.ceil(count / COLS);
   const cut  = { stroke: '#A8A29E', strokeWidth: 0.25, strokeDasharray: '2 1.2' };
   const fold = { stroke: '#C9A876', strokeWidth: 0.3, strokeDasharray: '0.4 1', strokeLinecap: 'round' };
@@ -186,30 +186,24 @@ function CutFoldLines({ count }) {
       {xs.map(x => <line key={`x${x}`} x1={x} x2={x} y1={0} y2={SHEET_H} {...cut} />)}
       {ys.map(y => <line key={`y${y}`} y1={y} y2={y} x1={0} x2={SHEET_W} {...cut} />)}
       {Array.from({ length: usedRows }, (_, r) => {
-        const y = r * OPEN_W + CARD_W;
+        const y = r * OPEN_H + CARD_H;
         return <line key={`f${r}`} y1={y} y2={y} x1={0} x2={SHEET_W} {...fold} />;
       })}
     </svg>
   );
 }
 
-function PrintSheet({ count, children }) {
+function PrintSheet({ count, front, back }) {
   return (
     <div className="gc-sheet">
       {Array.from({ length: count }, (_, i) => (
         <div key={i} style={{
           position: 'absolute', overflow: 'hidden',
-          left: `${(i % COLS) * CARD_H}mm`, top: `${Math.floor(i / COLS) * OPEN_W}mm`,
-          width: `${CARD_H}mm`, height: `${OPEN_W}mm`,
+          left: `${(i % COLS) * CARD_W}mm`, top: `${Math.floor(i / COLS) * OPEN_H}mm`,
+          width: `${CARD_W}mm`, height: `${OPEN_H}mm`,
         }}>
-          <div style={{
-            position: 'absolute', display: 'flex',
-            width: `${OPEN_W}mm`, height: `${CARD_H}mm`,
-            left: `${(CARD_H - OPEN_W) / 2}mm`, top: `${(OPEN_W - CARD_H) / 2}mm`,
-            transform: 'rotate(90deg)',
-          }}>
-            {children}
-          </div>
+          <div style={{ transform: 'rotate(180deg)' }}>{back}</div>
+          {front}
         </div>
       ))}
       <CutFoldLines count={count} />
@@ -427,18 +421,20 @@ export default function GiftCardClient({ savedSettings }) {
               In the print dialog, turn <b>Two-Sided OFF</b>. Each page is a separate sheet of {PER_SHEET} cards.
             </div>
             Print on 200–250gsm card at 100% scale (turn off &ldquo;fit to page&rdquo;).<br />
-            Cut on the grey dashed lines, then fold on the gold dotted line with the print facing out
+            Cut on the grey dashed lines, then fold on the gold dotted line with the print facing out (the fold sits at the top)
             (score it first for a crisp fold). Each sheet gives {PER_SHEET} cards; the inside stays blank for a note.
           </div>
         </div>
       </div>
 
-      {/* ── Print output: open cards (back | front), 4 per A4 ── */}
+      {/* ── Print output: open cards (back over front), 6 per A4 ── */}
       {sheets.map((n, i) => (
-        <PrintSheet key={i} count={n}>
-          <CardBack copy={copy} fromName={fromName} bg={printBg} />
-          <CardFront copy={copy} bg={printBg} />
-        </PrintSheet>
+        <PrintSheet
+          key={i}
+          count={n}
+          back={<CardBack copy={copy} fromName={fromName} bg={printBg} />}
+          front={<CardFront copy={copy} bg={printBg} />}
+        />
       ))}
     </div>
   );
