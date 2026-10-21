@@ -120,6 +120,16 @@ function CardFront({ copy, bg }) {
 /* ══════════════════════════════════════
    BACK
 ══════════════════════════════════════ */
+/* Label + dotted line to fill in by hand; fixed label width keeps To/From lines aligned */
+function WriteLine({ label }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', fontFamily: SERIF, fontStyle: 'italic', fontSize: '9pt', color: C.textBrown }}>
+      <div style={{ width: '9mm' }}>{label}</div>
+      <div style={{ width: '30mm', borderBottom: `0.3mm dotted ${C.textBrown}`, marginBottom: '1mm' }} />
+    </div>
+  );
+}
+
 function CardBack({ copy, fromName, bg }) {
   const name = fromName.trim();
   return (
@@ -133,16 +143,15 @@ function CardBack({ copy, fromName, bg }) {
 
       <div style={{ width: '11mm', height: '0.25mm', background: C.rule, margin: '2.5mm 0', flexShrink: 0 }} />
 
+      <WriteLine label="To" />
+
       {name ? (
-        <div style={{ textAlign: 'center', fontFamily: SERIF, fontStyle: 'italic', color: C.textBrown }}>
+        <div style={{ textAlign: 'center', fontFamily: SERIF, fontStyle: 'italic', color: C.textBrown, marginTop: '2mm' }}>
           <div style={{ fontSize: '8pt', lineHeight: 1.2 }}>A little gift from</div>
           <div style={{ fontSize: '11pt', fontWeight: 600, color: C.brand, lineHeight: 1.3 }}>{name}</div>
         </div>
       ) : (
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2mm', fontFamily: SERIF, fontStyle: 'italic', fontSize: '9pt', color: C.textBrown }}>
-          From
-          <div style={{ width: '30mm', borderBottom: `0.3mm dotted ${C.textBrown}`, marginBottom: '1mm' }} />
-        </div>
+        <div style={{ marginTop: '3.5mm' }}><WriteLine label="From" /></div>
       )}
 
       <div style={{ flex: 1 }} />
