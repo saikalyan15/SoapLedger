@@ -33,21 +33,24 @@ const SEED = {
   giftcard_qr_url:  'https://healingsoil.in/shop',
 };
 
-/* Geometry (mm). Folded card is 70×100; opened flat it's back|front = 140×100.
-   Open cards sit sideways on the sheet in 100×140 slots: 2 × 2 = 4 per A4 */
-const CARD_W = 70;
-const CARD_H = 100;
+/* Geometry (mm). Folded card is 55×85 (business-card size, fits the small jute pouch);
+   opened flat it's back|front = 110×85. Open cards sit sideways on the sheet in
+   85×110 slots: 2 × 2 = 4 per A4 */
+const CARD_W = 55;
+const CARD_H = 85;
 const OPEN_W = CARD_W * 2;
 const COLS = 2;
 const ROWS = 2;
 const PER_SHEET = COLS * ROWS;
-const SHEET_W = COLS * CARD_H;   // 200mm
-const SHEET_H = ROWS * OPEN_W;   // 280mm — page margins (@page) centre it on A4
+const SHEET_W = COLS * CARD_H;   // 170mm
+const SHEET_H = ROWS * OPEN_W;   // 220mm — page margins (@page) centre it on A4
+const PAGE_MARGIN_X = (210 - SHEET_W) / 2;
+const PAGE_MARGIN_Y = (297 - SHEET_H) / 2;
 
 /* ══════════════════════════════════════
    SOIL LAYERS — thin strata lines, the card's one motif
 ══════════════════════════════════════ */
-function SoilLayers({ height = '7mm', faint = false }) {
+function SoilLayers({ height = '5.5mm', faint = false }) {
   const o = faint ? 0.55 : 1;
   return (
     <svg viewBox="0 0 200 22" preserveAspectRatio="none" style={{ width: '100%', height, display: 'block' }}>
@@ -82,7 +85,7 @@ function Logo({ width = 30 }) {
 
 const cardShell = (bg) => ({
   width: `${CARD_W}mm`, height: `${CARD_H}mm`,
-  background: bg, boxSizing: 'border-box', padding: '6mm',
+  background: bg, boxSizing: 'border-box', padding: '4.5mm',
   display: 'flex', flexDirection: 'column', alignItems: 'center',
   overflow: 'hidden', position: 'relative',
   WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
@@ -94,20 +97,20 @@ const cardShell = (bg) => ({
 function CardFront({ copy, bg }) {
   return (
     <div style={cardShell(bg)}>
-      <div style={{ height: '5mm', flexShrink: 0 }} />
-      <Logo width={34} />
-      <div style={{ width: '14mm', height: '0.3mm', background: C.rule, margin: '6mm 0 5mm', flexShrink: 0 }} />
+      <div style={{ height: '3mm', flexShrink: 0 }} />
+      <Logo width={27} />
+      <div style={{ width: '11mm', height: '0.25mm', background: C.rule, margin: '4mm 0 3.5mm', flexShrink: 0 }} />
       <div style={{
-        fontFamily: SERIF, fontStyle: 'italic', fontSize: '16pt', lineHeight: 1.25,
+        fontFamily: SERIF, fontStyle: 'italic', fontSize: '13pt', lineHeight: 1.25,
         color: C.textBrown, textAlign: 'center', whiteSpace: 'pre-line',
       }}>
         {copy.giftcard_tagline}
       </div>
       <div style={{ flex: 1 }} />
-      <div style={{ width: '100%', marginBottom: '2.5mm' }}>
+      <div style={{ width: '100%', marginBottom: '2mm' }}>
         <SoilLayers />
       </div>
-      <div style={{ fontFamily: SANS, fontSize: '5pt', fontWeight: 600, letterSpacing: '0.25em', color: C.brand, textAlign: 'center' }}>
+      <div style={{ fontFamily: SANS, fontSize: '4.5pt', fontWeight: 600, letterSpacing: '0.22em', color: C.brand, textAlign: 'center' }}>
         {copy.giftcard_footer}
       </div>
     </div>
@@ -121,25 +124,25 @@ function CardBack({ copy, fromName, bg }) {
   const name = fromName.trim();
   return (
     <div style={cardShell(bg)}>
-      <div style={{ height: '4mm', flexShrink: 0 }} />
+      <div style={{ height: '2mm', flexShrink: 0 }} />
       <div style={{
-        fontFamily: SANS, fontSize: '7.5pt', lineHeight: 1.75,
+        fontFamily: SANS, fontSize: '6.5pt', lineHeight: 1.6,
         color: C.textBrown, textAlign: 'center', whiteSpace: 'pre-line',
       }}>
         {copy.giftcard_body}
       </div>
 
-      <div style={{ width: '14mm', height: '0.3mm', background: C.rule, margin: '5mm 0', flexShrink: 0 }} />
+      <div style={{ width: '11mm', height: '0.25mm', background: C.rule, margin: '3.5mm 0', flexShrink: 0 }} />
 
       {name ? (
         <div style={{ textAlign: 'center', fontFamily: SERIF, fontStyle: 'italic', color: C.textBrown }}>
-          <div style={{ fontSize: '10pt', lineHeight: 1.2 }}>A little gift from</div>
-          <div style={{ fontSize: '14pt', fontWeight: 600, color: C.brand, lineHeight: 1.3 }}>{name}</div>
+          <div style={{ fontSize: '8.5pt', lineHeight: 1.2 }}>A little gift from</div>
+          <div style={{ fontSize: '11.5pt', fontWeight: 600, color: C.brand, lineHeight: 1.3 }}>{name}</div>
         </div>
       ) : (
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2mm', fontFamily: SERIF, fontStyle: 'italic', fontSize: '11pt', color: C.textBrown }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2mm', fontFamily: SERIF, fontStyle: 'italic', fontSize: '9.5pt', color: C.textBrown }}>
           From
-          <div style={{ width: '36mm', borderBottom: `0.3mm dotted ${C.textBrown}`, marginBottom: '1mm' }} />
+          <div style={{ width: '28mm', borderBottom: `0.3mm dotted ${C.textBrown}`, marginBottom: '1mm' }} />
         </div>
       )}
 
@@ -153,14 +156,14 @@ function CardBack({ copy, fromName, bg }) {
           marginSize={0}
           fgColor={C.brand}
           bgColor="transparent"
-          style={{ width: '16mm', height: '16mm', flexShrink: 0 }}
+          style={{ width: '13mm', height: '13mm', flexShrink: 0 }}
         />
       )}
-      <div style={{ fontFamily: SANS, fontSize: '5.5pt', fontWeight: 600, letterSpacing: '0.12em', color: C.brand, textAlign: 'center', margin: '2.5mm 0' }}>
+      <div style={{ fontFamily: SANS, fontSize: '5pt', fontWeight: 600, letterSpacing: '0.1em', color: C.brand, textAlign: 'center', margin: '2mm 0' }}>
         {copy.giftcard_contact}
       </div>
       <div style={{ width: '100%' }}>
-        <SoilLayers height="3.5mm" faint />
+        <SoilLayers height="2.8mm" faint />
       </div>
     </div>
   );
@@ -255,9 +258,9 @@ export default function GiftCardClient({ savedSettings }) {
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&display=swap');
 
-        /* Sheet is 200×280mm inside these margins — leaves slack so rounding or a
+        /* Sheet is centred on A4 by these margins — leaves slack so rounding or a
            printer's own margin can't push a sheet onto the next page */
-        @page { size: 210mm 297mm; margin: 8.5mm 5mm; }
+        @page { size: 210mm 297mm; margin: ${PAGE_MARGIN_Y}mm ${PAGE_MARGIN_X}mm; }
 
         .gc-root {
           background: #F0EDE8;
@@ -403,9 +406,9 @@ export default function GiftCardClient({ savedSettings }) {
         {/* ── Right: preview ── */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: SANS, fontSize: '10px', fontWeight: 600, color: C.muted, letterSpacing: '0.1em', marginBottom: '10px' }}>
-            PREVIEW · 1.5× ACTUAL SIZE (card is 70 × 100 mm)
+            PREVIEW · 1.75× ACTUAL SIZE (folded card is {CARD_W} × {CARD_H} mm)
           </div>
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', zoom: 1.5 }}>
+          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', zoom: 1.75 }}>
             <div>
               <div style={previewTag}>FRONT</div>
               <div style={{ boxShadow: '0 4px 18px rgba(0,0,0,0.14)' }}>
