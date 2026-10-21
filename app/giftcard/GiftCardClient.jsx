@@ -31,21 +31,18 @@ const SEED = {
   giftcard_footer:  'HANDMADE · SMALL BATCH · GOA',
   giftcard_contact: 'healingsoil.in · @healingsoil.in',
   giftcard_qr_url:  'https://healingsoil.in/shop',
-  giftcard_personal_heading: 'a little note for you',
   giftcard_personal_signoff: 'with love,',
 };
 
-/* Geometry (mm). Folded card is 66×70 (fits the small jute pouch). Opened flat
-   it's 66×140: back on top (upside down), front below, fold across the middle —
-   a tent fold, so the fold sits at the card's top. 3 × 2 = 6 per A4, no rotation */
+/* Geometry (mm). Flat 66×70 card (fits the small jute pouch), printed both
+   sides: a fronts page then a backs page, 3 × 4 = 12 per A4 */
 const CARD_W = 66;
 const CARD_H = 70;
-const OPEN_H = CARD_H * 2;
 const COLS = 3;
-const ROWS = 2;
+const ROWS = 4;
 const PER_SHEET = COLS * ROWS;
 const SHEET_W = COLS * CARD_W;   // 198mm
-const SHEET_H = ROWS * OPEN_H;   // 280mm — page margins (@page) centre it on A4
+const SHEET_H = ROWS * CARD_H;   // 280mm — page margins (@page) centre it on A4
 const PAGE_MARGIN_X = (210 - SHEET_W) / 2;
 const PAGE_MARGIN_Y = (297 - SHEET_H) / 2;
 
@@ -139,19 +136,17 @@ function CorporateLines({ name }) {
   );
 }
 
-/* Personal: a heading, two lines for a short handwritten note, and a sign-off */
-function PersonalNote({ name, copy }) {
-  const dotted = `0.3mm dotted ${C.textBrown}`;
-  return (
-    <div style={{ width: '42mm', marginBottom: '1.5mm', fontFamily: SERIF, fontStyle: 'italic', color: C.textBrown }}>
-      <div style={{ fontSize: '9.5pt', textAlign: 'center', lineHeight: 1.2 }}>{copy.giftcard_personal_heading}</div>
-      {[0, 1].map(i => <div key={i} style={{ height: '4.8mm', borderBottom: dotted }} />)}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', gap: '1.5mm', marginTop: '2mm', fontSize: '9pt' }}>
-        {copy.giftcard_personal_signoff}
-        {name
-          ? <span style={{ fontSize: '10.5pt', fontWeight: 600, color: C.brand, lineHeight: 1 }}>{name}</span>
-          : <div style={{ width: '16mm', borderBottom: dotted, marginBottom: '1mm' }} />}
-      </div>
+/* Personal: just a sign-off — the empty space below is left free to write in, if they want */
+function PersonalSignoff({ name, copy }) {
+  return name ? (
+    <div style={{ textAlign: 'center', fontFamily: SERIF, fontStyle: 'italic', color: C.textBrown }}>
+      <div style={{ fontSize: '8pt', lineHeight: 1.2 }}>{copy.giftcard_personal_signoff}</div>
+      <div style={{ fontSize: '11pt', fontWeight: 600, color: C.brand, lineHeight: 1.3 }}>{name}</div>
+    </div>
+  ) : (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.5mm', fontFamily: SERIF, fontStyle: 'italic', fontSize: '9pt', color: C.textBrown }}>
+      {copy.giftcard_personal_signoff}
+      <div style={{ width: '20mm', borderBottom: `0.3mm dotted ${C.textBrown}`, marginBottom: '1mm' }} />
     </div>
   );
 }
@@ -181,7 +176,7 @@ function CardBack({ copy, fromName, mode, bg }) {
 
       {mode === 'corporate'
         ? <CorporateLines name={name} />
-        : <PersonalNote name={name} copy={copy} />}
+        : <PersonalSignoff name={name} copy={copy} />}
 
       <div style={{ flex: 1 }} />
 
@@ -207,44 +202,42 @@ function CardBack({ copy, fromName, mode, bg }) {
 }
 
 /* ══════════════════════════════════════
-   PRINT SHEET — single-sided. Each open card is back (upside down) over
-   front; fold across the middle, print side out, and the back reads the
-   right way up when the card is turned around.
+   PRINT SHEET — one A4 side. Backs mirror the columns so that, printed
+   two-sided and flipped on the long edge, each back lands behind its front
+   the same way up.
 ══════════════════════════════════════ */
-/* Lines run right across the grid — printers can't reach the outer ~5mm,
-   so marks only in the margin get lost. Cut = dashed, fold = dotted. */
-function CutFoldLines({ count }) {
+/* Dashed cut lines run right across the grid — printers can't reach the outer
+   ~5mm, so marks only in the margin get lost. Fronts page only, so they
+   don't show on the backs. */
+function CutLines() {
   const xs = Array.from({ length: COLS + 1 }, (_, i) => i * CARD_W);
-  const ys = Array.from({ length: ROWS + 1 }, (_, i) => i * OPEN_H);
-  const usedRows = Math.ceil(count / COLS);
-  const cut  = { stroke: '#A8A29E', strokeWidth: 0.25, strokeDasharray: '2 1.2' };
-  const fold = { stroke: '#C9A876', strokeWidth: 0.3, strokeDasharray: '0.4 1', strokeLinecap: 'round' };
+  const ys = Array.from({ length: ROWS + 1 }, (_, i) => i * CARD_H);
+  const cut = { stroke: '#A8A29E', strokeWidth: 0.25, strokeDasharray: '2 1.2' };
   return (
     <svg viewBox={`0 0 ${SHEET_W} ${SHEET_H}`} style={{ position: 'absolute', inset: 0, width: `${SHEET_W}mm`, height: `${SHEET_H}mm`, display: 'block', maxWidth: 'none', overflow: 'visible' }}>
       {xs.map(x => <line key={`x${x}`} x1={x} x2={x} y1={0} y2={SHEET_H} {...cut} />)}
       {ys.map(y => <line key={`y${y}`} y1={y} y2={y} x1={0} x2={SHEET_W} {...cut} />)}
-      {Array.from({ length: usedRows }, (_, r) => {
-        const y = r * OPEN_H + CARD_H;
-        return <line key={`f${r}`} y1={y} y2={y} x1={0} x2={SHEET_W} {...fold} />;
-      })}
     </svg>
   );
 }
 
-function PrintSheet({ count, front, back }) {
+function PrintSheet({ count, side, children }) {
   return (
     <div className="gc-sheet">
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} style={{
-          position: 'absolute', overflow: 'hidden',
-          left: `${(i % COLS) * CARD_W}mm`, top: `${Math.floor(i / COLS) * OPEN_H}mm`,
-          width: `${CARD_W}mm`, height: `${OPEN_H}mm`,
-        }}>
-          <div style={{ transform: 'rotate(180deg)' }}>{back}</div>
-          {front}
-        </div>
-      ))}
-      <CutFoldLines count={count} />
+      {Array.from({ length: count }, (_, i) => {
+        const col = i % COLS;
+        const x = side === 'back' ? COLS - 1 - col : col;
+        return (
+          <div key={i} style={{
+            position: 'absolute', overflow: 'hidden',
+            left: `${x * CARD_W}mm`, top: `${Math.floor(i / COLS) * CARD_H}mm`,
+            width: `${CARD_W}mm`, height: `${CARD_H}mm`,
+          }}>
+            {children}
+          </div>
+        );
+      })}
+      {side === 'front' && <CutLines />}
     </div>
   );
 }
@@ -342,7 +335,7 @@ export default function GiftCardClient({ savedSettings }) {
           <div>
             <div style={{ fontSize: '16px', fontWeight: 800 }}>Gift Card</div>
             <div style={{ fontSize: '11px', opacity: 0.6 }}>
-              {count} card{count !== 1 ? 's' : ''} · {sheetCount} A4 sheet{sheetCount !== 1 ? 's' : ''}, single-sided, cut & fold
+              {count} card{count !== 1 ? 's' : ''} · {sheetCount} A4 sheet{sheetCount !== 1 ? 's' : ''}, printed both sides
             </div>
           </div>
         </div>
@@ -436,9 +429,6 @@ export default function GiftCardClient({ savedSettings }) {
               <Field label="QR code link">
                 <input type="url" value={copy.giftcard_qr_url} onChange={e => setField('giftcard_qr_url', e.target.value)} maxLength={500} style={input} />
               </Field>
-              <Field label="Personal note heading">
-                <input type="text" value={copy.giftcard_personal_heading} onChange={e => setField('giftcard_personal_heading', e.target.value)} maxLength={500} style={input} />
-              </Field>
               <Field label="Personal sign-off">
                 <input type="text" value={copy.giftcard_personal_signoff} onChange={e => setField('giftcard_personal_signoff', e.target.value)} maxLength={500} style={input} />
               </Field>
@@ -462,7 +452,7 @@ export default function GiftCardClient({ savedSettings }) {
         {/* ── Right: preview ── */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: SANS, fontSize: '10px', fontWeight: 600, color: C.muted, letterSpacing: '0.1em', marginBottom: '10px' }}>
-            PREVIEW · 1.75× ACTUAL SIZE (folded card is {CARD_W} × {CARD_H} mm)
+            PREVIEW · 1.75× ACTUAL SIZE (card is {CARD_W} × {CARD_H} mm)
           </div>
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', zoom: 1.75 }}>
             <div>
@@ -480,24 +470,19 @@ export default function GiftCardClient({ savedSettings }) {
           </div>
           <div style={{ fontFamily: SANS, fontSize: '11px', color: C.muted, marginTop: '16px', lineHeight: 1.7 }}>
             <div style={{ background: '#FEF3C7', color: '#92400E', borderRadius: '8px', padding: '8px 12px', marginBottom: '8px', fontWeight: 600 }}>
-              In the print dialog, turn <b>Two-Sided OFF</b>. Each page is a separate sheet of {PER_SHEET} cards.
+              In the print dialog, turn <b>Two-Sided ON</b> and choose <b>Long-Edge binding</b>. Each sheet prints fronts on one side, backs on the other.
             </div>
-            Print on 200–250gsm card at 100% scale (turn off &ldquo;fit to page&rdquo;).<br />
-            Cut on the grey dashed lines, then fold on the gold dotted line with the print facing out (the fold sits at the top)
-            (score it first for a crisp fold). Each sheet gives {PER_SHEET} cards; the inside stays blank for a note.
+            Print on 300gsm card at 100% scale (turn off &ldquo;fit to page&rdquo;).<br />
+            Cut on the grey dashed lines. Each sheet gives {PER_SHEET} cards. First time? Test on plain paper and hold it up to the light to check the sides line up.
           </div>
         </div>
       </div>
 
-      {/* ── Print output: open cards (back over front), 6 per A4 ── */}
-      {sheets.map((n, i) => (
-        <PrintSheet
-          key={i}
-          count={n}
-          back={<CardBack copy={copy} fromName={fromName} mode={mode} bg={printBg} />}
-          front={<CardFront copy={copy} bg={printBg} />}
-        />
-      ))}
+      {/* ── Print output: per A4 sheet, a fronts page then a backs page, 12 cards ── */}
+      {sheets.map((n, i) => [
+        <PrintSheet key={`f${i}`} count={n} side="front"><CardFront copy={copy} bg={printBg} /></PrintSheet>,
+        <PrintSheet key={`b${i}`} count={n} side="back"><CardBack copy={copy} fromName={fromName} mode={mode} bg={printBg} /></PrintSheet>,
+      ])}
     </div>
   );
 }
