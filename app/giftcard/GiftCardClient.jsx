@@ -136,17 +136,19 @@ function CorporateLines({ name }) {
   );
 }
 
-/* Personal: just a sign-off — the empty space below is left free to write in, if they want */
+/* Personal: a few unlabelled lines for an optional note, then a letter-style sign-off */
+const NOTE_LINES = 3;
 function PersonalSignoff({ name, copy }) {
-  return name ? (
-    <div style={{ textAlign: 'center', fontFamily: SERIF, fontStyle: 'italic', color: C.textBrown }}>
-      <div style={{ fontSize: '8pt', lineHeight: 1.2 }}>{copy.giftcard_personal_signoff}</div>
-      <div style={{ fontSize: '11pt', fontWeight: 600, color: C.brand, lineHeight: 1.3 }}>{name}</div>
-    </div>
-  ) : (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.5mm', fontFamily: SERIF, fontStyle: 'italic', fontSize: '9pt', color: C.textBrown }}>
-      {copy.giftcard_personal_signoff}
-      <div style={{ width: '20mm', borderBottom: `0.3mm dotted ${C.textBrown}`, marginBottom: '1mm' }} />
+  const dotted = `0.3mm dotted ${C.textBrown}`;
+  return (
+    <div style={{ width: '46mm', marginBottom: '1.5mm', fontFamily: SERIF, fontStyle: 'italic', color: C.textBrown }}>
+      {Array.from({ length: NOTE_LINES }, (_, i) => <div key={i} style={{ height: '4.5mm', borderBottom: dotted }} />)}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', gap: '1.5mm', marginTop: '2mm', fontSize: '9pt' }}>
+        {copy.giftcard_personal_signoff}
+        {name
+          ? <span style={{ fontSize: '10.5pt', fontWeight: 600, color: C.brand, lineHeight: 1 }}>{name}</span>
+          : <div style={{ width: '18mm', borderBottom: dotted, marginBottom: '1mm' }} />}
+      </div>
     </div>
   );
 }
