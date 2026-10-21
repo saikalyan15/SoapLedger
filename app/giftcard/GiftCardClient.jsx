@@ -43,8 +43,8 @@ const ROWS = 4;
 const PER_SHEET = COLS * ROWS;
 const SHEET_W = COLS * CARD_W;   // 198mm
 const SHEET_H = ROWS * CARD_H;   // 280mm — page margins (@page) centre it on A4
-const PAGE_MARGIN_X = (210 - SHEET_W) / 2;
-const PAGE_MARGIN_Y = (297 - SHEET_H) / 2;
+const PAGE_MARGIN_X = (210 - SHEET_W) / 2;   // 6mm — keeps fronts and backs aligned in duplex
+const PAGE_MARGIN_Y = 5;                       // top & bottom; leaves 7mm of slack below the sheet
 
 /* ══════════════════════════════════════
    SOIL LAYERS — thin strata lines, the card's one motif
@@ -284,8 +284,8 @@ export default function GiftCardClient({ savedSettings }) {
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&display=swap');
 
-        /* Sheet is centred on A4 by these margins — leaves slack so rounding or a
-           printer's own margin can't push a sheet onto the next page */
+        /* Printable area must be taller than the sheet: if they match exactly, sub-mm
+           rounding spills a sliver onto an extra (blank) page after every sheet */
         @page { size: 210mm 297mm; margin: ${PAGE_MARGIN_Y}mm ${PAGE_MARGIN_X}mm; }
 
         .gc-root {
@@ -307,6 +307,8 @@ export default function GiftCardClient({ savedSettings }) {
             background: white !important;
           }
           body > div { min-height: 0 !important; }
+          html, body { overflow: visible !important; }
+          next-route-announcer, nextjs-portal { display: none !important; }
           .gc-sheet {
             display: block !important;
             position: relative;
