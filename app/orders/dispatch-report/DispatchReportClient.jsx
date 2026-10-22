@@ -178,12 +178,13 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
                     <div style={{ flex: 1, borderTop: '2px solid black' }} />
                   </div>
                   {/* Recipient */}
-                  <div style={{ fontSize: '19px', fontWeight: 800, color: 'black', marginBottom: '4px', lineHeight: 1.1 }}>{s.customer_name}</div>
+                  <div style={{ fontSize: '19px', fontWeight: 800, color: 'black', marginBottom: '4px', lineHeight: 1.1 }}>{s.recipient_name}</div>
                   <div style={{ fontSize: '13px', lineHeight: 1.4, color: 'black', fontWeight: 500, marginBottom: '6px' }}>
                     {s.address_text}
                   </div>
+                  {/* Blank line when a gift recipient's phone isn't known yet — fill in the order or by hand */}
                   <div style={{ fontSize: '14px', fontWeight: 800, color: 'black' }}>
-                    Phone: {formatPhoneForDisplay(s.customer_phone)}
+                    Phone: {s.recipient_phone ? formatPhoneForDisplay(s.recipient_phone) : '____________________'}
                   </div>
                 </div>
               );
@@ -201,8 +202,8 @@ const DispatchReportClient = ({ shipments, businessConfig }) => {
                 return (
                   <div key={s.shipment_id} className={`checklist-card ${isSelected ? '' : 'deselected'}`}>
                     <div style={{ fontSize: '13px', fontWeight: 800, color: 'black', marginBottom: '4px' }}>
-                      {s.customer_name}
-                      <span style={{ fontWeight: 600, color: COLORS.muted }}> · #{s.order_id.slice(0, 8)}{s.shipment_label ? ` · ${s.shipment_label}` : ''}</span>
+                      {s.recipient_name}
+                      <span style={{ fontWeight: 600, color: COLORS.muted }}>{s.recipient_name !== s.customer_name ? ` · for ${s.customer_name}` : ''} · #{s.order_id.slice(0, 8)}{s.shipment_label ? ` · ${s.shipment_label}` : ''}</span>
                     </div>
                     {items.length > 0 ? (
                       items.map((item, idx) => (

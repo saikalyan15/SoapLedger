@@ -44,7 +44,9 @@ const OrderForm = ({ products, settings, initialData = null }) => {
         status: s.status,
         city: s.city || '',
         state: s.state || '',
-        tracking_id: s.tracking_id || ''
+        tracking_id: s.tracking_id || '',
+        recipient_name: s.recipient_name || '',
+        recipient_phone: s.recipient_phone || ''
       }));
     }
     return [{ label: 'Primary Shipment', address_text: customer.address, status: 'Order Placed', city: '', state: '' }];
@@ -205,7 +207,9 @@ const OrderForm = ({ products, settings, initialData = null }) => {
       address_text: '',
       status: 'Order Placed',
       city: '',
-      state: ''
+      state: '',
+      recipient_name: '',
+      recipient_phone: ''
     }]);
   };
 
@@ -373,6 +377,36 @@ const OrderForm = ({ products, settings, initialData = null }) => {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <div style={{ fontWeight: '700', fontSize: '14px', color: '#1B4332' }}>{s.label}</div>
                 {idx > 0 && <button type="button" onClick={() => removeShipment(idx)} style={{ color: '#DC2626', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={16} /></button>}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label style={labelStyle}>Recipient name</label>
+                  <input
+                    type="text"
+                    value={s.recipient_name || ''}
+                    onChange={(e) => {
+                      const newShipments = [...shipments];
+                      newShipments[idx].recipient_name = e.target.value;
+                      setShipments(newShipments);
+                    }}
+                    placeholder={customer.name ? `Blank = ${customer.name}` : 'Blank = customer'}
+                    style={{ ...inputBaseStyle, fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Recipient phone</label>
+                  <input
+                    type="text"
+                    value={s.recipient_phone || ''}
+                    onChange={(e) => {
+                      const newShipments = [...shipments];
+                      newShipments[idx].recipient_phone = e.target.value;
+                      setShipments(newShipments);
+                    }}
+                    placeholder={s.recipient_name ? "Recipient's phone (add before printing)" : 'Blank = customer phone'}
+                    style={{ ...inputBaseStyle, fontSize: '13px' }}
+                  />
+                </div>
               </div>
               <textarea
                 value={s.address_text}

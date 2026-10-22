@@ -88,8 +88,8 @@ export async function POST(request) {
 
       // shipments (FK: orders)
       ...shipments.map(r => sql`
-        INSERT INTO shipments (id, order_id, label, address_text, status, dispatched_at, delivered_at, created_at)
-        VALUES (${r.id}, ${r.order_id}, ${r.label}, ${r.address_text}, ${r.status}, ${r.dispatched_at ?? null}, ${r.delivered_at ?? null}, ${r.created_at})
+        INSERT INTO shipments (id, order_id, label, address_text, status, dispatched_at, delivered_at, created_at, recipient_name, recipient_phone)
+        VALUES (${r.id}, ${r.order_id}, ${r.label}, ${r.address_text}, ${r.status}, ${r.dispatched_at ?? null}, ${r.delivered_at ?? null}, ${r.created_at}, ${r.recipient_name ?? null}, ${r.recipient_phone ?? null})
       `),
 
       // order_items (FK: orders, products, shipments)

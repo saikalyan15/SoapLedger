@@ -73,7 +73,15 @@ const ShipmentCard = ({ shipment, items, onStatusUpdate }) => {
         borderRadius: '8px'
       }}>
         <MapPin size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-        <div>{shipment.address_text}</div>
+        <div>
+          {shipment.recipient_name && (
+            <div style={{ fontWeight: '700', color: '#111827' }}>
+              {shipment.recipient_name}
+              {shipment.recipient_phone && <span style={{ fontWeight: '500', color: '#4B5563' }}> · {formatPhoneForDisplay(shipment.recipient_phone)}</span>}
+            </div>
+          )}
+          {shipment.address_text}
+        </div>
       </div>
 
       <div style={{ marginBottom: '20px' }}>
